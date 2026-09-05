@@ -1,0 +1,19 @@
+﻿
+NetSentinel V2 verification
+started  : 2026-09-05 02:04:58
+folder   : D:\1_sih26#2\netsentinel-main\v2
+os       : Microsoft Windows NT 10.0.26200.0
+cpu cores: 12
+python   : py -3
+
+=== create virtualenv ===
+> py -3 -m venv .venv
+[exit 0]
+venv     : D:\1_sih26#2\netsentinel-main\v2\.venv\Scripts\python.exe
+
+=== upgrade pip ===
+> D:\1_sih26#2\netsentinel-main\v2\.venv\Scripts\python.exe -m pip install --quiet --upgrade pip
+[exit 0]
+
+=== install torch (CPU build, ~200MB) ===
+> D:\1_sih26#2\netsentinel-main\v2\.venv\Scripts\python.exe -m pip install --quiet --index-url https://download.pytorch.org/whl/cpu torch

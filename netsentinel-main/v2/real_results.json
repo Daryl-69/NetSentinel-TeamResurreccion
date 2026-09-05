@@ -1,0 +1,161 @@
+{
+  "source": [
+    "data\\zed-sample-data\\zeek-default"
+  ],
+  "hosts": 664,
+  "days": 1,
+  "category_counts": {
+    "Recon_API": 0,
+    "Code_Repo_Paste": 19,
+    "Messaging_API": 1,
+    "Cloud_Storage": 14,
+    "Browse": 159,
+    "Sync": 0,
+    "CI_CD": 1,
+    "Internal": 600,
+    "Unknown_External": 57
+  },
+  "uncategorised_frac": 0.9588719010353088,
+  "flag_rate": 0.24096385542168675,
+  "router_auc": {
+    "A_distilled_detector": 0.9732204861111111,
+    "B_encoder_mahalanobis": 0.7428943452380952
+  },
+  "curves": {
+    "A_distilled_detector": [
+      {
+        "budget": 0.005,
+        "actual": 0.004518072289156626,
+        "recall_teacher": 0.01875,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.01,
+        "actual": 0.010542168674698794,
+        "recall_teacher": 0.04375,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.02,
+        "actual": 0.01957831325301205,
+        "recall_teacher": 0.08125,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.03,
+        "actual": 0.030120481927710843,
+        "recall_teacher": 0.125,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.05,
+        "actual": 0.04969879518072289,
+        "recall_teacher": 0.2,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.075,
+        "actual": 0.07530120481927711,
+        "recall_teacher": 0.3,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.1,
+        "actual": 0.09939759036144578,
+        "recall_teacher": 0.3875,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.15,
+        "actual": 0.15060240963855423,
+        "recall_teacher": 0.575,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.2,
+        "actual": 0.2003012048192771,
+        "recall_teacher": 0.7375,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.3,
+        "actual": 0.2996987951807229,
+        "recall_teacher": 0.93125,
+        "recall_attack": NaN
+      }
+    ],
+    "B_encoder_mahalanobis": [
+      {
+        "budget": 0.005,
+        "actual": 0.004518072289156626,
+        "recall_teacher": 0.00625,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.01,
+        "actual": 0.010542168674698794,
+        "recall_teacher": 0.025,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.02,
+        "actual": 0.01957831325301205,
+        "recall_teacher": 0.0375,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.03,
+        "actual": 0.030120481927710843,
+        "recall_teacher": 0.04375,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.05,
+        "actual": 0.04969879518072289,
+        "recall_teacher": 0.04375,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.075,
+        "actual": 0.07530120481927711,
+        "recall_teacher": 0.05625,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.1,
+        "actual": 0.09939759036144578,
+        "recall_teacher": 0.05625,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.15,
+        "actual": 0.15060240963855423,
+        "recall_teacher": 0.1,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.2,
+        "actual": 0.2003012048192771,
+        "recall_teacher": 0.24375,
+        "recall_attack": NaN
+      },
+      {
+        "budget": 0.3,
+        "actual": 0.2996987951807229,
+        "recall_teacher": 0.56875,
+        "recall_attack": NaN
+      }
+    ]
+  },
+  "geometry": {
+    "knn_overlap@20": 0.7805722891566265,
+    "trustworthiness": 0.9755722178374112,
+    "spearman_score": 0.8244218034148378,
+    "n": 664
+  },
+  "verdict": [
+    "GO",
+    "Student preserves the teacher's local geometry (overlap 0.78). Mahalanobis in student space is well founded."
+  ],
+  "runtime_s": 26.826277256011963
+}

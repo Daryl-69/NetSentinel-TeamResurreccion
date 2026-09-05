@@ -1,0 +1,111 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+uploads/*.pcap
+pcaps/*.pcap
+!pcaps/.gitkeep
+
+# Large test files (download separately)
+Friday-WorkingHours.pcap
+Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv
+
+# Keep only small test PCAPs
+!test_portscan.pcap
+!test_attacks.pcap
+!dummy.pcap
+
+# Cache
+.cache/
+*.csv
+!friday.csv
+
+# Temporary analysis files
+ks_results.csv
+ks_summary.txt
+ours.csv
+
+# HuggingFace upload staging (local only)
+hf_upload/
+
+# Graphify output (generated)
+graphify-out/
+
+# Temporary test/debug scripts
+check_evidence.py
+test_port_scan_evidence.py
+fix_sklearn_version.py
+prepare_hf_upload.py
+upload_to_hf.py
+retrain_exfil_scaler.py
+generate_portscan_pcap.py
+quickstart.py
+validate_fixes.py
+
+# Redundant documentation (consolidated)
+ACTION_ITEMS.md
+BACKEND_EVIDENCE_PATCH.md
+BACKEND_REMEDIATION_TODO.md
+CRITICAL_FIXES_SUMMARY.md
+FINAL_STATUS.md
+FIXES_APPLIED.md
+README_FIXES.md
+NEXT_STEPS.md
+START_HERE.md
+MASTER_RUN_GUIDE.md
+
+# Frontend
+frontend/node_modules/
+frontend/.figma/
+frontend/dist/
+frontend/.vite/
+frontend/pnpm-lock.yaml
+
+# V2 experiment artifacts (large binary files)
+v2/.venv/
+v2/lanl_tensors_*.npz
+v2/pretrained_real.pt
+v2/data/
+v2/__pycache__/
+
+# Graphify cache (contains auto-generated local paths)
+graphify-out/cache/

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetSentinel WebSocket Test</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e27;
+            color: #00ff41;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #00ff41;
+            text-shadow: 0 0 10px #00ff41;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #00ff41;
+        }
+        .connected { background: rgba(0, 255, 65, 0.1); }
+        .disconnected { background: rgba(255, 0, 0, 0.1); border-color: #ff0000; color: #ff0000; }
+        .alert-box {
+            background: rgba(0, 255, 65, 0.05);
+            border: 1px solid #00ff41;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .alert-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid #00ff41;
+        }
+        .threat-high { border-left-color: #ff0000; }
+        .threat-medium { border-left-color: #ffa500; }
+        .threat-low { border-left-color: #ffff00; }
+        button {
+            background: #00ff41;
+            color: #0a0e27;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 5px;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #00cc33;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: rgba(0, 255, 65, 0.1);
+            border: 1px solid #00ff41;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #00ff41;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ NetSentinel WebSocket Test</h1>
+        
+        <div id="status" class="status disconnected">
+            ⚠️ Disconnected
+        </div>
+
+        <div>
+            <button onclick="connect()">Connect</button>
+            <button onclick="disconnect()">Disconnect</button>
+            <button onclick="clearAlerts()">Clear Alerts</button>
+            <button onclick="testSimulation()">Run Mixed Simulation</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div>Total Alerts</div>
+                <div class="stat-value" id="totalAlerts">0</div>
+            </div>
+            <div class="stat-card">
+                <div>DDoS</div>
+                <div class="stat-value" id="ddosCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div>DGA</div>
+                <div class="stat-value" id="dgaCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div>C2 Beacon</div>
+                <div class="stat-value" id="c2Count">0</div>
+            </div>
+            <div class="stat-card">
+                <div>VPN/Tunnel</div>
+                <div class="stat-value" id="vpnCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div>Port Scan</div>
+                <div class="stat-value" id="portScanCount">0</div>
+            </div>
+        </div>
+
+        <h2>Live Alerts</h2>
+        <div id="alerts" class="alert-box">
+            <div style="color: #666;">Waiting for alerts...</div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let alertCount = {
+            total: 0,
+            ddos: 0,
+            dga: 0,
+            c2: 0,
+            vpn: 0,
+            portScan: 0
+        };
+
+        function connect() {
+            if (ws) {
+                console.log('Already connected');
+                return;
+            }
+
+            ws = new WebSocket('ws://localhost:8000/ws');
+            
+            ws.onopen = () => {
+                console.log('✅ WebSocket connected');
+                document.getElementById('status').className = 'status connected';
+                document.getElementById('status').textContent = '✅ Connected to NetSentinel';
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('📨 Received:', data);
+                    
+                    if (data.type === 'alert') {
+                        displayAlert(data);
+                        updateStats(data);
+                    }
+                } catch (e) {
+                    console.error('Error parsing message:', e);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('❌ WebSocket error:', error);
+            };
+
+            ws.onclose = () => {
+                console.log('⚠️ WebSocket disconnected');
+                document.getElementById('status').className = 'status disconnected';
+                document.getElementById('status').textContent = '⚠️ Disconnected';
+                ws = null;
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function displayAlert(alert) {
+            const alertsDiv = document.getElementById('alerts');
+            
+            // Clear "waiting" message on first alert
+            if (alertCount.total === 0) {
+                alertsDiv.innerHTML = '';
+            }
+
+            const severityClass = alert.severity === 'high' ? 'threat-high' : 
+                                 alert.severity === 'medium' ? 'threat-medium' : 'threat-low';
+            
+            const alertHtml = `
+                <div class="alert-item ${severityClass}">
+                    <strong>🚨 ${alert.threat_type || 'Unknown'}</strong> - ${alert.model_name || 'N/A'}<br>
+                    Severity: ${alert.severity || 'N/A'} | 
+                    Confidence: ${((alert.confidence || 0) * 100).toFixed(1)}%<br>
+                    Flow: ${alert.flow?.src_ip || 'N/A'}:${alert.flow?.src_port || '?'} → 
+                          ${alert.flow?.dst_ip || 'N/A'}:${alert.flow?.dst_port || '?'} 
+                          (${alert.flow?.protocol || '?'})<br>
+                    <small>${new Date(alert.timestamp).toLocaleString()}</small>
+                </div>
+            `;
+            
+            alertsDiv.insertAdjacentHTML('afterbegin', alertHtml);
+            
+            // Keep only last 50 alerts
+            while (alertsDiv.children.length > 50) {
+                alertsDiv.removeChild(alertsDiv.lastChild);
+            }
+        }
+
+        function updateStats(alert) {
+            alertCount.total++;
+            
+            const threatType = (alert.threat_type || '').toLowerCase();
+            if (threatType.includes('ddos')) alertCount.ddos++;
+            else if (threatType.includes('dga')) alertCount.dga++;
+            else if (threatType.includes('c2') || threatType.includes('beacon')) alertCount.c2++;
+            else if (threatType.includes('vpn') || threatType.includes('tunnel')) alertCount.vpn++;
+            else if (threatType.includes('port') || threatType.includes('scan')) alertCount.portScan++;
+            
+            document.getElementById('totalAlerts').textContent = alertCount.total;
+            document.getElementById('ddosCount').textContent = alertCount.ddos;
+            document.getElementById('dgaCount').textContent = alertCount.dga;
+            document.getElementById('c2Count').textContent = alertCount.c2;
+            document.getElementById('vpnCount').textContent = alertCount.vpn;
+            document.getElementById('portScanCount').textContent = alertCount.portScan;
+        }
+
+        function clearAlerts() {
+            document.getElementById('alerts').innerHTML = '<div style="color: #666;">Waiting for alerts...</div>';
+            alertCount = { total: 0, ddos: 0, dga: 0, c2: 0, vpn: 0, portScan: 0 };
+            updateStats({});
+        }
+
+        function testSimulation() {
+            fetch('http://localhost:8000/api/simulate/mixed', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('✅ Simulation started:', data);
+                alert('Mixed simulation started! Watch for alerts.');
+            })
+            .catch(error => {
+                console.error('❌ Simulation failed:', error);
+                alert('Failed to start simulation. Is the backend running?');
+            });
+        }
+
+        // Auto-connect on page load
+        window.addEventListener('load', () => {
+            connect();
+        });
+    </script>
+</body>
+</html>

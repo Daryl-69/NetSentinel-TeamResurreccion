@@ -1,0 +1,61 @@
+# ═══════════════════════════════════════════
+# NetSentinel — Root .gitignore
+# ═══════════════════════════════════════════
+
+# ── Obsidian ──
+.obsidian/
+
+# ── Python ──
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# ── Virtual Environments ──
+**/.venv/
+**/venv/
+**/ENV/
+**/env/
+
+# ── OS ──
+Thumbs.db
+.DS_Store
+desktop.ini
+*~
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Large binary data (v2 experiment artifacts) ──
+netsentinel-main/v2/lanl_tensors_*.npz
+netsentinel-main/v2/pretrained_real.pt
+netsentinel-main/v2/data/
+
+# ── Graphify cache (contains auto-generated local paths) ──
+netsentinel-main/graphify-out/cache/
+
+# ── Frontend build artifacts & deps ──
+**/node_modules/
+netsentinel-main/frontend/dist/
+netsentinel-main/frontend/.vite/
+
+# ── Lock files (can be regenerated) ──
+netsentinel-main/frontend/pnpm-lock.yaml
+
+# ── Python package build ──
+build/
+dist/
+*.egg-info/
+*.egg
+
+# ── Testing ──
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Logs ──
+*.log

@@ -1,0 +1,9 @@
+# NetSentinel V2 harness.
+# torch must come from the CPU index or pip pulls the ~2.5GB CUDA build:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r requirements.txt
+torch
+numpy
+scipy
+scikit-learn
+matplotlib

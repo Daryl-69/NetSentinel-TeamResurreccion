@@ -1,0 +1,715 @@
+<title>Inspector–Sentry Trial</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+:root{
+  --ground:#f6f8fa; --surface:#ffffff; --sunk:#eef2f6;
+  --ink:#0f1419; --ink-2:#4c5866; --ink-3:#7c8794;
+  --rule:#dce2e9; --rule-2:#c3ccd6;
+  --a:#2a78d6; --b:#eb6834; --c:#1baf7a; --ref:#8b95a1;
+  --good:#0a8a0a; --warn:#a9720a; --crit:#c23434;
+  --good-bg:#e8f5e8; --warn-bg:#fbf2df; --crit-bg:#fbeaea;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  --serif:"IBM Plex Serif",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#0d1117; --surface:#151b23; --sunk:#1b222b;
+  --ink:#e9eef4; --ink-2:#a3aebb; --ink-3:#6e7883;
+  --rule:#222a34; --rule-2:#2f3945;
+  --a:#3987e5; --b:#f07a4c; --c:#25c78d; --ref:#6e7883;
+  --good:#3fbf3f; --warn:#e0a52a; --crit:#e66767;
+  --good-bg:#122412; --warn-bg:#2a2110; --crit-bg:#2a1414;
+}}
+:root[data-theme="dark"]{
+  --ground:#0d1117; --surface:#151b23; --sunk:#1b222b;
+  --ink:#e9eef4; --ink-2:#a3aebb; --ink-3:#6e7883;
+  --rule:#222a34; --rule-2:#2f3945;
+  --a:#3987e5; --b:#f07a4c; --c:#25c78d; --ref:#6e7883;
+  --good:#3fbf3f; --warn:#e0a52a; --crit:#e66767;
+  --good-bg:#122412; --warn-bg:#2a2110; --crit-bg:#2a1414;
+}
+
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);
+  line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding:0 28px 96px}
+.col{max-width:70ch}
+h1,h2,h3{text-wrap:balance;margin:0}
+a{color:var(--a)}
+
+/* --- masthead: a graticule rail, the one motif ------------------------- */
+.mast{padding:52px 0 0}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-3);margin:0 0 14px}
+h1{font-size:clamp(30px,4.6vw,46px);font-weight:600;letter-spacing:-.021em;line-height:1.1}
+.dek{font-family:var(--serif);font-size:18px;line-height:1.62;color:var(--ink-2);
+  margin:16px 0 0;max-width:62ch}
+.rail{height:15px;margin:30px 0 0;border-bottom:1px solid var(--rule-2);
+  background-image:repeating-linear-gradient(to right,var(--rule) 0 1px,transparent 1px 40px);
+  background-position:bottom;background-repeat:repeat-x;background-size:auto 8px}
+.meta{display:flex;flex-wrap:wrap;gap:10px 30px;padding:14px 0 0;
+  font-family:var(--mono);font-size:11.5px;color:var(--ink-3)}
+.meta b{color:var(--ink-2);font-weight:500}
+
+/* --- sections ---------------------------------------------------------- */
+section{padding:52px 0 0}
+h2{font-size:12px;font-family:var(--mono);letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:500;padding-bottom:9px;border-bottom:1px solid var(--rule);
+  margin-bottom:26px}
+h3{font-size:19px;font-weight:600;letter-spacing:-.011em}
+p{margin:12px 0 0}
+.prose{font-family:var(--serif);font-size:16.5px;line-height:1.68;color:var(--ink-2);max-width:68ch}
+.prose strong{color:var(--ink);font-weight:500}
+
+/* --- findings: parallel readouts, not a numbered sequence -------------- */
+.find{display:grid;grid-template-columns:104px 1fr;gap:22px;padding:20px 0;
+  border-top:1px solid var(--rule)}
+.find:first-of-type{border-top:none;padding-top:4px}
+.chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+  font-weight:600;padding:4px 8px;border-radius:3px;white-space:nowrap;
+  display:inline-block;align-self:start}
+.chip.ok{background:var(--good-bg);color:var(--good)}
+.chip.wn{background:var(--warn-bg);color:var(--warn)}
+.chip.cr{background:var(--crit-bg);color:var(--crit)}
+.find h3{margin-bottom:6px}
+.find p{font-family:var(--serif);color:var(--ink-2);font-size:16px;line-height:1.65;margin-top:0}
+
+/* --- chart ------------------------------------------------------------- */
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:4px;
+  padding:22px 24px 18px;margin-top:22px}
+.chartwrap{overflow-x:auto}
+svg{display:block;width:100%;height:auto;min-width:560px;touch-action:none}
+.gl{stroke:var(--rule);stroke-width:1}
+.ax{stroke:var(--rule-2);stroke-width:1}
+.tk{fill:var(--ink-3);font-family:var(--mono);font-size:11px}
+.axlab{fill:var(--ink-2);font-family:var(--sans);font-size:12px}
+.slab{font-family:var(--mono);font-size:11.5px;font-weight:500}
+.cross{stroke:var(--ink-3);stroke-width:1;stroke-dasharray:3 3}
+
+.scrub{display:flex;align-items:center;gap:16px;margin-top:18px;
+  padding-top:16px;border-top:1px solid var(--rule)}
+.scrub label{font-family:var(--mono);font-size:11px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+input[type=range]{flex:1;accent-color:var(--b);min-width:120px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);border-radius:4px;
+  margin-top:16px;overflow:hidden}
+.ro{background:var(--surface);padding:13px 15px}
+.ro .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.ro .v{font-family:var(--mono);font-size:23px;font-weight:500;margin-top:5px;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.ro .s{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:2px;
+  font-variant-numeric:tabular-nums}
+
+/* --- table ------------------------------------------------------------- */
+.tblwrap{overflow-x:auto;margin-top:20px}
+table{border-collapse:collapse;width:100%;min-width:520px;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:9px 12px;border-bottom:1px solid var(--rule);
+  font-family:var(--mono);font-size:13px}
+th{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);
+  font-weight:500;border-bottom:1px solid var(--rule-2)}
+th:first-child,td:first-child{text-align:left;font-family:var(--sans)}
+tbody tr:last-child td{border-bottom:none}
+td.win{color:var(--b);font-weight:600}
+.swatch{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:8px;
+  vertical-align:baseline}
+
+/* --- cost model -------------------------------------------------------- */
+.knobs{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px 26px}
+.knob label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:7px}
+.knob .kv{font-family:var(--mono);font-size:15px;color:var(--ink);
+  font-variant-numeric:tabular-nums;float:right;font-weight:500}
+.bigfig{font-family:var(--mono);font-size:clamp(38px,7vw,60px);font-weight:600;
+  letter-spacing:-.035em;color:var(--b);line-height:1;font-variant-numeric:tabular-nums}
+
+/* --- diagrams ---------------------------------------------------------- */
+.fig{margin:0;overflow-x:auto}
+.fig svg{min-width:700px;color:var(--ink-2)}
+.fig figcaption{font-family:var(--serif);font-size:14.5px;line-height:1.6;color:var(--ink-3);
+  margin-top:14px;max-width:70ch}
+.bx{fill:var(--surface);stroke:var(--rule-2);stroke-width:1}
+.bx.hero{fill:var(--sunk);stroke:var(--ink-3)}
+.bx.ghost{fill:none;stroke:var(--rule-2);stroke-dasharray:4 3}
+.bx.jA{stroke:var(--a)} .bx.jB{stroke:var(--b)} .bx.jC{stroke:var(--c)}
+.bx.win{stroke-width:2}
+.bt{fill:var(--ink);font-family:var(--sans);font-size:13px;font-weight:600;text-anchor:middle}
+.bt.mut{fill:var(--ink-3);font-weight:500}
+.jAt{fill:var(--a)} .jBt{fill:var(--b)} .jCt{fill:var(--c)}
+.bs{fill:var(--ink-3);font-family:var(--sans);font-size:11px;text-anchor:middle}
+.auc{fill:var(--ink-2);font-family:var(--mono);font-size:11.5px;
+  font-variant-numeric:tabular-nums}
+.auc.winA{fill:var(--a);font-weight:600}
+.elA{fill:var(--a);font-family:var(--mono);font-size:10.5px;font-weight:500}
+.el{fill:var(--ink-3);font-family:var(--mono);font-size:10.5px}
+.el.mid{text-anchor:middle}
+.elB{fill:var(--b);font-family:var(--mono);font-size:10.5px;font-weight:500}
+.bandlab{fill:var(--ink-3);font-family:var(--mono);font-size:10.5px;letter-spacing:.09em}
+.hair{stroke:var(--rule);stroke-width:1}
+.fl{stroke:currentColor;stroke-width:1.4;fill:none}
+.flB{stroke:var(--b);stroke-width:1.8;fill:none}
+.dash{stroke:var(--ref);stroke-width:1.4;stroke-dasharray:4 3;fill:none}
+
+/* --- honesty ----------------------------------------------------------- */
+.warnbox{border-left:3px solid var(--warn);background:var(--sunk);
+  padding:20px 24px;border-radius:0 4px 4px 0;margin-top:22px}
+.warnbox h3{font-size:16px;margin-bottom:8px}
+.warnbox p{font-family:var(--serif);color:var(--ink-2);font-size:15.5px;line-height:1.65}
+.claim{border:1px solid var(--rule-2);border-radius:4px;padding:20px 24px;margin-top:20px;
+  background:var(--surface)}
+.claim .lab{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:9px}
+.claim q{font-family:var(--serif);font-size:17.5px;line-height:1.6;color:var(--ink);
+  font-style:italic;display:block}
+ul{margin:12px 0 0;padding-left:20px;font-family:var(--serif);color:var(--ink-2);
+  font-size:16px;line-height:1.62}
+li{margin-top:7px}
+li strong{color:var(--ink);font-weight:500}
+code{font-family:var(--mono);font-size:.9em;background:var(--sunk);padding:1px 5px;
+  border-radius:3px;color:var(--ink-2)}
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--rule);
+  font-family:var(--mono);font-size:11px;color:var(--ink-3);line-height:1.7}
+:focus-visible{outline:2px solid var(--a);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:620px){.find{grid-template-columns:1fr;gap:10px}}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">NetSentinel V2 · escalation-routing trial</p>
+  <h1>Can a cheap Sentry route well enough to keep the Inspector's ceiling?</h1>
+  <p class="dek">Three ways of building the always-on layer, raced against each other at equal
+  escalation budget. One of them is the architecture already in the design doc. After a bug fix, it came first.</p>
+  <div class="rail"></div>
+  <div class="meta">
+    <span><b>3</b> seeds</span>
+    <span><b>300</b> hosts × <b>24</b> days</span>
+    <span>temporal train→val→test</span>
+    <span>thresholds on validation only</span>
+    <span>CPU, <b>~2 min</b>/seed</span>
+    <span>+ shift test: <b>2</b> worlds</span>
+  </div>
+</header>
+
+<section>
+  <h2>What came out</h2>
+
+  <div class="find">
+    <span class="chip cr">Withdrawn</span>
+    <div>
+      <h3>A bug reversed this result — the earlier finding is retracted</h3>
+      <p>The edge aggregator's max-pool guarded on a clamped denominator, so a <code>-1e9</code>
+      masking sentinel leaked into the encoder on every empty window — about half of them.
+      First-epoch loss ran to 3.7&nbsp;×&nbsp;10<sup>12</sup>. It converged anyway, which is why
+      nothing downstream looked wrong. Because <code>-1e9</code> made empty windows trivially
+      separable, the Mahalanobis router harvested that artifact as free signal and appeared to
+      win. Fixed and re-run: <strong>the original design wins instead.</strong></p>
+    </div>
+  </div>
+
+  <div class="find">
+    <span class="chip ok">Corrected</span>
+    <div>
+      <h3>Distilling the whole detector beats distilling only the encoder</h3>
+      <p>Router A — the design already in the V2 document — scores 0.876 against the Inspector's
+      decision, ahead of the deferral head at 0.850 and the Mahalanobis baseline at 0.818. The
+      distillation-transfer argument predicted the opposite. At this dimensionality it does not
+      hold, and B's variance is <strong>seven times</strong> A's, which is the covariance-estimation
+      instability the hardening note flagged: 4,000 commissioning windows is too thin for a
+      32-dimensional per-host covariance.</p>
+    </div>
+  </div>
+
+  <div class="find">
+    <span class="chip cr">Target missed</span>
+    <div>
+      <h3>The design target was aspirational, not measured</h3>
+      <p>The hardening note proposed <strong>≥95% recall at ≤5% budget</strong>. The measured value
+      is <strong>37.1%</strong>. Routing genuinely works — 7.4× better than random — but that
+      headline is not supported by this run and should not appear on a slide.</p>
+    </div>
+  </div>
+
+  <div class="find">
+    <span class="chip wn">Holds, with a caveat</span>
+    <div>
+      <h3>The mechanism survives a new network. The calibration does not.</h3>
+      <p>Trained on a dev-heavy organisation and deployed cold to an OT-heavy one, detection
+      quality barely moves. But the alert threshold set at the training world's 99th percentile
+      fires on 6.3% of windows there — and <strong>6.8% in its own world's test period</strong>. So
+      it isn't a shift problem, it's a <em>temporal</em> one: the threshold decays from the day it
+      is set.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Recall vs escalation budget</h2>
+  <p class="prose">The budget is the share of host-windows handed up to the expensive Inspector.
+  Recall is the share of windows the Inspector <em>would</em> have flagged that the router
+  actually sent it. The diagonal is what you'd get by escalating at random. Drag the scrubber, or
+  hover the plot.</p>
+
+  <div class="panel">
+    <div class="chartwrap">
+      <svg id="chart" viewBox="0 0 760 392" role="img"
+           aria-label="Recall of Inspector-flagged windows against escalation budget for three routers"></svg>
+    </div>
+    <div class="scrub">
+      <label for="bslider">Escalation budget</label>
+      <input id="bslider" type="range" min="0" max="9" step="1" value="4">
+      <span class="kv" id="bval" style="font-family:var(--mono);font-size:15px;font-weight:500;min-width:52px;text-align:right"></span>
+    </div>
+    <div class="readout" id="readout"></div>
+  </div>
+</section>
+
+<section>
+  <h2>The routers</h2>
+  <div class="tblwrap">
+    <table>
+      <thead><tr>
+        <th>Router</th><th>AUC vs Inspector</th><th>Recall @5%</th><th>Recall @10%</th><th>Lift @5%</th>
+      </tr></thead>
+      <tbody id="rtable"></tbody>
+    </table>
+  </div>
+  <p class="prose" style="margin-top:16px"><strong>A</strong> is the original V2 design: the
+  Sentry is a shrunk detector. <strong>B</strong> distils only the encoder and scores each window
+  against that host's own baseline. <strong>C</strong> replaces the threshold with a learned
+  deferral rule. The Inspector itself scores <span id="oracle"></span> AUC against attack windows,
+  so it is a real oracle — agreement with it is not agreement with noise.</p>
+</section>
+
+<section>
+  <h2>Does the Sentry preserve the Inspector's geometry?</h2>
+  <p class="prose">The Mahalanobis approach only means something if the small encoder still places
+  each host's neighbours where the large one did. The honest test is neighbourhood overlap, not
+  score correlation — score correlation stays high while the local structure quietly collapses.</p>
+  <div class="panel">
+    <div class="readout" style="margin-top:0" id="geo"></div>
+    <p class="prose" style="font-size:15.5px;margin-top:16px" id="geomsg"></p>
+  </div>
+</section>
+
+<section>
+  <h2>Does it survive a network it has never seen?</h2>
+  <p class="prose">The encoder trains on <strong>world A</strong> — a dev-heavy software org — then
+  deploys <em>cold</em> to <strong>world B</strong>: OT/plant-heavy, different role mix, slower
+  human rhythms, lower data volumes, longer working day. Baselines are re-fit on B's own
+  commissioning window, but A's threshold and A's standardiser are applied unchanged, because that
+  is the mistake a real deployment makes.</p>
+
+  <div class="panel">
+    <div class="readout" style="margin-top:0" id="shift"></div>
+    <p class="prose" style="font-size:15.5px;margin-top:18px"><strong>The mechanism transfers. The
+    calibration does not.</strong> Detection quality barely moves across a genuinely different
+    organisation. But the threshold set at world A's 99th percentile fires on
+    <span id="fb"></span> of world B — and on <span id="fa"></span> of world A's <em>own</em> test
+    period. So this is not a shift problem, it is a <em>temporal</em> one: reconstruction error in
+    the test period runs systematically higher than in the commissioning period even in the same
+    world. <strong>The threshold decays from the day it is set.</strong></p>
+    <p class="prose" style="font-size:15.5px">Consequence: every deployment needs its own
+    calibration window <em>and</em> rolling re-calibration. The current design has no such knob.</p>
+  </div>
+</section>
+
+<section>
+  <h2>What it costs</h2>
+  <p class="prose">The Inspector runs during commissioning and on re-escalation only. Steady state
+  is the Sentry: a <span id="pcomp"></span>× smaller encoder plus a distance computation, both on
+  CPU. Change the deployment and the arithmetic follows.</p>
+
+  <div class="panel">
+    <div class="knobs">
+      <div class="knob"><label for="kH">Hosts <span class="kv" id="vH"></span></label>
+        <input id="kH" type="range" min="100" max="10000" step="100" value="1000"></div>
+      <div class="knob"><label for="kD">Commissioning days <span class="kv" id="vD"></span></label>
+        <input id="kD" type="range" min="3" max="60" step="1" value="14"></div>
+      <div class="knob"><label for="kR">Sample rate /host-day <span class="kv" id="vR"></span></label>
+        <input id="kR" type="range" min="1" max="120" step="1" value="30"></div>
+      <div class="knob"><label for="kE">Escalation rate /host-day <span class="kv" id="vE"></span></label>
+        <input id="kE" type="range" min="0" max="200" step="1" value="20"></div>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="k">Inspect-all</div><div class="v" id="cAll"></div>
+        <div class="s">GPU-host-days / yr</div></div>
+      <div class="ro"><div class="k">Commissioning</div><div class="v" id="cOne"></div>
+        <div class="s">GPU-host-days, one-time</div></div>
+      <div class="ro"><div class="k">Steady state</div><div class="v" id="cOng"></div>
+        <div class="s">GPU-host-days / yr</div></div>
+    </div>
+    <div style="margin-top:22px">
+      <div class="claim lab" style="font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);border:none;padding:0;background:none;margin:0 0 6px">Steady-state reduction</div>
+      <div class="bigfig" id="cRed"></div>
+    </div>
+    <p class="prose" style="font-size:15px;margin-top:16px">Detection latency is bounded, not
+    eliminated: expected time to escalation is <code>1 / (r · P(detect | inspected))</code> — not
+    <code>1/r</code>. An Inspector visit that lands on a quiet window sees nothing.</p>
+  </div>
+</section>
+
+<section>
+  <h2>How it works</h2>
+  <p class="prose">Two pictures. The first is the system: who looks at what, and when. The second
+  is what the trial actually varied — because all three routers share the same small encoder and
+  differ only in the box that makes the call.</p>
+
+  <div class="panel">
+  <figure class="fig">
+    <svg viewBox="0 0 900 424" role="img" aria-label="The Inspector runs once during commissioning and either holds a host or stores its baseline; the Sentry then runs always on CPU, judging each window against that baseline and escalating back to the Inspector when it deviates.">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto">
+          <polygon points="0,0 10,4 0,8" fill="currentColor"/>
+        </marker>
+        <marker id="arB" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto">
+          <polygon points="0,0 10,4 0,8" fill="#eb6834"/>
+        </marker>
+        <marker id="arM" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto">
+          <polygon points="0,0 10,4 0,8" fill="#8b95a1"/>
+        </marker>
+      </defs>
+
+      <text class="bandlab" x="16" y="18">PHASE 1 · COMMISSIONING — once, about 14 days, needs the GPU</text>
+      <line class="hair" x1="16" y1="26" x2="884" y2="26"/>
+
+      <rect class="bx" x="16" y="70" width="126" height="46" rx="3"/>
+      <text class="bt" x="79" y="90">All host traffic</text>
+      <text class="bs" x="79" y="105">every window</text>
+
+      <line class="fl" x1="142" y1="93" x2="190" y2="93" marker-end="url(#ar)"/>
+
+      <rect class="bx hero" x="196" y="62" width="168" height="62" rx="3"/>
+      <text class="bt" x="280" y="86">INSPECTOR</text>
+      <text class="bs" x="280" y="103">big model · GPU · slow</text>
+      <text class="bs" x="280" y="116">learns what normal looks like</text>
+
+      <polyline class="fl" points="364,93 420,93 420,58 474,58" fill="none" marker-end="url(#ar)"/>
+      <text class="el mid" x="447" y="50">looks bad</text>
+      <polyline class="fl" points="364,93 420,93 420,140 474,140" fill="none" marker-end="url(#ar)"/>
+      <text class="el mid" x="447" y="156">looks fine</text>
+
+      <rect class="bx" x="480" y="36" width="232" height="44" rx="3"/>
+      <text class="bt" x="596" y="55">HELD on the Inspector</text>
+      <text class="bs" x="596" y="70">never handed down — stays watched</text>
+
+      <rect class="bx" x="480" y="118" width="232" height="44" rx="3"/>
+      <text class="bt" x="596" y="137">Baseline stored for this host</text>
+      <text class="bs" x="596" y="152">a compact picture of its normal</text>
+
+      <text class="el" x="604" y="180" text-anchor="start">handed to the Sentry as its yardstick</text>
+      <polyline class="dash" points="596,162 596,290 551,290 551,300" fill="none" marker-end="url(#arM)"/>
+
+      <polyline class="dash" points="240,124 240,300" fill="none" marker-end="url(#arM)"/>
+      <text class="el" x="226" y="186" text-anchor="end">shrink the</text>
+      <text class="el" x="226" y="199" text-anchor="end">"eyes" only</text>
+
+      <polyline class="flB" points="670,337 800,337 800,222 324,222 324,130" fill="none" marker-end="url(#arB)"/>
+      <text class="elB" x="336" y="212" text-anchor="start">re-inspect properly</text>
+      <text class="elB" x="788" y="290" text-anchor="end">too far → send it back up</text>
+
+      <text class="bandlab" x="16" y="252">PHASE 2 · STEADY STATE — always on, CPU only, no GPU</text>
+      <line class="hair" x1="16" y1="260" x2="884" y2="260"/>
+
+      <rect class="bx" x="16" y="314" width="126" height="46" rx="3"/>
+      <text class="bt" x="79" y="334">Live traffic</text>
+      <text class="bs" x="79" y="349">every window</text>
+
+      <line class="fl" x1="142" y1="337" x2="190" y2="337" marker-end="url(#ar)"/>
+
+      <rect class="bx hero" x="196" y="306" width="168" height="62" rx="3"/>
+      <text class="bt" x="280" y="330">SENTRY</text>
+      <text class="bs" x="280" y="347">small model · CPU · cheap</text>
+      <text class="bs" x="280" y="360">13.7× smaller than above</text>
+
+      <line class="fl" x1="364" y1="337" x2="426" y2="337" marker-end="url(#ar)"/>
+
+      <rect class="bx" x="432" y="306" width="238" height="62" rx="3"/>
+      <text class="bt" x="551" y="330">How far from its own normal?</text>
+      <text class="bs" x="551" y="347">plain arithmetic, no neural net</text>
+      <text class="bs" x="551" y="360">this host only, not the crowd</text>
+
+      <polyline class="fl" points="551,368 551,396 280,396 280,372" fill="none" marker-end="url(#ar)"/>
+      <text class="el mid" x="416" y="412">close enough → keep watching, cost stays near zero</text>
+    </svg>
+    <figcaption>The GPU is spent once per host during commissioning, and again only when the
+    Sentry sends something back up. Everything in Phase 2 runs on CPU.</figcaption>
+  </figure>
+  </div>
+
+  <div class="panel">
+  <figure class="fig">
+    <svg viewBox="0 0 900 322" role="img" aria-label="All three routers share the same distilled encoder and differ only in the judge that reads its output: predicting the Inspector's score, measuring distance from the host's own baseline, or predicting whether the Inspector would flag it.">
+      <defs>
+        <marker id="ar2" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto">
+          <polygon points="0,0 10,4 0,8" fill="currentColor"/>
+        </marker>
+      </defs>
+
+      <rect class="bx ghost" x="180" y="14" width="196" height="42" rx="3"/>
+      <text class="bt mut" x="278" y="32">Inspector's encoder</text>
+      <text class="bs" x="278" y="47">205,546 parameters</text>
+      <polyline class="dash" points="278,56 278,104" fill="none" marker-end="url(#arM)"/>
+      <text class="el" x="268" y="88" text-anchor="end">copy the eyes, not the verdict</text>
+
+      <rect class="bx" x="16" y="140" width="126" height="46" rx="3"/>
+      <text class="bt" x="79" y="160">One window</text>
+      <text class="bs" x="79" y="175">of one host</text>
+      <line class="fl" x1="142" y1="163" x2="174" y2="163" marker-end="url(#ar2)"/>
+
+      <rect class="bx hero" x="180" y="132" width="196" height="62" rx="3"/>
+      <text class="bt" x="278" y="156">The "eyes" — shared</text>
+      <text class="bs" x="278" y="173">distilled encoder, 14,992 params</text>
+      <text class="bs" x="278" y="186">identical in all three routers</text>
+
+      <line class="fl" x1="376" y1="163" x2="412" y2="163" marker-end="url(#ar2)"/>
+      <text class="el mid" x="400" y="122">32 numbers</text>
+
+      <line class="hair" x1="418" y1="70" x2="418" y2="262"/>
+      <polyline class="fl" points="418,163 418,74 452,74" fill="none" marker-end="url(#ar2)"/>
+      <polyline class="fl" points="418,163 452,163" fill="none" marker-end="url(#ar2)"/>
+      <polyline class="fl" points="418,163 418,252 452,252" fill="none" marker-end="url(#ar2)"/>
+
+      <text class="el" x="762" y="34" text-anchor="start">how often it agrees</text>
+      <text class="el" x="762" y="47" text-anchor="start">with the Inspector</text>
+
+      <rect class="bx jA win" x="458" y="50" width="278" height="48" rx="3"/>
+      <text class="bt jAt" x="597" y="69">A · guess the big model's score</text>
+      <text class="bs" x="597" y="84">a second small net — the original design</text>
+      <text class="auc winA" x="762" y="74" text-anchor="start">0.876</text>
+      <text class="elA" x="762" y="90" text-anchor="start">the winner</text>
+
+      <rect class="bx jB" x="458" y="139" width="278" height="48" rx="3"/>
+      <text class="bt jBt" x="597" y="158">B · distance from its own normal</text>
+      <text class="bs" x="597" y="173">plain arithmetic — no extra model</text>
+      <text class="auc" x="762" y="168" text-anchor="start">0.818</text>
+      <text class="el" x="762" y="184" text-anchor="start">±0.046 — unstable</text>
+
+      <rect class="bx jC" x="458" y="228" width="278" height="48" rx="3"/>
+      <text class="bt jCt" x="597" y="247">C · guess if it would be flagged</text>
+      <text class="bs" x="597" y="262">a second small net, trained on the verdict</text>
+      <text class="auc" x="762" y="257" text-anchor="start">0.850</text>
+    </svg>
+    <figcaption>Same eyes, three judges. Only the judge changed between runs — which is why the
+    comparison is fair. A — regressing the Inspector's own score — wins; the plain-arithmetic baseline is both weaker and markedly less stable across seeds.</figcaption>
+  </figure>
+  </div>
+
+  <p class="prose" style="margin-top:22px"><strong>The words, plainly:</strong></p>
+  <ul>
+    <li><strong>Inspector / teacher</strong> — the big model. Sees each host in the context of
+      every other host. Accurate, needs a GPU, too expensive to leave running.</li>
+    <li><strong>Sentry / student</strong> — the small model that runs all the time. Its job is
+      <em>not</em> to catch attacks. Its job is to decide what deserves the Inspector's time.</li>
+    <li><strong>Encoder, "the eyes"</strong> — the part that turns an hour of a host's traffic into
+      32 numbers. Compressing this survives; compressing the judgement does not.</li>
+    <li><strong>Baseline</strong> — what this host's 32 numbers usually look like, stored once during
+      commissioning. Three clusters per host, so a night shift isn't mistaken for an intruder.</li>
+    <li><strong>Escalation budget</strong> — the share of windows you're willing to send back up.
+      Set it by what you can afford; the chart tells you what that buys.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Before quoting any of this</h2>
+
+  <div class="warnbox">
+    <h3>The attack numbers come from a stand-in, not a dataset</h3>
+    <p>A detector evaluated on the generator that produced its attacks learns the generator. The
+    benign side is synthetic too, and unrealistic <em>benign</em> data is the more damaging error —
+    it makes every false-positive figure meaningless. Replace it with real consented capture before
+    any external claim.</p>
+  </div>
+
+  <p class="prose" style="margin-top:22px">What the comparison above does <em>not</em> depend on is
+  whether the attacks are realistic: the Inspector is the reference oracle, so router-versus-teacher
+  agreement is measured against a fixed target either way. That is the part you can defend.
+  The generator does carry the hard negatives that matter — DevOps hosts producing the same
+  Recon → Repo → Messaging → Cloud category sequence as the attack, with human timing.</p>
+
+  <div class="claim">
+    <div class="lab">The claim this run supports</div>
+    <q>At a 5% escalation budget the Sentry recovers 37% of everything the Inspector would have
+    flagged — 7.4× better than random routing — while being 13.7× smaller and running on CPU. Detection quality holds on a different organisation; the alert threshold does not, and must be recalibrated per deployment and over time.</q>
+  </div>
+
+  <p class="prose" style="margin-top:24px"><strong>Still not built:</strong></p>
+  <ul>
+    <li>No live escalation loop — <strong>B is a scorer, not yet the architecture.</strong> No
+      retention rule, no random-sampling scheduler, no re-baselining, no round-trip to the Inspector.</li>
+    <li>The Inspector is a <strong>reimplementation of GraphIDS</strong> (arXiv:2509.16625). Cite it;
+      it is not the contribution.</li>
+    <li>Hop-2 context uses the full same-category population, not a sampled fanout. Fine at this
+      scale; must become neighbour sampling on real graphs.</li>
+    <li>Mahalanobis wins here <em>despite</em> the documented near-OOD weakness in high dimensions.
+      That makes the threshold empirical, not the objection wrong.</li>
+  </ul>
+</section>
+
+<footer>
+  netsentinel-main\v2\ · <code>python run_experiment.py --seeds 3 --hosts 300 --days 24</code><br>
+  Figures read live from results.json. Attack-recall rows are indicative only.
+</footer>
+
+</div>
+
+<script>
+const DATA = {"budgets":[0.005,0.01,0.02,0.03,0.05,0.075,0.1,0.15,0.2,0.3],"agg":{"A_distilled_detector":[{"budget":0.005,"recall_teacher_mean":0.06123044768726809,"recall_teacher_std":0.003343045689473395,"recall_attack_mean":0.021143596231234,"recall_attack_std":0.0033422126006280727},{"budget":0.01,"recall_teacher_mean":0.1116638375526373,"recall_teacher_std":0.01069144245354731,"recall_attack_mean":0.03563845935453052,"recall_attack_std":0.005741776989196657},{"budget":0.02,"recall_teacher_mean":0.20241266030674235,"recall_teacher_std":0.017613786562750318,"recall_attack_mean":0.0682970843869891,"recall_attack_std":0.01131806730564633},{"budget":0.03,"recall_teacher_mean":0.26979351648052524,"recall_teacher_std":0.01276163991895551,"recall_attack_mean":0.10186494902838096,"recall_attack_std":0.010471342421411992},{"budget":0.05,"recall_teacher_mean":0.3709682085677279,"recall_teacher_std":0.008556467946887405,"recall_attack_mean":0.17270389669686514,"recall_attack_std":0.006668184390080744},{"budget":0.075,"recall_teacher_mean":0.45364885093251545,"recall_teacher_std":0.008973895996831576,"recall_attack_mean":0.2391036922116032,"recall_attack_std":0.012900348521433028},{"budget":0.1,"recall_teacher_mean":0.5200399232294156,"recall_teacher_std":0.01207534442735558,"recall_attack_mean":0.3014622926118859,"recall_attack_std":0.0025618681534916006},{"budget":0.15,"recall_teacher_mean":0.637145580256198,"recall_teacher_std":0.030441367554160173,"recall_attack_mean":0.4214349715008492,"recall_attack_std":0.018857984984940217},{"budget":0.2,"recall_teacher_mean":0.7228483791721935,"recall_teacher_std":0.031236586796100252,"recall_attack_mean":0.509842945248409,"recall_attack_std":0.02054100270482527},{"budget":0.3,"recall_teacher_mean":0.8510166693278189,"recall_teacher_std":0.0327004061145162,"recall_attack_mean":0.6625594964419972,"recall_attack_std":0.026534387972338667}],"B_encoder_mahalanobis":[{"budget":0.005,"recall_teacher_mean":0.06304431860367696,"recall_teacher_std":0.006492807662047261,"recall_attack_mean":0.06516575720445188,"recall_attack_std":0.005823162051972456},{"budget":0.01,"recall_teacher_mean":0.11423471193619428,"recall_teacher_std":0.020229369729035745,"recall_attack_mean":0.12065551158555297,"recall_attack_std":0.021365691570305215},{"budget":0.02,"recall_teacher_mean":0.18487022778959714,"recall_teacher_std":0.035288364834578104,"recall_attack_mean":0.1919781961440242,"recall_attack_std":0.040202588649063876},{"budget":0.03,"recall_teacher_mean":0.23920913670966296,"recall_teacher_std":0.05118086245948653,"recall_attack_mean":0.24381901326128677,"recall_attack_std":0.05785477081753162},{"budget":0.05,"recall_teacher_mean":0.3284914226241987,"recall_teacher_std":0.06918643613093742,"recall_attack_mean":0.32876506140460504,"recall_attack_std":0.08195138465044105},{"budget":0.075,"recall_teacher_mean":0.42324541947397504,"recall_teacher_std":0.07851029043265408,"recall_attack_mean":0.4155632944043082,"recall_attack_std":0.0928093905536607},{"budget":0.1,"recall_teacher_mean":0.48936024687908136,"recall_teacher_std":0.08503650427118623,"recall_attack_mean":0.4753903934667201,"recall_attack_std":0.09814477600955028},{"budget":0.15,"recall_teacher_mean":0.59216436662304,"recall_teacher_std":0.07935146121577405,"recall_attack_mean":0.5610564291391317,"recall_attack_std":0.09691559920963969},{"budget":0.2,"recall_teacher_mean":0.6576395906043979,"recall_teacher_std":0.08175480260806578,"recall_attack_mean":0.6188735181858118,"recall_attack_std":0.09623561146845366},{"budget":0.3,"recall_teacher_mean":0.7511976213951314,"recall_teacher_std":0.07135368487421785,"recall_attack_mean":0.7083754357605404,"recall_attack_std":0.08836024470931021}],"C_deferral_head":[{"budget":0.005,"recall_teacher_mean":0.056176919881606106,"recall_teacher_std":0.005691149011397008,"recall_attack_mean":0.019121007787748636,"recall_attack_std":0.005622506519709025},{"budget":0.01,"recall_teacher_mean":0.10724036941485848,"recall_teacher_std":0.011742080826834513,"recall_attack_mean":0.039867165196553644,"recall_attack_std":0.012466291653028358},{"budget":0.02,"recall_teacher_mean":0.1947714069631786,"recall_teacher_std":0.02368575321440608,"recall_attack_mean":0.07844599181206827,"recall_attack_std":0.02520428889688424},{"budget":0.03,"recall_teacher_mean":0.26925135679590767,"recall_teacher_std":0.03799228551281872,"recall_attack_mean":0.12203981483367116,"recall_attack_std":0.043504016558908086},{"budget":0.05,"recall_teacher_mean":0.38255770427173125,"recall_teacher_std":0.0696006200212292,"recall_attack_mean":0.20058992155953623,"recall_attack_std":0.07032304721823239},{"budget":0.075,"recall_teacher_mean":0.4672152192826436,"recall_teacher_std":0.08111881692993281,"recall_attack_mean":0.26960010466209333,"recall_attack_std":0.08642487152835389},{"budget":0.1,"recall_teacher_mean":0.5232507234848323,"recall_teacher_std":0.07714707418358382,"recall_attack_mean":0.3207290222630847,"recall_attack_std":0.08657838408556172},{"budget":0.15,"recall_teacher_mean":0.613237329014332,"recall_teacher_std":0.07058794385070517,"recall_attack_mean":0.4076822499766886,"recall_attack_std":0.08267756776931187},{"budget":0.2,"recall_teacher_mean":0.6842789773510329,"recall_teacher_std":0.06945347115553745,"recall_attack_mean":0.4854787018327242,"recall_attack_std":0.07941555338281069},{"budget":0.3,"recall_teacher_mean":0.7887425354772191,"recall_teacher_std":0.07461377724236522,"recall_attack_mean":0.6096429748162117,"recall_attack_std":0.084843718346675}]},"geo":{"knn_overlap@20":0.3459222222222222,"trustworthiness":0.9873183395712828,"spearman_score":0.8382731120304451,"n":32234.0},"verdict":["MARGINAL","Partial geometry preservation (overlap 0.35). The Mahalanobis router depends on this geometry and came LAST in the measured comparison, with ~7x the seed variance of the learned heads -- consistent with only partial preservation. Report the overlap alongside any recall claim, and re-check it whenever student capacity or the distillation loss changes."],"router_auc":{"A_distilled_detector":0.8757500910505737,"B_encoder_mahalanobis":0.8177841014092607,"C_deferral_head":0.8495514387645638},"oracle_auc":0.8752448118652335,"params":{"inspector":205546,"sentry":14992,"deferral_head":2369,"compression":13.71037886872999},"cost":{"one_time":14000,"ongoing_per_year":19466.666666666664,"inspect_all_per_year":365000,"steady_state_reduction":0.9466666666666667},"nseeds":3,"shift":{"A":{"oracle_auc":0.8809334420757136,"router_auc":0.8036697486195786,"recall_at_5":0.3262785373264289,"recall_attack_at_5":0.3143206994268455,"knn":0.3483388888888889,"flag_rate":0.06819029069831119},"B":{"oracle_auc":0.8518123986187415,"router_auc":0.8254324776762388,"recall_at_5":0.360464798817993,"recall_attack_at_5":0.37192403784562883,"knn":0.33193333333333336,"flag_rate":0.06256865738118615},"thr_ratio":1.133942587358822}} ;
+
+const R = [
+  {k:"A_distilled_detector",  n:"A · distilled detector", sub:"original V2 design", v:"--a"},
+  {k:"B_encoder_mahalanobis", n:"B · encoder + Mahalanobis", sub:"hardening B1", v:"--b"},
+  {k:"C_deferral_head",       n:"C · deferral head", sub:"hardening G5", v:"--c"}
+];
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const B = DATA.budgets.map(b=>b*100);
+const pct = x => (x*100);
+
+/* ---------- chart ---------- */
+const W=760,H=392,L=56,Rm=150,T=20,Bm=46;
+const px = b => L + (b/30)*(W-L-Rm);
+const py = r => T + (1-r/100)*(H-T-Bm);
+
+function drawChart(){
+  const s=[];
+  s.push(`<rect x="0" y="0" width="${W}" height="${H}" fill="none"/>`);
+  for(let g=0;g<=100;g+=20){
+    s.push(`<line class="gl" x1="${L}" y1="${py(g)}" x2="${W-Rm}" y2="${py(g)}"/>`);
+    s.push(`<text class="tk" x="${L-10}" y="${py(g)+4}" text-anchor="end">${g}</text>`);
+  }
+  [0,5,10,15,20,25,30].forEach(t=>{
+    s.push(`<line class="gl" x1="${px(t)}" y1="${T}" x2="${px(t)}" y2="${py(0)}"/>`);
+    s.push(`<text class="tk" x="${px(t)}" y="${py(0)+20}" text-anchor="middle">${t}%</text>`);
+  });
+  s.push(`<line class="ax" x1="${L}" y1="${py(0)}" x2="${W-Rm}" y2="${py(0)}"/>`);
+  s.push(`<line class="ax" x1="${L}" y1="${T}" x2="${L}" y2="${py(0)}"/>`);
+
+  // random-routing reference
+  s.push(`<line x1="${px(0)}" y1="${py(0)}" x2="${px(30)}" y2="${py(30)}"
+    stroke="${css('--ref')}" stroke-width="1.4" stroke-dasharray="5 4"/>`);
+  s.push(`<text class="slab" x="${px(30)+9}" y="${py(30)+4}" fill="${css('--ref')}">random routing</text>`);
+
+  // ends for label de-collision
+  const ends=[];
+  R.forEach(r=>{
+    const rows=DATA.agg[r.k], col=css(r.v);
+    const m=rows.map(x=>pct(x.recall_teacher_mean)), sd=rows.map(x=>pct(x.recall_teacher_std));
+    const up=B.map((b,i)=>`${px(b)},${py(Math.min(100,m[i]+sd[i]))}`).join(" ");
+    const dn=B.map((b,i)=>`${px(b)},${py(Math.max(0,m[i]-sd[i]))}`).reverse().join(" ");
+    s.push(`<polygon points="${up} ${dn}" fill="${col}" fill-opacity="0.13" stroke="none"/>`);
+    s.push(`<polyline points="${B.map((b,i)=>`${px(b)},${py(m[i])}`).join(" ")}"
+      fill="none" stroke="${col}" stroke-width="2.2" stroke-linejoin="round"/>`);
+    B.forEach((b,i)=>s.push(`<circle cx="${px(b)}" cy="${py(m[i])}" r="3.4" fill="${col}"
+      stroke="${css('--surface')}" stroke-width="1.5"/>`));
+    ends.push({y:py(m[m.length-1]),col,r});
+  });
+  ends.sort((a,b)=>a.y-b.y);
+  const placed=[];
+  ends.forEach(e=>{
+    let ly=e.y; while(placed.some(p=>Math.abs(ly-p)<30)) ly+=8;
+    placed.push(ly);
+    s.push(`<text class="slab" x="${px(30)+9}" y="${ly-3}" fill="${e.col}">${e.r.n}</text>`);
+    s.push(`<text class="slab" x="${px(30)+9}" y="${ly+11}" fill="${css('--ink-3')}"
+      font-size="10.5">${e.r.sub}</text>`);
+  });
+
+  s.push(`<line id="cross" class="cross" x1="0" y1="${T}" x2="0" y2="${py(0)}" opacity="0"/>`);
+  s.push(`<text class="axlab" x="${(L+W-Rm)/2}" y="${H-8}" text-anchor="middle"
+    fill="${css('--ink-2')}">Escalation budget — % of host-windows sent to the Inspector</text>`);
+  s.push(`<text class="axlab" transform="translate(15,${(T+py(0))/2}) rotate(-90)"
+    text-anchor="middle" fill="${css('--ink-2')}">Recall of flagged windows (%)</text>`);
+  document.getElementById("chart").innerHTML = s.join("");
+}
+
+/* ---------- readout ---------- */
+function setIdx(i){
+  const b=DATA.budgets[i];
+  document.getElementById("bval").textContent=(b*100).toFixed(1)+"%";
+  document.getElementById("readout").innerHTML = R.map(r=>{
+    const row=DATA.agg[r.k][i], m=pct(row.recall_teacher_mean), sd=pct(row.recall_teacher_std);
+    return `<div class="ro"><div class="k"><span class="dot" style="background:var(${r.v})"></span>${r.n.split(" · ")[1]}</div>
+      <div class="v" style="color:var(${r.v})">${m.toFixed(1)}%</div>
+      <div class="s">±${sd.toFixed(1)} · ${(row.recall_teacher_mean/b).toFixed(1)}× random</div></div>`;
+  }).join("");
+  const c=document.getElementById("cross");
+  if(c){c.setAttribute("x1",px(b*100));c.setAttribute("x2",px(b*100));c.setAttribute("opacity","1");}
+  document.getElementById("bslider").value=i;
+}
+document.getElementById("bslider").addEventListener("input",e=>setIdx(+e.target.value));
+
+const svg=document.getElementById("chart");
+svg.addEventListener("pointermove",e=>{
+  const r=svg.getBoundingClientRect();
+  const bx=((e.clientX-r.left)/r.width*W-L)/(W-L-Rm)*30;
+  let best=0,bd=1e9;
+  DATA.budgets.forEach((b,i)=>{const d=Math.abs(b*100-bx); if(d<bd){bd=d;best=i;}});
+  setIdx(best);
+});
+
+/* ---------- tables & panels ---------- */
+const i5=DATA.budgets.indexOf(0.05), i10=DATA.budgets.indexOf(0.1);
+document.getElementById("rtable").innerHTML = R.map(r=>{
+  const a=DATA.router_auc[r.k], m5=DATA.agg[r.k][i5], m10=DATA.agg[r.k][i10];
+  const win=r.k==="A_distilled_detector"?" class=\"win\"":"";
+  return `<tr><td><span class="swatch" style="background:var(${r.v})"></span>${r.n}</td>
+    <td${win}>${a.toFixed(3)}</td><td${win}>${pct(m5.recall_teacher_mean).toFixed(1)}%</td>
+    <td${win}>${pct(m10.recall_teacher_mean).toFixed(1)}%</td>
+    <td${win}>${(m5.recall_teacher_mean/0.05).toFixed(1)}×</td></tr>`;
+}).join("");
+document.getElementById("oracle").textContent=DATA.oracle_auc.toFixed(3);
+document.getElementById("pcomp").textContent=DATA.params.compression.toFixed(1);
+
+const g=DATA.geo;
+document.getElementById("geo").innerHTML=`
+  <div class="ro"><div class="k">kNN overlap @20</div>
+    <div class="v" style="color:var(--warn)">${g["knn_overlap@20"].toFixed(2)}</div>
+    <div class="s">the real test</div></div>
+  <div class="ro"><div class="k">Trustworthiness</div>
+    <div class="v">${g.trustworthiness.toFixed(3)}</div><div class="s">manifold measure</div></div>
+  <div class="ro"><div class="k">Score correlation</div>
+    <div class="v" style="color:var(--ink-3)">${g.spearman_score.toFixed(2)}</div>
+    <div class="s">the weak test</div></div>
+  <div class="ro"><div class="k">Verdict</div>
+    <div class="v" style="color:var(--warn);font-size:19px">${DATA.verdict[0]}</div>
+    <div class="s">${(g.n/1000).toFixed(1)}k windows</div></div>`;
+document.getElementById("geomsg").textContent=DATA.verdict[1];
+
+/* ---------- shift ---------- */
+const S = DATA.shift;
+const pcts = (x) => (x*100).toFixed(2) + '%';
+document.getElementById('shift').innerHTML = [
+  ['Inspector AUC vs attack','oracle_auc',''],
+  ['Router AUC','router_auc',''],
+  ['Recall @5% budget','recall_at_5','%'],
+  ['kNN geometry overlap','knn',''],
+  ['Flag rate · target 1.0%','flag_rate','%'],
+].map(([label,k,unit])=>{
+  const a=S.A[k], b=S.B[k];
+  const fmt=(v)=> unit==='%' ? (v*100).toFixed(1)+'%' : v.toFixed(3);
+  const d=((b-a)/a*100);
+  const bad=(k==='flag_rate');
+  return `<div class="ro"><div class="k">${label}</div>
+    <div class="v" style="color:${bad?'var(--warn)':'var(--ink)'}">${fmt(b)}</div>
+    <div class="s">world A ${fmt(a)} · ${d>=0?'+':''}${d.toFixed(1)}%</div></div>`;
+}).join('');
+document.getElementById('fb').textContent = pcts(S.B.flag_rate);
+document.getElementById('fa').textContent = pcts(S.A.flag_rate);
+
+/* ---------- cost ---------- */
+const fmt=n=>Math.round(n).toLocaleString("en-US");
+function cost(){
+  const Hn=+kH.value, D=+kD.value, r=1/+kR.value, e=(+kE.value)/1000;
+  vH.textContent=fmt(Hn); vD.textContent=D+"d";
+  vR.textContent="1/"+kR.value; vE.textContent=e.toFixed(3);
+  const all=Hn*365, one=Hn*D, ong=Hn*(r+e)*365;
+  cAll.textContent=fmt(all); cOne.textContent=fmt(one); cOng.textContent=fmt(ong);
+  cRed.textContent=((1-ong/all)*100).toFixed(1)+"%";
+}
+["kH","kD","kR","kE"].forEach(id=>document.getElementById(id).addEventListener("input",cost));
+
+drawChart(); setIdx(i5); cost();
+matchMedia("(prefers-color-scheme:dark)").addEventListener("change",()=>{drawChart();setIdx(+bslider.value);});
+</script>
