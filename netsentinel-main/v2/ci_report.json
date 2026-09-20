@@ -1,0 +1,108 @@
+{
+  "n_seeds": 3,
+  "sd_convention": "population (np.std, ddof=0)",
+  "pop_over_sample": 0.816496580927726,
+  "ci95_multiplier_on_sample_sd": 2.4841377117503303,
+  "rows": [
+    {
+      "label": "within-host AUC, LANL",
+      "source": "lanl_novelty.json",
+      "n": 3,
+      "mean": 0.5569470006316343,
+      "sd_population": 0.013092853476784497,
+      "sd_sample": 0.01603540514757335,
+      "ci95_lo": 0.517112845981352,
+      "ci95_hi": 0.5967811552819166
+    },
+    {
+      "label": "pooled AUC, LANL",
+      "source": "lanl_novelty.json",
+      "n": 3,
+      "mean": 0.7454144849466409,
+      "sd_population": 0.002149049532387892,
+      "sd_sample": 0.0026320373931585637,
+      "ci95_lo": 0.7388761415995586,
+      "ci95_hi": 0.7519528282937231
+    },
+    {
+      "label": "router A agreement",
+      "source": "lanl_novelty.json",
+      "n": 3,
+      "mean": 0.9920901373337822,
+      "sd_population": 0.0033322297431030434,
+      "sd_sample": 0.004081131288163965,
+      "ci95_lo": 0.9819520451942498,
+      "ci95_hi": 1.0022282294733145
+    },
+    {
+      "label": "router B agreement",
+      "source": "lanl_novelty.json",
+      "n": 3,
+      "mean": 0.6340520717298191,
+      "sd_population": 0.006998459008789094,
+      "sd_sample": 0.008571326778658706,
+      "ci95_lo": 0.6127597156392176,
+      "ci95_hi": 0.6553444278204207
+    },
+    {
+      "label": "pooled AUC, host-normalised",
+      "source": "lanl_novelty_hn.json",
+      "n": 3,
+      "mean": 0.6181539534263419,
+      "sd_population": 0.021024681050658398,
+      "sd_sample": 0.0257498702894378,
+      "ci95_lo": 0.5541877295676702,
+      "ci95_hi": 0.6821201772850137
+    },
+    {
+      "label": "within-host, synthetic Inspector",
+      "source": "paired_synth.json",
+      "n": 3,
+      "mean": 0.7613888815695168,
+      "sd_population": 0.009555438917261337,
+      "sd_sample": 0.011702974807811422,
+      "ci95_lo": 0.7323170805097684,
+      "ci95_hi": 0.7904606826292652
+    },
+    {
+      "label": "within-host, synthetic bag",
+      "source": "paired_synth.json",
+      "n": 3,
+      "mean": 0.7358852350647328,
+      "sd_population": 0.00884578297153215,
+      "sd_sample": 0.010833827327827051,
+      "ci95_lo": 0.7089725160370863,
+      "ci95_hi": 0.7627979540923793
+    },
+    {
+      "label": "router A, synthetic",
+      "source": "results_8seed.json",
+      "n": 8,
+      "mean": 0.8334688444416758,
+      "sd_population": 0.044143414648635936,
+      "sd_sample": 0.047191295284998186,
+      "ci95_lo": 0.7940159342646118,
+      "ci95_hi": 0.8729217546187398
+    },
+    {
+      "label": "router B, synthetic",
+      "source": "results_8seed.json",
+      "n": 8,
+      "mean": 0.8040511677707318,
+      "sd_population": 0.028824510921331845,
+      "sd_sample": 0.030814698345413553,
+      "ci95_lo": 0.7782894352602576,
+      "ci95_hi": 0.829812900281206
+    },
+    {
+      "label": "router C, synthetic",
+      "source": "results_8seed.json",
+      "n": 8,
+      "mean": 0.8385581777023358,
+      "sd_population": 0.038627817013405584,
+      "sd_sample": 0.041294873389474615,
+      "ci95_lo": 0.804034799592685,
+      "ci95_hi": 0.8730815558119865
+    }
+  ]
+}

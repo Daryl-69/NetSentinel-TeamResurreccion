@@ -1,0 +1,33 @@
+{
+  "dataset": "lanl_cyber1",
+  "hosts": 612,
+  "days": 13,
+  "commissioning_days": 6,
+  "test_days": 5,
+  "live_test_windows": 39492,
+  "attack_windows": 131,
+  "attacked_hosts": 80,
+  "hosts_fellback": 32,
+  "bag_pooled_auc": 0.6267749434622677,
+  "bag_within_host_auc_mean": 0.5779462057524685,
+  "bag_within_host_auc_std": 0.27270747170899384,
+  "bag_within_host_n_hosts": 77,
+  "bag_within_host_n_positives": 106,
+  "paired": {
+    "hosts_compared": 77,
+    "a": "Inspector",
+    "b": "bag-Mahalanobis",
+    "mean_a": 0.5414310323071065,
+    "mean_b": 0.5779462057524685,
+    "mean_diff": -0.03651517344536193,
+    "median_diff": -0.012605042016806678,
+    "a_wins": 35,
+    "b_wins": 40,
+    "ties": 2,
+    "sign_test_p": 0.644463913894226
+  },
+  "inspector_pooled_auc": 0.7435643178400909,
+  "inspector_within_host_auc_mean": 0.5414310323071065,
+  "inspector_within_host_auc_std": 0.3099901607650418,
+  "verdict": "the Inspector does NOT separate itself from a ~0-parameter order-free baseline"
+}

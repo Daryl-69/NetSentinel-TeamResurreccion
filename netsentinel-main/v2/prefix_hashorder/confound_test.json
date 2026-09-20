@@ -1,0 +1,243 @@
+{
+  "config": {
+    "seeds": 3,
+    "hosts": 200,
+    "days": 16,
+    "epochs": 8,
+    "out": "confound_test.json"
+  },
+  "runs": [
+    {
+      "density_attacked": 0.6458333333333334,
+      "density_other": 0.49926403985507245,
+      "pooled_raw": 0.7828407726245288,
+      "pooled_z": 0.7900518895751315,
+      "pooled_bag": 0.7619516907785254,
+      "n_fellback_hosts": 0,
+      "mean_busyness_all": 0.5272040036314307,
+      "n_hosts_live": 200,
+      "within_raw": 0.8083546234560105,
+      "within_raw_hostspread": 0.08846900905213637,
+      "within_raw_nhosts": 15,
+      "within_raw_npos": 1212,
+      "b5_raw_recall_attack": 0.5359032501889645,
+      "b5_raw_precision": 0.7168857431749242,
+      "b5_raw_hosts_touched": 133,
+      "b5_raw_mean_busyness_of_selected": 0.6225327561509942,
+      "within_z": 0.8083546234560105,
+      "within_z_hostspread": 0.08846900905213637,
+      "within_z_nhosts": 15,
+      "within_z_npos": 1212,
+      "b5_z_recall_attack": 0.43386243386243384,
+      "b5_z_precision": 0.5803842264914054,
+      "b5_z_hosts_touched": 96,
+      "b5_z_mean_busyness_of_selected": 0.6225064248399057,
+      "within_bag": 0.8139704316344168,
+      "within_bag_hostspread": 0.1323731266867658,
+      "within_bag_nhosts": 15,
+      "within_bag_npos": 1212,
+      "b5_bag_recall_attack": 0.5185185185185185,
+      "b5_bag_precision": 0.6936299292214358,
+      "b5_bag_hosts_touched": 106,
+      "b5_bag_mean_busyness_of_selected": 0.6169610507246378
+    },
+    {
+      "density_attacked": 0.7560221354166666,
+      "density_other": 0.5013020833333334,
+      "pooled_raw": 0.7083263282475654,
+      "pooled_z": 0.7004914427386871,
+      "pooled_bag": 0.5895199221610016,
+      "n_fellback_hosts": 0,
+      "mean_busyness_all": 0.5436686995682039,
+      "n_hosts_live": 200,
+      "within_raw": 0.7518004553455652,
+      "within_raw_hostspread": 0.09921909082220973,
+      "within_raw_nhosts": 12,
+      "within_raw_npos": 761,
+      "b5_raw_recall_attack": 0.31223628691983124,
+      "b5_raw_precision": 0.444,
+      "b5_raw_hosts_touched": 157,
+      "b5_raw_mean_busyness_of_selected": 0.6311640625,
+      "within_z": 0.7518004553455652,
+      "within_z_hostspread": 0.09921909082220973,
+      "within_z_nhosts": 12,
+      "within_z_npos": 761,
+      "b5_z_recall_attack": 0.3178621659634318,
+      "b5_z_precision": 0.452,
+      "b5_z_hosts_touched": 131,
+      "b5_z_mean_busyness_of_selected": 0.6411875,
+      "within_bag": 0.7016571538216662,
+      "within_bag_hostspread": 0.1601249767070239,
+      "within_bag_nhosts": 12,
+      "within_bag_npos": 761,
+      "b5_bag_recall_attack": 0.279887482419128,
+      "b5_bag_precision": 0.398,
+      "b5_bag_hosts_touched": 133,
+      "b5_bag_mean_busyness_of_selected": 0.6126848958333333
+    },
+    {
+      "density_attacked": 0.7255859375,
+      "density_other": 0.5043874547101449,
+      "pooled_raw": 0.7260710505119256,
+      "pooled_z": 0.7333502350565111,
+      "pooled_bag": 0.658678407806373,
+      "n_fellback_hosts": 0,
+      "mean_busyness_all": 0.5389793345520569,
+      "n_hosts_live": 200,
+      "within_raw": 0.7371016797912212,
+      "within_raw_hostspread": 0.08036109980720113,
+      "within_raw_nhosts": 15,
+      "within_raw_npos": 1120,
+      "b5_raw_recall_attack": 0.3758064516129032,
+      "b5_raw_precision": 0.46368159203980097,
+      "b5_raw_hosts_touched": 161,
+      "b5_raw_mean_busyness_of_selected": 0.5871709162520728,
+      "within_z": 0.7371016797912212,
+      "within_z_hostspread": 0.08036109980720113,
+      "within_z_nhosts": 15,
+      "within_z_npos": 1120,
+      "b5_z_recall_attack": 0.36612903225806454,
+      "b5_z_precision": 0.45174129353233833,
+      "b5_z_hosts_touched": 116,
+      "b5_z_mean_busyness_of_selected": 0.6098388266998341,
+      "within_bag": 0.665709029451845,
+      "within_bag_hostspread": 0.14117092399622655,
+      "within_bag_nhosts": 15,
+      "within_bag_npos": 1120,
+      "b5_bag_recall_attack": 0.35080645161290325,
+      "b5_bag_precision": 0.43283582089552236,
+      "b5_bag_hosts_touched": 134,
+      "b5_bag_mean_busyness_of_selected": 0.580345667495854
+    }
+  ],
+  "mean_std": {
+    "density_attacked": [
+      0.7091471354166666,
+      0.046461946340284756
+    ],
+    "density_other": [
+      0.5016511926328503,
+      0.002106142274641979
+    ],
+    "pooled_raw": [
+      0.7390793837946732,
+      0.03178063515516091
+    ],
+    "pooled_z": [
+      0.7412978557901099,
+      0.03699226870468785
+    ],
+    "pooled_bag": [
+      0.6700500069153,
+      0.07085272827897988
+    ],
+    "n_fellback_hosts": [
+      0.0,
+      0.0
+    ],
+    "mean_busyness_all": [
+      0.5366173459172305,
+      0.006926076128462413
+    ],
+    "n_hosts_live": [
+      200.0,
+      0.0
+    ],
+    "within_raw": [
+      0.7657522528642656,
+      0.03071628217223477
+    ],
+    "within_raw_hostspread": [
+      0.08934973322718241,
+      0.0077238898915386375
+    ],
+    "within_raw_nhosts": [
+      14.0,
+      1.4142135623730951
+    ],
+    "within_raw_npos": [
+      1031.0,
+      194.5781762343009
+    ],
+    "b5_raw_recall_attack": [
+      0.40798199624056625,
+      0.09410340719504263
+    ],
+    "b5_raw_precision": [
+      0.5415224450715751,
+      0.12426062934431634
+    ],
+    "b5_raw_hosts_touched": [
+      150.33333333333334,
+      12.36482466066094
+    ],
+    "b5_raw_mean_busyness_of_selected": [
+      0.6136225783010224,
+      0.019033175968756484
+    ],
+    "within_z": [
+      0.7657522528642656,
+      0.03071628217223477
+    ],
+    "within_z_hostspread": [
+      0.08934973322718241,
+      0.0077238898915386375
+    ],
+    "within_z_nhosts": [
+      14.0,
+      1.4142135623730951
+    ],
+    "within_z_npos": [
+      1031.0,
+      194.5781762343009
+    ],
+    "b5_z_recall_attack": [
+      0.3726178773613101,
+      0.047578667287209685
+    ],
+    "b5_z_precision": [
+      0.49470850667458127,
+      0.06058197452959816
+    ],
+    "b5_z_hosts_touched": [
+      114.33333333333333,
+      14.337208778404378
+    ],
+    "b5_z_mean_busyness_of_selected": [
+      0.6245109171799132,
+      0.012876291432344308
+    ],
+    "within_bag": [
+      0.7271122049693094,
+      0.06314707998518185
+    ],
+    "within_bag_hostspread": [
+      0.14455634246333873,
+      0.011579783778488653
+    ],
+    "within_bag_nhosts": [
+      14.0,
+      1.4142135623730951
+    ],
+    "within_bag_npos": [
+      1031.0,
+      194.5781762343009
+    ],
+    "b5_bag_recall_attack": [
+      0.38307081751684996,
+      0.10005643350248224
+    ],
+    "b5_bag_precision": [
+      0.5081552500389861,
+      0.13191923303734177
+    ],
+    "b5_bag_hosts_touched": [
+      124.33333333333333,
+      12.970050972229146
+    ],
+    "b5_bag_mean_busyness_of_selected": [
+      0.6033305380179418,
+      0.016346244825677
+    ]
+  }
+}

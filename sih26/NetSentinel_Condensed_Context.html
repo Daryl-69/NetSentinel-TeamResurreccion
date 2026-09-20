@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NetSentinel — Condensed Project Context</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+  }
+
+  @media print {
+    :root {
+      --bg: #ffffff;
+      --surface: #f6f8fa;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --text-dim: #656d76;
+      --accent: #0969da;
+      --green: #1a7f37;
+      --yellow: #9a6700;
+      --red: #cf222e;
+      --purple: #8250df;
+    }
+    body { font-size: 9pt; }
+    h1 { font-size: 18pt; }
+    h2 { font-size: 14pt; page-break-before: auto; }
+    h3 { font-size: 11pt; }
+    pre { font-size: 7.5pt; }
+    table { font-size: 8pt; }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 0.5rem;
+    margin: 1.5rem 0 1rem;
+  }
+
+  h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--purple);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.3rem;
+    margin: 2rem 0 0.8rem;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--green);
+    margin: 1.2rem 0 0.5rem;
+  }
+
+  h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--yellow);
+    margin: 1rem 0 0.4rem;
+  }
+
+  p { margin: 0.5rem 0; }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  strong { color: var(--text); font-weight: 600; }
+
+  blockquote {
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    padding: 0.6rem 1rem;
+    margin: 0.8rem 0;
+    border-radius: 4px;
+  }
+
+  code {
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    background: var(--surface);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.88em;
+    border: 1px solid var(--border);
+  }
+
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 0.8rem 0;
+  }
+
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.85em;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.8rem 0;
+    font-size: 0.9em;
+  }
+
+  th, td {
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.7rem;
+    text-align: left;
+  }
+
+  th {
+    background: var(--surface);
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  tr:nth-child(even) { background: rgba(22, 27, 34, 0.5); }
+
+  ul, ol {
+    margin: 0.5rem 0 0.5rem 1.5rem;
+  }
+
+  li { margin: 0.2rem 0; }
+
+  li input[type="checkbox"] {
+    margin-right: 0.4rem;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1.5rem 0;
+  }
+
+  /* Status badges */
+  .emoji { font-style: normal; }
+</style>
+</head>
+<body>
+<h1 id="netsentinel-condensed-project-context">NetSentinel — Condensed Project Context</h1>
+
+<blockquote>
+  <p><strong>Purpose:</strong> Feed this to GPT Astra (or any LLM) for full project context in one file.
+  <strong>Generated:</strong> 2026-09-10 | <strong>Project:</strong> SIH 2026 — AI/ML NIDS
+  <strong>Team:</strong> 2–3 devs + AI (Claude, Antigravity, GPT Astra)
+  <strong>Stage:</strong> Demo-ready prototype → Grand Finale (submit 20 Sep)</p>
+</blockquote>
+
+<hr />
+
+<h2 id="1-what-netsentinel-is">1. What NetSentinel IS</h2>
+
+<p>A <strong>passive AI Network Intrusion Detection System</strong> for unidirectional traffic behind data diodes (nuclear, defence, SCADA). No DPI, no signatures, CPU-only, detection-only.</p>
+
+<p><strong>Two tiers:</strong></p>
+
+<table>
+<thead>
+<tr>
+  <th>Tier</th>
+  <th>Status</th>
+  <th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Tier 1</strong></td>
+  <td>✅ BUILT, 6/6 models load</td>
+  <td>6 ONNX expert models for known threat classes</td>
+</tr>
+<tr>
+  <td><strong>Tier 2</strong></td>
+  <td>🔶 PARTLY BUILT</td>
+  <td>Inspector–Sentry cascade for LOTS/LSA detection (the novel contribution)</td>
+</tr>
+</tbody>
+</table>
+
+<hr />
+
+<h2 id="2-tier-1-the-6-expert-models-all-built">2. Tier 1 — The 6 Expert Models (ALL BUILT)</h2>
+
+<table>
+<thead>
+<tr>
+  <th>#</th>
+  <th>Model</th>
+  <th>Architecture</th>
+  <th>Training Data</th>
+  <th>Performance</th>
+  <th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>A</td>
+  <td><strong>DDoS</strong></td>
+  <td>XGBoost → ONNX</td>
+  <td>CIC-DDoS2019 (2.5M flows, 59 CIC features)</td>
+  <td>99.3% F1</td>
+  <td>✅ Working</td>
+</tr>
+<tr>
+  <td>B</td>
+  <td><strong>DGA</strong></td>
+  <td>CNN-BiLSTM</td>
+  <td>UMUDGA + Tranco (1.2M domains)</td>
+  <td>93.6% 3-class</td>
+  <td>✅ Working</td>
+</tr>
+<tr>
+  <td>C</td>
+  <td><strong>C2 Beacon</strong></td>
+  <td>BiLSTM+FFT dual-branch</td>
+  <td>CTU-13 (13 botnet scenarios)</td>
+  <td>93.5% accuracy</td>
+  <td>✅ Working (genuine novel contribution)</td>
+</tr>
+<tr>
+  <td>D</td>
+  <td><strong>Encrypted Traffic</strong></td>
+  <td>FT-Transformer</td>
+  <td>ISCX-VPN-NonVPN (150K flows)</td>
+  <td>88% 14-class</td>
+  <td>✅ Working</td>
+</tr>
+<tr>
+  <td>E</td>
+  <td><strong>Port Scan</strong></td>
+  <td>XGBoost → ONNX</td>
+  <td>UNSW-NB15 (39 features)</td>
+  <td>96.4% F1 (reported)</td>
+  <td>⚠️ 0 detections on CIC data (wrong dataset)</td>
+</tr>
+<tr>
+  <td>F</td>
+  <td><strong>Exfiltration</strong></td>
+  <td>VAE anomaly</td>
+  <td>CIC-Bell-DNS-EXF-2021 (24 DNS features)</td>
+  <td>91.2% AUC</td>
+  <td>⚠️ ~50% FP (scikit-learn version mismatch)</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="feature-extractors-3-non-overlapping-schemas">Feature Extractors (3 non-overlapping schemas)</h3>
+
+<ul>
+<li><strong>59 CIC-IDS features</strong> → DDoS, Encrypted, (Port Scan wrongly fed this)</li>
+<li><strong>39 UNSW-NB15 features</strong> → Port Scan (correct schema)</li>
+<li><strong>24 DNS-lexical features</strong> → Exfiltration VAE</li>
+</ul>
+
+<h3 id="pipeline-flow">Pipeline Flow</h3>
+
+<pre><code>PCAP / Live Capture / Simulator
+  → PacketProcessor (pcap_reader.py)
+    ├→ FlowExtractor (59 CIC features) → "flow" events
+    ├→ DNSExtractor → "dns" events
+    └→ SessionBuilder (100-flow windows) → "session" events
+  → FlowAnalyzer (routes to correct models)
+    ├→ "flow" → DDoS + ETT + PortScan
+    ├→ "dns" → DGA + Exfiltration
+    └→ "session" → C2 Beacon
+  → AlertManager (MITRE mapping + severity + dedup)
+  → WebSocket → React Dashboard
+</code></pre>
+
+<h3 id="real-world-test-friday-workinghourspcap-88gb">Real-World Test (Friday-WorkingHours.pcap, 8.8GB)</h3>
+
+<ul>
+<li><strong>32,266 alerts</strong> across all 6 classes</li>
+<li>42.5 flows/sec, 23ms latency, ~280MB RAM</li>
+<li>All 6 models load in 0.61s</li>
+</ul>
+
+<hr />
+
+<h2 id="3-tier-2-inspectorsentry-the-core-innovation">3. Tier 2 — Inspector–Sentry (THE CORE INNOVATION)</h2>
+
+<h3 id="the-problem">The Problem</h3>
+
+<p>Modern intrusions use <strong>Living off Trusted Sites (LOTS/LSA)</strong> — every hop rides domains nobody can block (ip-api → GitHub → Telegram → Google Drive). Each request alone looks normal. <strong>The signal is the cross-service category-transition SEQUENCE.</strong></p>
+
+<h3 id="architecture-built-components">Architecture (Built Components)</h3>
+
+<pre><code>ALL HOST TRAFFIC
+  ↓
+COMMISSIONING (tiered length) → INSPECTOR (expensive E-GraphSAGE + Transformer)
+  ↓                                  ↓
+  threat found? ──yes──→ HELD on Inspector (never demoted)  ← RETENTION RULE
+  ↓ no
+CLEARED → demoted to SENTRY (cheap distilled model, always-on)
+  ↓
+Re-escalation triggers:
+  (a) anomaly — off-path category transition
+  (b) random sample — unpredictable, can't be timed
+  (c) behavioural change — drift detection
+  ↓
+Back to INSPECTOR to confirm
+  ↓
+benign/drift → re-baseline → Sentry
+malicious → LLM verdict → ALERT (chain summary + MITRE + confidence)
+</code></pre>
+
+<h3 id="whats-actually-built-in-code-v2-directory">What's Actually Built in Code (<code>v2/</code> directory)</h3>
+
+<table>
+<thead>
+<tr>
+  <th>Component</th>
+  <th>File</th>
+  <th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Inspector model</strong> (E-GraphSAGE + Transformer AE)</td>
+  <td><code>netsentinel_v2/models.py</code> — <code>Inspector</code> class</td>
+  <td>✅ Built, trained, measured</td>
+</tr>
+<tr>
+  <td><strong>Sentry model</strong> (distilled, GRU, no hop-2)</td>
+  <td><code>netsentinel_v2/models.py</code> — <code>Sentry</code> class</td>
+  <td>✅ Built, trained, measured</td>
+</tr>
+<tr>
+  <td><strong>Deferral Head</strong> (router C)</td>
+  <td><code>netsentinel_v2/models.py</code> — <code>DeferralHead</code> class</td>
+  <td>✅ Built</td>
+</tr>
+<tr>
+  <td><strong>Per-host baseline</strong> (Ledoit-Wolf + KMeans)</td>
+  <td><code>netsentinel_v2/baseline.py</code> — <code>HostBaseline</code></td>
+  <td>✅ Built</td>
+</tr>
+<tr>
+  <td><strong>Service Category Resolver</strong></td>
+  <td><code>netsentinel_v2/categories.py</code> + <code>zeek_loader.py</code></td>
+  <td>✅ Built (9 categories)</td>
+</tr>
+<tr>
+  <td><strong>Synthetic data generator</strong> (with hard negatives)</td>
+  <td><code>netsentinel_v2/synth.py</code></td>
+  <td>✅ Built</td>
+</tr>
+<tr>
+  <td><strong>Zeek log loader</strong> (real traffic)</td>
+  <td><code>netsentinel_v2/zeek_loader.py</code></td>
+  <td>✅ Built</td>
+</tr>
+<tr>
+  <td><strong>LANL cyber1 loader</strong> (real red team)</td>
+  <td><code>netsentinel_v2/lanl_loader.py</code></td>
+  <td>✅ Built</td>
+</tr>
+<tr>
+  <td><strong>Router comparison harness</strong></td>
+  <td><code>run_experiment.py</code></td>
+  <td>✅ Built</td>
+</tr>
+<tr>
+  <td><strong>Distribution shift test</strong></td>
+  <td><code>shift_test.py</code></td>
+  <td>✅ Built</td>
+</tr>
+<tr>
+  <td><strong>Real traffic training</strong></td>
+  <td><code>train_real.py</code></td>
+  <td>✅ Built</td>
+</tr>
+<tr>
+  <td><strong>Interactive demo app</strong></td>
+  <td><code>inspector centry/App.tsx</code> (48KB React component)</td>
+  <td>✅ Built</td>
+</tr>
+<tr>
+  <td>Escalation loop / retention rule runtime</td>
+  <td>—</td>
+  <td>❌ NOT BUILT</td>
+</tr>
+<tr>
+  <td>Random sampling scheduler</td>
+  <td>—</td>
+  <td>❌ NOT BUILT</td>
+</tr>
+<tr>
+  <td>Rolling re-calibration</td>
+  <td>—</td>
+  <td>❌ NOT BUILT</td>
+</tr>
+<tr>
+  <td>LLM verdict integration</td>
+  <td>—</td>
+  <td>❌ NOT BUILT</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="service-category-taxonomy-9-categories">Service Category Taxonomy (9 categories)</h3>
+
+<pre><code>Recon_API        — ip-api.com, ipify.org (victim fingerprinting)
+Code_Repo_Paste  — github, pastebin (stager pull)
+Messaging_API    — telegram, discord (C2 polling)
+Cloud_Storage    — drive.google.com, dropbox (exfil T1567)
+Browse           — general web
+Sync             — OneDrive/Dropbox agents
+CI_CD            — build runners, artifact stores
+Internal         — east-west traffic (OT/diode generalisation)
+Unknown_External — resolver failed (ECH/DoH/raw IP)
+</code></pre>
+
+<h3 id="edge-features-10-per-host-category-window">Edge Features (10 per host-category-window)</h3>
+
+<pre><code>log_n_flows, log_bytes_up, log_bytes_down, egress_asymmetry,
+iat_cv, ks_uniform, ks_exponential, fft_prominence,
+distinct_endpoint_ratio, log_duration_mean
+</code></pre>
+
+<h3 id="measured-results-post-bugfix-3-seeds">Measured Results (Post-Bugfix, 3 Seeds)</h3>
+
+<p><strong>Synthetic (300 hosts, 24 days):</strong></p>
+
+<table>
+<thead>
+<tr>
+  <th>Router</th>
+  <th>AUC vs Inspector</th>
+  <th>Recall @5% budget</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>A — distilled detector</strong></td>
+  <td><strong>0.876 ← BEST</strong></td>
+  <td><strong>37.1% ± 0.9</strong></td>
+</tr>
+<tr>
+  <td>B — encoder+Mahalanobis</td>
+  <td>0.818 ± 0.046</td>
+  <td>32.8% ± 6.9</td>
+</tr>
+<tr>
+  <td>C — deferral head</td>
+  <td>0.850</td>
+  <td>38.3% ± 7.0</td>
+</tr>
+</tbody>
+</table>
+
+<p>Compression: 205,546 → 14,992 params (13.7×)</p>
+
+<p><strong>LANL cyber1 (real traffic, real red team, 612 hosts × 13 days):</strong></p>
+
+<table>
+<thead>
+<tr>
+  <th>Metric</th>
+  <th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Cascade AUC (router A vs Inspector)</td>
+  <td><strong>0.992 ± 0.003</strong></td>
+</tr>
+<tr>
+  <td>Cascade recall @5% budget</td>
+  <td><strong>96.9% ± 1.1</strong> (agreement with teacher, NOT detection)</td>
+</tr>
+<tr>
+  <td><strong>Within-host AUC</strong> (the real detection number)</td>
+  <td><strong>0.557 ± 0.013 — CHANCE</strong></td>
+</tr>
+<tr>
+  <td>Global AUC (confounded — between-host effect)</td>
+  <td>0.745</td>
+</tr>
+</tbody>
+</table>
+
+<p><strong>Key finding:</strong> The cascade WORKS (Router A tracks Inspector excellently). Detection on LANL is CHANCE because lateral movement uses access the host already has. The global AUC is a confound — attacked hosts are busier (density 0.811 vs 0.530).</p>
+
+<p><strong>Shift test (World A → World B):</strong></p>
+
+<ul>
+<li>Mechanism transfers: AUC drops only −3.3%</li>
+<li><strong>Calibration does NOT transfer:</strong> flag rate 6.82% in own test period (target 1.0%)</li>
+<li>Threshold decays over time — rolling re-calibration is mandatory</li>
+</ul>
+
+<hr />
+
+<h2 id="4-frontend-react-vite-typescript">4. Frontend (React + Vite + TypeScript)</h2>
+
+<p>15 components including:</p>
+
+<ul>
+<li>Real-time alert feed with WebSocket</li>
+<li>3D threat graph (Three.js / WebGL force-directed)</li>
+<li>MITRE ATT&amp;CK 14-tactic heatmap</li>
+<li>Model status cards with accuracy rings</li>
+<li>Traffic charts (Recharts)</li>
+<li>Glassmorphism design system</li>
+</ul>
+
+<hr />
+
+<h2 id="5-known-bugs-issues">5. Known Bugs &amp; Issues</h2>
+
+<table>
+<thead>
+<tr>
+  <th>Issue</th>
+  <th>Severity</th>
+  <th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Exfil VAE ~50% FP</td>
+  <td>Critical</td>
+  <td><code>pip install scikit-learn==1.6.1</code> or re-save scaler</td>
+</tr>
+<tr>
+  <td>Port scan 0 detections</td>
+  <td>Critical</td>
+  <td>Needs scan-heavy dataset (UNSW-NB15 or IoT-23), not a code bug</td>
+</tr>
+<tr>
+  <td>92% features drifted vs CICFlowMeter</td>
+  <td>Critical</td>
+  <td>3 bugs fixed; <code>ks_summary.txt</code> is STALE — rerun <code>scripts/covariate_shift.py</code></td>
+</tr>
+<tr>
+  <td>2/6 evidence panels wrong visualization</td>
+  <td>Medium</td>
+  <td>Exfil panel shows byte-ratio but model uses DNS-lexical</td>
+</tr>
+<tr>
+  <td>No persistence (in-memory alerts)</td>
+  <td>Low</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>No authentication on API</td>
+  <td>Low</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>No SIEM/SOAR connectors</td>
+  <td>Low</td>
+  <td>—</td>
+</tr>
+</tbody>
+</table>
+
+<hr />
+
+<h2 id="6-networking-capture-blocked-issues">6. Networking / Capture — BLOCKED ISSUES</h2>
+
+<h3 id="the-cloudflare-doh-problem">The Cloudflare / DoH Problem</h3>
+
+<p>During the 12-day local capture (started ~5 Sep), three defects were found on day 1:</p>
+
+<ol>
+<li><strong>Snaplen 160 destroyed ALL TLS hostnames</strong> — 100% of 4,539 ClientHellos truncated, 0 SNI hostnames recovered. Fixed: snaplen → 512.</li>
+<li><strong>61% of encrypted traffic is QUIC</strong> — SNI inside encrypted Initial packet. Fix: disable QUIC in Chrome/Edge via Group Policy.</li>
+<li><strong>DNS-over-HTTPS (Cloudflare)</strong> hides the fallback naming path — 55% of DNS queries were FOR DoH resolvers (<code>chrome.cloudflare-dns.com</code>). Fix: disable DoH in browser policies.</li>
+</ol>
+
+<p><strong>All three are fixed in <code>capture_service.ps1</code> and <code>start_capture.ps1</code>.</strong> The broken first 21 hours are kept as evidence.</p>
+
+<h3 id="what-this-means-for-the-network-scan">What This Means for the Network Scan</h3>
+
+<p>The networking part (local network scan + live capture) was blocked because:</p>
+
+<ul>
+<li>Cloudflare DoH was eating all the DNS queries → resolver blind</li>
+<li>QUIC was hiding 61% of browsing hostnames → category resolver can't work</li>
+<li>Without hostnames, the Service Category Resolver puts everything in <code>Unknown_External</code> → the cross-service sequence hypothesis CANNOT be tested</li>
+</ul>
+
+<p><strong>After applying the fixes:</strong> the capture should produce real hostnames, and the Zeek loader (<code>zeek_loader.py</code>) + <code>train_real.py</code> can process it.</p>
+
+<hr />
+
+<h2 id="7-what-to-do-next-future-goals-tasks">7. WHAT TO DO NEXT — Future Goals &amp; Tasks</h2>
+
+<h3 id="immediate-before-20-sep-submission">🔴 IMMEDIATE (Before 20 Sep Submission)</h3>
+
+<h4 id="a-rolling-re-calibration-1-dev-912-sep">A. Rolling Re-Calibration (1 dev, 9–12 Sep)</h4>
+
+<p>The threshold decays from the day it's set (6.82% flag rate vs 1.0% target). This is the one feature your own evidence demands.</p>
+
+<ul>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Implement rolling window re-estimate of Inspector threshold (hold last N days, re-take 99th percentile)</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Guard it: cap flag-rate movement per re-calibration cycle</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Measure: re-run <code>shift_test.py</code> and <code>train_real.py --lanl</code> with re-calibration ON</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Write into ARCHITECTURE_V2 §4 as a real component</li>
+</ul>
+
+<h4 id="b-chain-injection-on-real-capture-12-devs-916-sep">B. Chain Injection on Real Capture (1–2 devs, 9–16 Sep)</h4>
+
+<p>The ONLY route to a detection number you can defend.</p>
+
+<ul>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Script LOTS chains over captured benign base: <code>Recon_API → Code_Repo_Paste → Messaging_API → Cloud_Storage</code> at realistic beacon intervals</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Include hard negatives (DevOps hosts walking the same category sequence with human timing)</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Inject as Zeek-format rows so <code>zeek_loader.load_dir()</code> reads them unchanged</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Evaluate with <code>train_real.py --seeds 3</code>, report <strong>within-host AUC</strong> (not global)</li>
+</ul>
+
+<h4 id="c-local-network-scan-dataset-creation">C. Local Network Scan &amp; Dataset Creation</h4>
+
+<p><strong>This is the piece that was blocked by the Cloudflare/QUIC/DoH issues.</strong></p>
+
+<p>Steps to build:</p>
+
+<ol>
+<li><strong>Fix the capture environment</strong> (already done in scripts):
+<ul>
+<li>Disable QUIC: <code>Set-ItemProperty "HKLM:\SOFTWARE\Policies\Google\Chrome" -Name "QuicAllowed" -Value 0</code></li>
+<li>Disable DoH: <code>Set-ItemProperty "HKLM:\SOFTWARE\Policies\Google\Chrome" -Name "DnsOverHttpsMode" -Value "off"</code></li>
+<li>Snaplen 512 in capture scripts</li>
+</ul></li>
+<li><strong>Run the local capture</strong> (12 days, multiple machines):
+<div class="codehilite">
+<pre><span></span><code><span class="nb">cd </span><span class="n">D</span><span class="p">:&lt;/span><span class="n">1_sih26</span><span class="c">#2\netsentinel-main\v2</span>
+<span class="p">.&lt;/span><span class="n">start_capture</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-Interface</span> <span class="p">&lt;</span><span class="n">n</span><span class="p">&gt;</span> <span class="n">-OutDir</span> <span class="n">D</span><span class="p">:&lt;/span><span class="n">capture</span> <span class="n">-MaxGB</span> <span class="n">40</span>
+</code></pre>
+</div></li>
+</ol>
+
+<ol start="3">
+<li><p><strong>Convert to Zeek logs</strong> (in WSL):</p>
+
+<div class="codehilite">
+<pre><span></span><code>./zeekify.sh<span class="w"> </span>/mnt/d/capture<span class="w"> </span>/mnt/d/capture-zeek
+</code></pre>
+</div></li>
+<li><p><strong>Verify resolver works</strong>:</p>
+
+<div class="codehilite">
+<pre><span></span><code><span class="p">.\.</span><span class="n">venv</span><span class="p">\</span><span class="n">Scripts</span><span class="p">\</span><span class="n">python</span><span class="p">.</span><span class="n">exe</span> <span class="n">train_real</span><span class="p">.</span><span class="n">py</span> <span class="p">-</span><span class="n">-data</span> <span class="n">D</span><span class="p">:\</span><span class="n">capture-zeek</span> <span class="p">-</span><span class="n">-seeds</span> <span class="n">3</span>
+</code></pre>
+</div>
+
+<p>Look at <strong>resolver hit rate</strong> — target is ~77% (WRCCDC baseline).</p></li>
+<li><strong>Create the dataset</strong> by overlaying injected LOTS chains onto the benign capture</li>
+<li><strong>Final run</strong> on full 12 days with <code>--seeds 3</code></li>
+</ol>
+
+<h4 id="d-submission-document">D. Submission Document</h4>
+
+<ul>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Lead with cascade result; state the LANL negative yourself</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Correct positioning: §9's OT reframe is NOT evidence-backed</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> State prior art: Inspector = GraphIDS (arXiv:2509.16625)</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Delete stale files: <code>lanl_results.json</code>, <code>lanl_src.json</code>, <code>lanl_dst.json</code>, <code>lanl_both.json</code></li>
+</ul>
+
+<h3 id="medium-term-post-submission-for-grand-finale">🟡 MEDIUM-TERM (Post-Submission, for Grand Finale)</h3>
+
+<h4 id="e-build-the-escalation-runtime">E. Build the Escalation Runtime</h4>
+
+<p>The routers are scorers, not yet the architecture. Build the actual runtime:</p>
+
+<ul>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Escalation loop: Sentry flags → host returns to Inspector</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Retention rule: threats during commissioning stay on Inspector forever</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Random sampling scheduler (anti-poisoning mechanism)</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Behavioural-drift vs taxonomy-drift separation</li>
+</ul>
+
+<h4 id="f-llm-verdict-integration">F. LLM Verdict Integration</h4>
+
+<ul>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Wire up an LLM (GPT-4 / Claude) to produce chain narratives from confirmed alerts</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Output: MITRE technique + confidence + human-readable summary</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Display in the Inspector-Sentry demo app</li>
+</ul>
+
+<h4 id="g-fix-tier-1-known-issues">G. Fix Tier 1 Known Issues</h4>
+
+<ul>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Port scan model: retrain on IoT-23 (213M labelled port scan flows) or real scan-heavy data</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Exfil VAE: pin scikit-learn==1.6.1 or re-export scaler</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Evidence panels: fix exfil panel (show DNS-lexical reconstruction error, not byte-ratio)</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Rerun covariate shift analysis post-fix</li>
+</ul>
+
+<h3 id="long-term-future-work">🟢 LONG-TERM (Future Work)</h3>
+
+<ul>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> <strong>SHAP explainability</strong> for all 6 models</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> <strong>Meta-classifier MLP</strong> ensemble fusion across experts</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> <strong>Alert persistence</strong> (database backend)</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> <strong>Authentication</strong> on API</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> <strong>SIEM/SOAR connectors</strong> (Splunk, ELK, QRadar)</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> <strong>Public LOTS chain dataset</strong> — the 124-dataset survey found none; building one is a contribution</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> <strong>DARPA TC/OpTC validation</strong> — real adversary sequences for sequence-hypothesis testing</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> <strong>Caldera/Mythic emulation</strong> — the malicious half of the dataset</li>
+</ul>
+
+<hr />
+
+<h2 id="8-what-not-to-claim">8. What NOT to Claim</h2>
+
+<ul>
+<li>❌ "State-of-the-art accuracy" (88% vs 99.93% with better features)</li>
+<li>❌ "Novel transformer approach" (transformers for traffic are well-known)</li>
+<li>❌ "We replace EDR" (strictly worse on host signal)</li>
+<li>❌ "≥95% recall at 5% budget" (measured: 37.1%)</li>
+<li>❌ "We detect attacks on LANL" (within-host AUC 0.557 = chance)</li>
+<li>❌ "The OT/internal-asset reframe is validated" (LANL is that setting and detection was chance)</li>
+</ul>
+
+<h2 id="9-what-to-claim">9. What TO Claim</h2>
+
+<ul>
+<li>✅ "Dual-branch FFT+BiLSTM beacon detector is a novel combination"</li>
+<li>✅ "Cross-service category-transition sequence semantics" (91-study review found nobody does it)</li>
+<li>✅ "We cover what EDR cannot reach — agentless/unmanaged/IoT/OT"</li>
+<li>✅ "Inspector–Sentry cascade: 13.7× compression, 96.9% agreement with teacher at 5% budget"</li>
+<li>✅ "The mechanism transfers across organisations (AUC −3.3%)"</li>
+<li>✅ "We found our own negative and built the tooling to prove it" (honest science)</li>
+</ul>
+
+<hr />
+
+<h2 id="10-key-file-paths">10. Key File Paths</h2>
+
+<h3 id="code">Code</h3>
+
+<table>
+<thead>
+<tr>
+  <th>Thing</th>
+  <th>Path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Backend root</td>
+  <td><code>D:\1_sih26#2\netsentinel-main\netsentinel\</code></td>
+</tr>
+<tr>
+  <td>V2 harness</td>
+  <td><code>D:\1_sih26#2\netsentinel-main\v2\</code></td>
+</tr>
+<tr>
+  <td>Frontend</td>
+  <td><code>D:\1_sih26#2\netsentinel-main\frontend\src\</code></td>
+</tr>
+<tr>
+  <td>Inspector-Sentry demo</td>
+  <td><code>D:\1_sih26#2\netsentinel-main\inspector centry\App.tsx</code></td>
+</tr>
+<tr>
+  <td>Entry point</td>
+  <td><code>D:\1_sih26#2\netsentinel-main\run.py</code></td>
+</tr>
+<tr>
+  <td>V2 models</td>
+  <td><code>v2\netsentinel_v2\models.py</code> (Inspector, Sentry, DeferralHead)</td>
+</tr>
+<tr>
+  <td>V2 training</td>
+  <td><code>v2\netsentinel_v2\train.py</code></td>
+</tr>
+<tr>
+  <td>Service Category Resolver</td>
+  <td><code>v2\netsentinel_v2\categories.py</code> + <code>zeek_loader.py</code></td>
+</tr>
+<tr>
+  <td>Synthetic generator</td>
+  <td><code>v2\netsentinel_v2\synth.py</code></td>
+</tr>
+<tr>
+  <td>LANL loader</td>
+  <td><code>v2\netsentinel_v2\lanl_loader.py</code></td>
+</tr>
+<tr>
+  <td>Per-host baseline</td>
+  <td><code>v2\netsentinel_v2\baseline.py</code></td>
+</tr>
+<tr>
+  <td>Capture scripts</td>
+  <td><code>v2\start_capture.ps1</code>, <code>v2\capture_service.ps1</code>, <code>v2\install_capture_task.ps1</code></td>
+</tr>
+<tr>
+  <td>Zeek converter</td>
+  <td><code>v2\zeekify.sh</code></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="key-documents">Key Documents</h3>
+
+<table>
+<thead>
+<tr>
+  <th>Doc</th>
+  <th>Path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Master context</td>
+  <td><code>sih26\CLAUDE.md</code></td>
+</tr>
+<tr>
+  <td>V2 architecture</td>
+  <td><code>docs_deep\ARCHITECTURE_V2.md</code></td>
+</tr>
+<tr>
+  <td>Critique</td>
+  <td><code>docs_deep\CRITIQUE.md</code></td>
+</tr>
+<tr>
+  <td>V2 results</td>
+  <td><code>v2\results.json</code>, <code>v2\shift_results.json</code></td>
+</tr>
+<tr>
+  <td>LANL results</td>
+  <td><code>v2\lanl_novelty.json</code> (3 seeds, novelty on), <code>v2\lanl_base.json</code> (no novelty)</td>
+</tr>
+<tr>
+  <td>Datasets guide</td>
+  <td><code>v2\DATASETS.md</code></td>
+</tr>
+<tr>
+  <td>Capture fix</td>
+  <td><code>v2\CAPTURE_FIX_6SEP.md</code></td>
+</tr>
+<tr>
+  <td>Post-8 Sep plan</td>
+  <td><code>v2\POST_8SEP.md</code></td>
+</tr>
+</tbody>
+</table>
+
+<hr />
+
+<h2 id="11-how-to-run">11. How to Run</h2>
+
+<div class="codehilite">
+<pre><span></span><code><span class="c1"># Backend</span>
+python<span class="w"> </span>run.py
+<span class="c1"># Wait for: [&gt;] Server ready! [OK] 6/6 models loaded</span>
+
+<span class="c1"># Frontend</span>
+<span class="nb">cd</span><span class="w"> </span>frontend<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>pnpm<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>pnpm<span class="w"> </span>dev
+<span class="c1"># Open: http://localhost:5173</span>
+
+<span class="c1"># V2 experiments</span>
+<span class="nb">cd</span><span class="w"> </span>v2
+python<span class="w"> </span>run_experiment.py<span class="w"> </span>--seeds<span class="w"> </span><span class="m">3</span><span class="w"> </span>--hosts<span class="w"> </span><span class="m">300</span><span class="w"> </span>--days<span class="w"> </span><span class="m">24</span>
+python<span class="w"> </span>shift_test.py<span class="w"> </span>--seeds<span class="w"> </span><span class="m">3</span>
+python<span class="w"> </span>train_real.py<span class="w"> </span>--data<span class="w"> </span>D:<span class="se">\c</span>apture-zeek<span class="w"> </span>--seeds<span class="w"> </span><span class="m">3</span>
+
+<span class="c1"># LANL</span>
+python<span class="w"> </span>train_real.py<span class="w"> </span>--lanl<span class="w"> </span>--data<span class="w"> </span>D:<span class="se">\D</span>ownloads<span class="w"> </span>--max-hosts<span class="w"> </span><span class="m">500</span><span class="w"> </span>--lanl-days<span class="w"> </span><span class="m">13</span><span class="w"> </span>--seeds<span class="w"> </span><span class="m">3</span>
+
+<span class="c1"># Local capture</span>
+.<span class="se">\s</span>tart_capture.ps1<span class="w"> </span>-Interface<span class="w"> </span>&lt;n&gt;<span class="w"> </span>-OutDir<span class="w"> </span>D:<span class="se">\c</span>apture<span class="w"> </span>-MaxGB<span class="w"> </span><span class="m">40</span>
+</code></pre>
+</div>
+
+<hr />
+
+<h2 id="12-api-contract">12. API Contract</h2>
+
+<pre><code>GET  /api/health              → { status, models_loaded, uptime }
+GET  /api/alerts              → [ alert_objects... ]
+GET  /api/stats               → { total_alerts, by_threat_class, by_severity }
+POST /api/pcap/upload         → multipart file → process
+POST /api/capture/start?interface=X → start live Scapy capture
+POST /api/capture/stop        → stop
+POST /api/simulate/{mode}     → normal|ddos|dga|c2|mixed
+WS   ws://localhost:8000/ws   → real-time alert stream
+</code></pre>
+
+<footer style="margin-top:3rem; padding-top:1rem; border-top:1px solid var(--border); color:var(--text-dim); font-size:0.8em; text-align:center;">
+  Generated 2026-09-10 · NetSentinel · SIH 2026
+</footer>
+</body>
+</html>

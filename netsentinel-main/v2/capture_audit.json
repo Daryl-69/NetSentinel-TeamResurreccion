@@ -1,0 +1,16 @@
+{
+  "files": 16,
+  "packets": 2067074,
+  "clienthello": 4539,
+  "sni_ok": 0,
+  "quic": 659522,
+  "tcp443": 419402,
+  "dns_queries": 19210,
+  "dns_map": 210,
+  "named_pkts": 462900,
+  "unnamed_pkts": 1303245,
+  "categories": {
+    "Unknown_External": 1303245,
+    "Browse": 462900
+  }
+}

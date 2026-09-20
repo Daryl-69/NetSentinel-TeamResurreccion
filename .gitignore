@@ -59,3 +59,17 @@ htmlcov/
 
 # ── Logs ──
 *.log
+
+# ── Compiled Java ──
+*.class
+
+# ── Personal scratch / prompt notes ──
+astra.txt
+astra#!(send claude).txt
+
+# ── Duplicate root-level copies ──
+/netsentinel_deck.html
+/ppt/
+
+# ── AI output scratch ──
+sih26/Claude outputs/

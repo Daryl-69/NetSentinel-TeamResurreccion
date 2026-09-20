@@ -1,0 +1,5 @@
+{"_meta": true, "host": "api.telegram.org", "src_ip": "10.36.16.146", "interval": 60.0, "jitter": 0.05, "duration_s": 14400.0, "started_iso": "2026-09-20T19:12:32.152081+00:00"}
+{"ts": 1789931552.152716, "iso": "2026-09-20T19:12:32.152717+00:00", "host": "api.telegram.org", "dest_ip": "2001:67c:4e8:f004::9", "src_port": 58623, "status": 401, "resp_bytes": 83, "ok": true, "rtt_ms": 692.2, "seq": 0}
+{"ts": 1789931610.5363917, "iso": "2026-09-20T19:13:30.536395+00:00", "host": "api.telegram.org", "dest_ip": "2001:67c:4e8:f004::9", "src_port": 49501, "status": 401, "resp_bytes": 83, "ok": true, "rtt_ms": 861.5, "seq": 1}
+{"ts": 1789931670.1741984, "iso": "2026-09-20T19:14:30.174203+00:00", "host": "api.telegram.org", "dest_ip": "2001:67c:4e8:f004::9", "src_port": 58409, "status": 401, "resp_bytes": 83, "ok": true, "rtt_ms": 907.1, "seq": 2}
+{"ts": 1789931731.6696112, "iso": "2026-09-20T19:15:31.669622+00:00", "host": "api.telegram.org", "dest_ip": "2001:67c:4e8:f004::9", "src_port": 63839, "status": 401, "resp_bytes": 83, "ok": true, "rtt_ms": 659.5, "seq": 3}

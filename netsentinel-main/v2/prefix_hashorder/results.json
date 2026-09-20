@@ -1,0 +1,967 @@
+{
+  "runs": [
+    {
+      "seed": 0,
+      "geometry": {
+        "knn_overlap@20": 0.3908333333333333,
+        "trustworthiness": 0.9914871951911081,
+        "spearman_score": 0.8129442801311416,
+        "n": 31772
+      },
+      "verdict": [
+        "MARGINAL",
+        "Partial geometry preservation (overlap 0.39). Empirically still enough for the baseline router to lead, but the margin is not guaranteed: near-OOD resolution is the first thing that degrades. Report the overlap alongside any recall claim, and re-check it whenever the student capacity or distillation loss changes."
+      ],
+      "curves": {
+        "A_distilled_detector": [
+          {
+            "budget": 0.005,
+            "actual": 0.005004406395568425,
+            "recall_teacher": 0.0605512878445549,
+            "recall_attack": 0.025869759143621766
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.01000881279113685,
+            "recall_teacher": 0.11613194758246724,
+            "recall_attack": 0.04192685102586976
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.019986151328213523,
+            "recall_teacher": 0.21373700858563036,
+            "recall_attack": 0.07716324710080286
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.029994964119350372,
+            "recall_teacher": 0.27745142340713963,
+            "recall_attack": 0.10972346119536129
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.050012589701624074,
+            "recall_teacher": 0.3791233619521012,
+            "recall_attack": 0.18198037466547726
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.07500314742540602,
+            "recall_teacher": 0.46633529145955716,
+            "recall_attack": 0.25245316681534347
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.09999370514918797,
+            "recall_teacher": 0.5241753276095797,
+            "recall_attack": 0.3050847457627119
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15000629485081204,
+            "recall_teacher": 0.6276547672842295,
+            "recall_attack": 0.4112399643175736
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.19998741029837594,
+            "recall_teacher": 0.7175779484862178,
+            "recall_attack": 0.5053523639607493
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.3000125897016241,
+            "recall_teacher": 0.8450067781292363,
+            "recall_attack": 0.652542372881356
+          }
+        ],
+        "B_encoder_mahalanobis": [
+          {
+            "budget": 0.005,
+            "actual": 0.005004406395568425,
+            "recall_teacher": 0.06732941708088568,
+            "recall_attack": 0.07091882247992863
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.01000881279113685,
+            "recall_teacher": 0.12336195210122006,
+            "recall_attack": 0.13826940231935772
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.019986151328213523,
+            "recall_teacher": 0.2200632625395391,
+            "recall_attack": 0.23818019625334522
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.029994964119350372,
+            "recall_teacher": 0.3000451875282422,
+            "recall_attack": 0.31891168599464764
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.050012589701624074,
+            "recall_teacher": 0.4202440126525079,
+            "recall_attack": 0.44112399643175737
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.07500314742540602,
+            "recall_teacher": 0.5305015815634885,
+            "recall_attack": 0.5454950936663693
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.09999370514918797,
+            "recall_teacher": 0.6064166290103932,
+            "recall_attack": 0.6123996431757359
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15000629485081204,
+            "recall_teacher": 0.7022141888838681,
+            "recall_attack": 0.6966993755575379
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.19998741029837594,
+            "recall_teacher": 0.771802982376864,
+            "recall_attack": 0.7542372881355932
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.3000125897016241,
+            "recall_teacher": 0.8517849073655671,
+            "recall_attack": 0.8327386262265835
+          }
+        ],
+        "C_deferral_head": [
+          {
+            "budget": 0.005,
+            "actual": 0.005004406395568425,
+            "recall_teacher": 0.06281066425666516,
+            "recall_attack": 0.026761819803746655
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.01000881279113685,
+            "recall_teacher": 0.1211025756891098,
+            "recall_attack": 0.056199821587867974
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.019986151328213523,
+            "recall_teacher": 0.2263895164934478,
+            "recall_attack": 0.1128456735057984
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.029994964119350372,
+            "recall_teacher": 0.3226389516493448,
+            "recall_attack": 0.1833184656556646
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.050012589701624074,
+            "recall_teacher": 0.4807953004970628,
+            "recall_attack": 0.29973238180196254
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.07500314742540602,
+            "recall_teacher": 0.5815634884771803,
+            "recall_attack": 0.3911685994647636
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.09999370514918797,
+            "recall_teacher": 0.631721644826028,
+            "recall_attack": 0.4424620874219447
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15000629485081204,
+            "recall_teacher": 0.7130591956619973,
+            "recall_attack": 0.5245316681534344
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.19998741029837594,
+            "recall_teacher": 0.7821961138725712,
+            "recall_attack": 0.5976806422836753
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.3000125897016241,
+            "recall_teacher": 0.8942611839132399,
+            "recall_attack": 0.7288135593220338
+          }
+        ]
+      },
+      "router_auc_vs_teacher": {
+        "A_distilled_detector": 0.8661932761343213,
+        "B_encoder_mahalanobis": 0.8820264454738763,
+        "C_deferral_head": 0.9062976622444221
+      },
+      "teacher_auc_vs_attack": 0.8800170557889843,
+      "params": {
+        "inspector": 205546,
+        "sentry": 14992,
+        "deferral_head": 2369,
+        "compression": 13.71037886872999
+      },
+      "teacher_flag_rate_test": 0.06965252423517562,
+      "attack_window_rate_test": 0.0705652776029208,
+      "live_window_frac": 0.49030864197530866,
+      "runtime_s": 148.2949423789978
+    },
+    {
+      "seed": 1,
+      "geometry": {
+        "knn_overlap@20": 0.31344999999999995,
+        "trustworthiness": 0.9857735510944766,
+        "spearman_score": 0.8359366534905464,
+        "n": 32170
+      },
+      "verdict": [
+        "MARGINAL",
+        "Partial geometry preservation (overlap 0.31). Empirically still enough for the baseline router to lead, but the margin is not guaranteed: near-OOD resolution is the first thing that degrades. Report the overlap alongside any recall claim, and re-check it whenever the student capacity or distillation loss changes."
+      ],
+      "curves": {
+        "A_distilled_detector": [
+          {
+            "budget": 0.005,
+            "actual": 0.005004662729250855,
+            "recall_teacher": 0.057518115942028984,
+            "recall_attack": 0.018836333193804938
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.01000932545850171,
+            "recall_teacher": 0.09692028985507246,
+            "recall_attack": 0.02804520719966513
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.019987566055331054,
+            "recall_teacher": 0.17753623188405798,
+            "recall_attack": 0.052323147760569275
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.029996891513832762,
+            "recall_teacher": 0.25181159420289856,
+            "recall_attack": 0.08706571787358727
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.049984457569163816,
+            "recall_teacher": 0.3591485507246377,
+            "recall_attack": 0.16659690246965259
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.07500777121541809,
+            "recall_teacher": 0.4470108695652174,
+            "recall_attack": 0.243197990791126
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.1,
+            "recall_teacher": 0.5036231884057971,
+            "recall_attack": 0.29970699037254084
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15001554243083617,
+            "recall_teacher": 0.6055253623188406,
+            "recall_attack": 0.4051904562578485
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.2,
+            "recall_teacher": 0.6875,
+            "recall_attack": 0.4872331519464211
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.3,
+            "recall_teacher": 0.8143115942028986,
+            "recall_attack": 0.6362494767685224
+          }
+        ],
+        "B_encoder_mahalanobis": [
+          {
+            "budget": 0.005,
+            "actual": 0.005004662729250855,
+            "recall_teacher": 0.06793478260869565,
+            "recall_attack": 0.06739221431561322
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.01000932545850171,
+            "recall_teacher": 0.1331521739130435,
+            "recall_attack": 0.13311008790288822
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.019987566055331054,
+            "recall_teacher": 0.19791666666666666,
+            "recall_attack": 0.1975722059439096
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.029996891513832762,
+            "recall_teacher": 0.2427536231884058,
+            "recall_attack": 0.23440770196735036
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.049984457569163816,
+            "recall_teacher": 0.3120471014492754,
+            "recall_attack": 0.2971954792800335
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.07500777121541809,
+            "recall_teacher": 0.3944746376811594,
+            "recall_attack": 0.3666806195060695
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.1,
+            "recall_teacher": 0.45471014492753625,
+            "recall_attack": 0.42611971536207616
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15001554243083617,
+            "recall_teacher": 0.5561594202898551,
+            "recall_attack": 0.5102553369610716
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.2,
+            "recall_teacher": 0.6163949275362319,
+            "recall_attack": 0.5634156550858099
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.3,
+            "recall_teacher": 0.7078804347826086,
+            "recall_attack": 0.6567601506906655
+          }
+        ],
+        "C_deferral_head": [
+          {
+            "budget": 0.005,
+            "actual": 0.005004662729250855,
+            "recall_teacher": 0.04891304347826087,
+            "recall_attack": 0.013394725826705735
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.01000932545850171,
+            "recall_teacher": 0.09239130434782608,
+            "recall_attack": 0.02595228128924236
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.019987566055331054,
+            "recall_teacher": 0.1693840579710145,
+            "recall_attack": 0.053160318124738384
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.029996891513832762,
+            "recall_teacher": 0.23731884057971014,
+            "recall_attack": 0.08664713269150272
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.049984457569163816,
+            "recall_teacher": 0.338768115942029,
+            "recall_attack": 0.15780661364587695
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.07500777121541809,
+            "recall_teacher": 0.4180253623188406,
+            "recall_attack": 0.21975722059439096
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.1,
+            "recall_teacher": 0.4791666666666667,
+            "recall_attack": 0.2712431979907911
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15001554243083617,
+            "recall_teacher": 0.5625,
+            "recall_attack": 0.3528673084972792
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.2,
+            "recall_teacher": 0.6286231884057971,
+            "recall_attack": 0.43365424863959817
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.3,
+            "recall_teacher": 0.7364130434782609,
+            "recall_attack": 0.5621598995395563
+          }
+        ]
+      },
+      "router_auc_vs_teacher": {
+        "A_distilled_detector": 0.8706210838076057,
+        "B_encoder_mahalanobis": 0.7975027426044003,
+        "C_deferral_head": 0.8210054142251683
+      },
+      "teacher_auc_vs_attack": 0.8750625063170436,
+      "params": {
+        "inspector": 205546,
+        "sentry": 14992,
+        "deferral_head": 2369,
+        "compression": 13.71037886872999
+      },
+      "teacher_flag_rate_test": 0.06863537457258315,
+      "attack_window_rate_test": 0.07426173453528132,
+      "live_window_frac": 0.4964506172839506,
+      "runtime_s": 154.77371907234192
+    },
+    {
+      "seed": 2,
+      "geometry": {
+        "knn_overlap@20": 0.3334833333333333,
+        "trustworthiness": 0.9846942724282636,
+        "spearman_score": 0.8659384024696475,
+        "n": 32760
+      },
+      "verdict": [
+        "MARGINAL",
+        "Partial geometry preservation (overlap 0.33). Empirically still enough for the baseline router to lead, but the margin is not guaranteed: near-OOD resolution is the first thing that degrades. Report the overlap alongside any recall claim, and re-check it whenever the student capacity or distillation loss changes."
+      ],
+      "curves": {
+        "A_distilled_detector": [
+          {
+            "budget": 0.005,
+            "actual": 0.0050061050061050065,
+            "recall_teacher": 0.06562193927522038,
+            "recall_attack": 0.018724696356275303
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.010012210012210013,
+            "recall_teacher": 0.12193927522037218,
+            "recall_attack": 0.03694331983805668
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.019993894993894992,
+            "recall_teacher": 0.21596474045053868,
+            "recall_attack": 0.07540485829959515
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.030006105006105007,
+            "recall_teacher": 0.2801175318315377,
+            "recall_attack": 0.10880566801619433
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.05,
+            "recall_teacher": 0.3746327130264447,
+            "recall_attack": 0.1695344129554656
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.075,
+            "recall_teacher": 0.4476003917727718,
+            "recall_attack": 0.2216599190283401
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.1,
+            "recall_teacher": 0.5323212536728698,
+            "recall_attack": 0.29959514170040485
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15,
+            "recall_teacher": 0.678256611165524,
+            "recall_attack": 0.4478744939271255
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.2,
+            "recall_teacher": 0.7634671890303624,
+            "recall_attack": 0.5369433198380567
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.3,
+            "recall_teacher": 0.8937316356513222,
+            "recall_attack": 0.6988866396761133
+          }
+        ],
+        "B_encoder_mahalanobis": [
+          {
+            "budget": 0.005,
+            "actual": 0.0050061050061050065,
+            "recall_teacher": 0.05386875612144956,
+            "recall_attack": 0.057186234817813764
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.010012210012210013,
+            "recall_teacher": 0.08619000979431929,
+            "recall_attack": 0.09058704453441295
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.019993894993894992,
+            "recall_teacher": 0.1366307541625857,
+            "recall_attack": 0.14018218623481782
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.030006105006105007,
+            "recall_teacher": 0.17482859941234083,
+            "recall_attack": 0.17813765182186234
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.05,
+            "recall_teacher": 0.2531831537708129,
+            "recall_attack": 0.2479757085020243
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.075,
+            "recall_teacher": 0.34476003917727716,
+            "recall_attack": 0.33451417004048584
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.1,
+            "recall_teacher": 0.4069539666993144,
+            "recall_attack": 0.3876518218623482
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15,
+            "recall_teacher": 0.5181194906953966,
+            "recall_attack": 0.47621457489878544
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.2,
+            "recall_teacher": 0.584720861900098,
+            "recall_attack": 0.5389676113360324
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.3,
+            "recall_teacher": 0.6939275220372184,
+            "recall_attack": 0.6356275303643725
+          }
+        ],
+        "C_deferral_head": [
+          {
+            "budget": 0.005,
+            "actual": 0.0050061050061050065,
+            "recall_teacher": 0.05680705190989226,
+            "recall_attack": 0.01720647773279352
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.010012210012210013,
+            "recall_teacher": 0.10822722820763957,
+            "recall_attack": 0.03744939271255061
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.019993894993894992,
+            "recall_teacher": 0.18854064642507345,
+            "recall_attack": 0.06933198380566802
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.030006105006105007,
+            "recall_teacher": 0.24779627815866798,
+            "recall_attack": 0.09615384615384616
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.05,
+            "recall_teacher": 0.3281096963761019,
+            "recall_attack": 0.14423076923076922
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.075,
+            "recall_teacher": 0.4020568070519099,
+            "recall_attack": 0.1978744939271255
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.1,
+            "recall_teacher": 0.45886385896180215,
+            "recall_attack": 0.24848178137651822
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15,
+            "recall_teacher": 0.564152791380999,
+            "recall_attack": 0.3456477732793522
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.2,
+            "recall_teacher": 0.6420176297747306,
+            "recall_attack": 0.4251012145748988
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.3,
+            "recall_teacher": 0.7355533790401567,
+            "recall_attack": 0.5379554655870445
+          }
+        ]
+      },
+      "router_auc_vs_teacher": {
+        "A_distilled_detector": 0.8904359132097939,
+        "B_encoder_mahalanobis": 0.7738231161495055,
+        "C_deferral_head": 0.8213512398241015
+      },
+      "teacher_auc_vs_attack": 0.8706548734896724,
+      "params": {
+        "inspector": 205546,
+        "sentry": 14992,
+        "deferral_head": 2369,
+        "compression": 13.71037886872999
+      },
+      "teacher_flag_rate_test": 0.06233211233211233,
+      "attack_window_rate_test": 0.06031746031746032,
+      "live_window_frac": 0.5055555555555555,
+      "runtime_s": 147.98287558555603
+    }
+  ],
+  "aggregate": {
+    "A_distilled_detector": [
+      {
+        "budget": 0.005,
+        "recall_teacher_mean": 0.06123044768726809,
+        "recall_teacher_std": 0.003343045689473395,
+        "recall_attack_mean": 0.021143596231234,
+        "recall_attack_std": 0.0033422126006280727
+      },
+      {
+        "budget": 0.01,
+        "recall_teacher_mean": 0.1116638375526373,
+        "recall_teacher_std": 0.01069144245354731,
+        "recall_attack_mean": 0.03563845935453052,
+        "recall_attack_std": 0.005741776989196657
+      },
+      {
+        "budget": 0.02,
+        "recall_teacher_mean": 0.20241266030674235,
+        "recall_teacher_std": 0.017613786562750318,
+        "recall_attack_mean": 0.0682970843869891,
+        "recall_attack_std": 0.01131806730564633
+      },
+      {
+        "budget": 0.03,
+        "recall_teacher_mean": 0.26979351648052524,
+        "recall_teacher_std": 0.01276163991895551,
+        "recall_attack_mean": 0.10186494902838096,
+        "recall_attack_std": 0.010471342421411992
+      },
+      {
+        "budget": 0.05,
+        "recall_teacher_mean": 0.3709682085677279,
+        "recall_teacher_std": 0.008556467946887405,
+        "recall_attack_mean": 0.17270389669686514,
+        "recall_attack_std": 0.006668184390080744
+      },
+      {
+        "budget": 0.075,
+        "recall_teacher_mean": 0.45364885093251545,
+        "recall_teacher_std": 0.008973895996831576,
+        "recall_attack_mean": 0.2391036922116032,
+        "recall_attack_std": 0.012900348521433028
+      },
+      {
+        "budget": 0.1,
+        "recall_teacher_mean": 0.5200399232294156,
+        "recall_teacher_std": 0.01207534442735558,
+        "recall_attack_mean": 0.3014622926118859,
+        "recall_attack_std": 0.0025618681534916006
+      },
+      {
+        "budget": 0.15,
+        "recall_teacher_mean": 0.637145580256198,
+        "recall_teacher_std": 0.030441367554160173,
+        "recall_attack_mean": 0.4214349715008492,
+        "recall_attack_std": 0.018857984984940217
+      },
+      {
+        "budget": 0.2,
+        "recall_teacher_mean": 0.7228483791721935,
+        "recall_teacher_std": 0.031236586796100252,
+        "recall_attack_mean": 0.509842945248409,
+        "recall_attack_std": 0.02054100270482527
+      },
+      {
+        "budget": 0.3,
+        "recall_teacher_mean": 0.8510166693278189,
+        "recall_teacher_std": 0.0327004061145162,
+        "recall_attack_mean": 0.6625594964419972,
+        "recall_attack_std": 0.026534387972338667
+      }
+    ],
+    "B_encoder_mahalanobis": [
+      {
+        "budget": 0.005,
+        "recall_teacher_mean": 0.06304431860367696,
+        "recall_teacher_std": 0.006492807662047261,
+        "recall_attack_mean": 0.06516575720445188,
+        "recall_attack_std": 0.005823162051972456
+      },
+      {
+        "budget": 0.01,
+        "recall_teacher_mean": 0.11423471193619428,
+        "recall_teacher_std": 0.020229369729035745,
+        "recall_attack_mean": 0.12065551158555297,
+        "recall_attack_std": 0.021365691570305215
+      },
+      {
+        "budget": 0.02,
+        "recall_teacher_mean": 0.18487022778959714,
+        "recall_teacher_std": 0.035288364834578104,
+        "recall_attack_mean": 0.1919781961440242,
+        "recall_attack_std": 0.040202588649063876
+      },
+      {
+        "budget": 0.03,
+        "recall_teacher_mean": 0.23920913670966296,
+        "recall_teacher_std": 0.05118086245948653,
+        "recall_attack_mean": 0.24381901326128677,
+        "recall_attack_std": 0.05785477081753162
+      },
+      {
+        "budget": 0.05,
+        "recall_teacher_mean": 0.3284914226241987,
+        "recall_teacher_std": 0.06918643613093742,
+        "recall_attack_mean": 0.32876506140460504,
+        "recall_attack_std": 0.08195138465044105
+      },
+      {
+        "budget": 0.075,
+        "recall_teacher_mean": 0.42324541947397504,
+        "recall_teacher_std": 0.07851029043265408,
+        "recall_attack_mean": 0.4155632944043082,
+        "recall_attack_std": 0.0928093905536607
+      },
+      {
+        "budget": 0.1,
+        "recall_teacher_mean": 0.48936024687908136,
+        "recall_teacher_std": 0.08503650427118623,
+        "recall_attack_mean": 0.4753903934667201,
+        "recall_attack_std": 0.09814477600955028
+      },
+      {
+        "budget": 0.15,
+        "recall_teacher_mean": 0.59216436662304,
+        "recall_teacher_std": 0.07935146121577405,
+        "recall_attack_mean": 0.5610564291391317,
+        "recall_attack_std": 0.09691559920963969
+      },
+      {
+        "budget": 0.2,
+        "recall_teacher_mean": 0.6576395906043979,
+        "recall_teacher_std": 0.08175480260806578,
+        "recall_attack_mean": 0.6188735181858118,
+        "recall_attack_std": 0.09623561146845366
+      },
+      {
+        "budget": 0.3,
+        "recall_teacher_mean": 0.7511976213951314,
+        "recall_teacher_std": 0.07135368487421785,
+        "recall_attack_mean": 0.7083754357605404,
+        "recall_attack_std": 0.08836024470931021
+      }
+    ],
+    "C_deferral_head": [
+      {
+        "budget": 0.005,
+        "recall_teacher_mean": 0.056176919881606106,
+        "recall_teacher_std": 0.005691149011397008,
+        "recall_attack_mean": 0.019121007787748636,
+        "recall_attack_std": 0.005622506519709025
+      },
+      {
+        "budget": 0.01,
+        "recall_teacher_mean": 0.10724036941485848,
+        "recall_teacher_std": 0.011742080826834513,
+        "recall_attack_mean": 0.039867165196553644,
+        "recall_attack_std": 0.012466291653028358
+      },
+      {
+        "budget": 0.02,
+        "recall_teacher_mean": 0.1947714069631786,
+        "recall_teacher_std": 0.02368575321440608,
+        "recall_attack_mean": 0.07844599181206827,
+        "recall_attack_std": 0.02520428889688424
+      },
+      {
+        "budget": 0.03,
+        "recall_teacher_mean": 0.26925135679590767,
+        "recall_teacher_std": 0.03799228551281872,
+        "recall_attack_mean": 0.12203981483367116,
+        "recall_attack_std": 0.043504016558908086
+      },
+      {
+        "budget": 0.05,
+        "recall_teacher_mean": 0.38255770427173125,
+        "recall_teacher_std": 0.0696006200212292,
+        "recall_attack_mean": 0.20058992155953623,
+        "recall_attack_std": 0.07032304721823239
+      },
+      {
+        "budget": 0.075,
+        "recall_teacher_mean": 0.4672152192826436,
+        "recall_teacher_std": 0.08111881692993281,
+        "recall_attack_mean": 0.26960010466209333,
+        "recall_attack_std": 0.08642487152835389
+      },
+      {
+        "budget": 0.1,
+        "recall_teacher_mean": 0.5232507234848323,
+        "recall_teacher_std": 0.07714707418358382,
+        "recall_attack_mean": 0.3207290222630847,
+        "recall_attack_std": 0.08657838408556172
+      },
+      {
+        "budget": 0.15,
+        "recall_teacher_mean": 0.613237329014332,
+        "recall_teacher_std": 0.07058794385070517,
+        "recall_attack_mean": 0.4076822499766886,
+        "recall_attack_std": 0.08267756776931187
+      },
+      {
+        "budget": 0.2,
+        "recall_teacher_mean": 0.6842789773510329,
+        "recall_teacher_std": 0.06945347115553745,
+        "recall_attack_mean": 0.4854787018327242,
+        "recall_attack_std": 0.07941555338281069
+      },
+      {
+        "budget": 0.3,
+        "recall_teacher_mean": 0.7887425354772191,
+        "recall_teacher_std": 0.07461377724236522,
+        "recall_attack_mean": 0.6096429748162117,
+        "recall_attack_std": 0.084843718346675
+      }
+    ]
+  },
+  "budgets": [
+    0.005,
+    0.01,
+    0.02,
+    0.03,
+    0.05,
+    0.075,
+    0.1,
+    0.15,
+    0.2,
+    0.3
+  ],
+  "geometry_mean": {
+    "knn_overlap@20": 0.3459222222222222,
+    "trustworthiness": 0.9873183395712828,
+    "spearman_score": 0.8382731120304451,
+    "n": 32234.0
+  },
+  "verdict": [
+    "MARGINAL",
+    "Partial geometry preservation (overlap 0.35). The Mahalanobis router depends on this geometry and came LAST in the measured comparison, with ~7x the seed variance of the learned heads -- consistent with only partial preservation. Report the overlap alongside any recall claim, and re-check it whenever student capacity or the distillation loss changes."
+  ],
+  "lift_over_random": {
+    "0.005": {
+      "A_distilled_detector": 12.246089537453617,
+      "B_encoder_mahalanobis": 12.60886372073539,
+      "C_deferral_head": 11.235383976321222
+    },
+    "0.010": {
+      "A_distilled_detector": 11.16638375526373,
+      "B_encoder_mahalanobis": 11.423471193619427,
+      "C_deferral_head": 10.724036941485847
+    },
+    "0.020": {
+      "A_distilled_detector": 10.120633015337118,
+      "B_encoder_mahalanobis": 9.243511389479856,
+      "C_deferral_head": 9.73857034815893
+    },
+    "0.030": {
+      "A_distilled_detector": 8.993117216017508,
+      "B_encoder_mahalanobis": 7.973637890322099,
+      "C_deferral_head": 8.975045226530256
+    },
+    "0.050": {
+      "A_distilled_detector": 7.419364171354557,
+      "B_encoder_mahalanobis": 6.569828452483974,
+      "C_deferral_head": 7.651154085434625
+    },
+    "0.075": {
+      "A_distilled_detector": 6.0486513457668725,
+      "B_encoder_mahalanobis": 5.643272259653001,
+      "C_deferral_head": 6.229536257101914
+    },
+    "0.100": {
+      "A_distilled_detector": 5.2003992322941555,
+      "B_encoder_mahalanobis": 4.893602468790814,
+      "C_deferral_head": 5.232507234848322
+    },
+    "0.150": {
+      "A_distilled_detector": 4.247637201707987,
+      "B_encoder_mahalanobis": 3.9477624441535997,
+      "C_deferral_head": 4.088248860095547
+    },
+    "0.200": {
+      "A_distilled_detector": 3.614241895860967,
+      "B_encoder_mahalanobis": 3.2881979530219896,
+      "C_deferral_head": 3.4213948867551647
+    },
+    "0.300": {
+      "A_distilled_detector": 2.83672223109273,
+      "B_encoder_mahalanobis": 2.5039920713171044,
+      "C_deferral_head": 2.6291417849240637
+    }
+  },
+  "best_router_at_5pct": "C_deferral_head",
+  "oracle_auc": 0.8752448118652335,
+  "router_auc": {
+    "A_distilled_detector": 0.8757500910505737,
+    "B_encoder_mahalanobis": 0.8177841014092607,
+    "C_deferral_head": 0.8495514387645638
+  },
+  "cost": {
+    "one_time": 14000,
+    "ongoing_per_year": 19466.666666666664,
+    "inspect_all_per_year": 365000,
+    "steady_state_reduction": 0.9466666666666667
+  },
+  "cost_text": "hosts=1000  commissioning=14d  sample_rate=0.0333/host-day  escalation=0.0200/host-day\n  inspect-all              :    365,000 GPU-host-days/yr\n  NetSentinel one-time     :     14,000 GPU-host-days\n  NetSentinel ongoing      :     19,467 GPU-host-days/yr\n  steady-state reduction   :       94.7 %",
+  "params": {
+    "inspector": 205546,
+    "sentry": 14992,
+    "deferral_head": 2369,
+    "compression": 13.71037886872999
+  }
+}

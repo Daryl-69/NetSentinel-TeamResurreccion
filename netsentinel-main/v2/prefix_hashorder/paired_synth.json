@@ -1,0 +1,70 @@
+{
+  "hosts": 700,
+  "days": 16,
+  "seeds": 3,
+  "epochs": 10,
+  "hard_negatives": true,
+  "confound_imposed": false,
+  "runs": [
+    {
+      "seed": 0,
+      "pooled_inspector": 0.7469306177562054,
+      "pooled_bag": 0.716661948879727,
+      "within_inspector": 0.7480957347094541,
+      "within_bag": 0.7179624372730623,
+      "paired": {
+        "hosts": 50,
+        "a_wins": 25,
+        "b_wins": 25,
+        "ties": 0,
+        "mean_diff": 0.03013329743639159,
+        "median_diff": -0.002395284051338209,
+        "p": 1.0
+      }
+    },
+    {
+      "seed": 1,
+      "pooled_inspector": 0.748754937100952,
+      "pooled_bag": 0.7135687587252609,
+      "within_inspector": 0.7759472151961991,
+      "within_bag": 0.7412509427694297,
+      "paired": {
+        "hosts": 48,
+        "a_wins": 23,
+        "b_wins": 25,
+        "ties": 0,
+        "mean_diff": 0.0346962724267694,
+        "median_diff": -0.003284838904826004,
+        "p": 0.8854334972865132
+      }
+    },
+    {
+      "seed": 2,
+      "pooled_inspector": 0.7262056992023779,
+      "pooled_bag": 0.6987331237285987,
+      "within_inspector": 0.7476572061957539,
+      "within_bag": 0.7379310649816335,
+      "paired": {
+        "hosts": 52,
+        "a_wins": 22,
+        "b_wins": 30,
+        "ties": 0,
+        "mean_diff": 0.009726141214120212,
+        "median_diff": -0.0161490945703619,
+        "p": 0.3317497633694906
+      }
+    }
+  ],
+  "seeds_significant": 0,
+  "mean_paired_diff": 0.02485190369242707,
+  "verdict": "POWERED, and the shape matters more than the headline: at n=150 paired hosts (min detectable split 88-62) the win rate is 70/80, p=0.46 -- no difference in HOW OFTEN the Inspector is better. But its MEAN within-host AUC is +0.025 higher while its MEDIAN paired difference is NEGATIVE (-0.007). The Inspector wins big on a minority of hosts and loses slightly on the majority. That is a real, defensible finding: its value is concentrated, not general.",
+  "pooled_inspector_wins": 70,
+  "pooled_bag_wins": 80,
+  "pooled_n": 150,
+  "pooled_sign_test_p": 0.4625495178668303,
+  "min_detectable_split": [
+    88,
+    62
+  ],
+  "median_paired_diff": -0.007276405842175371
+}

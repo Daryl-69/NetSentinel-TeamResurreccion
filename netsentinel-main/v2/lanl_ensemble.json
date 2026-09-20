@@ -1,0 +1,134 @@
+{
+  "dataset": "lanl_cyber1",
+  "hosts": 612,
+  "test_days": 5,
+  "live_windows": 39492,
+  "attack_windows": 131,
+  "scorers": {
+    "Inspector": {
+      "pooled": 0.7409482901566261,
+      "within_mean": 0.5420858201681897,
+      "within_std": 0.3103798146960442,
+      "n_hosts": 77,
+      "n_pos": 106
+    },
+    "bag-Mahalanobis": {
+      "pooled": 0.6267749434622677,
+      "within_mean": 0.5779462057524685,
+      "within_std": 0.27270747170899384,
+      "n_hosts": 77,
+      "n_pos": 106
+    },
+    "ensemble mean(z)": {
+      "pooled": 0.5958733709947712,
+      "within_mean": 0.568474023692747,
+      "within_std": 0.30435621878479313,
+      "n_hosts": 77,
+      "n_pos": 106
+    },
+    "ensemble max(z)": {
+      "pooled": 0.6077832884140946,
+      "within_mean": 0.5677703459525626,
+      "within_std": 0.29283098077411995,
+      "n_hosts": 77,
+      "n_pos": 106
+    },
+    "ensemble min(z)": {
+      "pooled": 0.5911383783421068,
+      "within_mean": 0.5691982663020156,
+      "within_std": 0.3176933453886612,
+      "n_hosts": 77,
+      "n_pos": 106
+    },
+    "ensemble mean(rank)": {
+      "pooled": 0.6948886321582703,
+      "within_mean": 0.5566164899692981,
+      "within_std": 0.31904528459391124,
+      "n_hosts": 77,
+      "n_pos": 106
+    }
+  },
+  "paired": {
+    "ensemble mean(z)": {
+      "vs_inspector": {
+        "n": 77,
+        "wins": 31,
+        "losses": 37,
+        "ties": 9,
+        "mean_diff": 0.02638820352455727,
+        "median_diff": 0.0,
+        "p": 0.5446122234192591
+      },
+      "vs_bag": {
+        "n": 77,
+        "wins": 26,
+        "losses": 33,
+        "ties": 18,
+        "mean_diff": -0.009472182059721298,
+        "median_diff": 0.0,
+        "p": 0.4349928051221534
+      }
+    },
+    "ensemble max(z)": {
+      "vs_inspector": {
+        "n": 77,
+        "wins": 30,
+        "losses": 38,
+        "ties": 9,
+        "mean_diff": 0.02568452578437268,
+        "median_diff": 0.0,
+        "p": 0.39612484029702977
+      },
+      "vs_bag": {
+        "n": 77,
+        "wins": 20,
+        "losses": 34,
+        "ties": 23,
+        "mean_diff": -0.010175859799905897,
+        "median_diff": 0.0,
+        "p": 0.07590472948910143
+      }
+    },
+    "ensemble min(z)": {
+      "vs_inspector": {
+        "n": 77,
+        "wins": 38,
+        "losses": 20,
+        "ties": 19,
+        "mean_diff": 0.027112446133825782,
+        "median_diff": 0.0,
+        "p": 0.024746035842440797
+      },
+      "vs_bag": {
+        "n": 77,
+        "wins": 46,
+        "losses": 24,
+        "ties": 7,
+        "mean_diff": -0.008747939450452782,
+        "median_diff": 0.030303030303030276,
+        "p": 0.011526409654363481
+      }
+    },
+    "ensemble mean(rank)": {
+      "vs_inspector": {
+        "n": 77,
+        "wins": 36,
+        "losses": 36,
+        "ties": 5,
+        "mean_diff": 0.014530669801108342,
+        "median_diff": 0.0,
+        "p": 1.0
+      },
+      "vs_bag": {
+        "n": 77,
+        "wins": 35,
+        "losses": 35,
+        "ties": 7,
+        "mean_diff": -0.02132971578317023,
+        "median_diff": 0.0,
+        "p": 1.0
+      }
+    }
+  },
+  "best": null
+}

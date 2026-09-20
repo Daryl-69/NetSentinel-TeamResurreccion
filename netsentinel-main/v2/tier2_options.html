@@ -1,0 +1,833 @@
+<title>The Sentry Decision</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+  :root {
+    --ground:      #f6f7f8;
+    --surface:     #ffffff;
+    --sunk:        #eceff1;
+    --ink:         #14181c;
+    --ink-2:       #4a545c;
+    --ink-3:       #7c878f;
+    --rule:        #d5dbdf;
+    --rule-firm:   #b4bec4;
+    --gpu:         #9a5b00;   /* the expensive path */
+    --gpu-soft:    #f2e6d2;
+    --cpu:         #10635f;   /* the always-on cheap path */
+    --cpu-soft:    #dceceb;
+    --dead:        #9c3418;   /* withdrawn / disproven */
+    --dead-soft:   #f6e3de;
+    --pick:        #10635f;
+
+    --f-display: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+    --f-body:    "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --f-mono:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:    #101417;
+      --surface:   #171c20;
+      --sunk:      #1e2429;
+      --ink:       #e8edf0;
+      --ink-2:     #a9b4bb;
+      --ink-3:     #77838b;
+      --rule:      #2b333a;
+      --rule-firm: #3d474f;
+      --gpu:       #e0a355;
+      --gpu-soft:  #33260f;
+      --cpu:       #5fc4bd;
+      --cpu-soft:  #10302f;
+      --dead:      #e08a6e;
+      --dead-soft: #331c14;
+      --pick:      #5fc4bd;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:    #101417;
+    --surface:   #171c20;
+    --sunk:      #1e2429;
+    --ink:       #e8edf0;
+    --ink-2:     #a9b4bb;
+    --ink-3:     #77838b;
+    --rule:      #2b333a;
+    --rule-firm: #3d474f;
+    --gpu:       #e0a355;
+    --gpu-soft:  #33260f;
+    --cpu:       #5fc4bd;
+    --cpu-soft:  #10302f;
+    --dead:      #e08a6e;
+    --dead-soft: #331c14;
+    --pick:      #5fc4bd;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0;
+    padding-inline: 20px;
+    padding-block: 0 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 900px; margin: 0 auto; }
+
+  /* ---------- masthead ---------- */
+  header.top {
+    padding-block: 48px 34px;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 34px;
+  }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(2.3rem, 7vw, 3.6rem);
+    line-height: 0.98;
+    letter-spacing: -0.022em;
+    margin: 0 0 18px;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: 1.06rem;
+    color: var(--ink-2);
+    max-width: 60ch;
+    margin: 0;
+  }
+  .standfirst strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- section headings ---------- */
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 1.55rem;
+    letter-spacing: -0.012em;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  h3 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 1.02rem;
+    letter-spacing: 0.005em;
+    margin: 0 0 6px;
+  }
+  p { margin: 0 0 14px; max-width: 66ch; }
+  p:last-child { margin-bottom: 0; }
+
+  .section { margin-block: 44px; }
+  .lede { color: var(--ink-2); }
+
+  /* ---------- shared substrate strip ---------- */
+  .substrate {
+    background: var(--sunk);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 22px 22px 16px;
+  }
+
+  /* ---------- option blocks ---------- */
+  .option {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    margin-bottom: 22px;
+    overflow: hidden;
+  }
+  .option.picked { border-color: var(--pick); border-width: 2px; }
+
+  .opt-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .opt-letter {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--ink-3);
+    letter-spacing: -0.02em;
+  }
+  .option.picked .opt-letter { color: var(--pick); }
+  .opt-name {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 1.28rem;
+    letter-spacing: -0.01em;
+    flex: 1 1 auto;
+  }
+  .chip {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .chip.no    { background: var(--dead-soft); color: var(--dead); }
+  .chip.maybe { background: var(--sunk);      color: var(--ink-2); }
+  .chip.yes   { background: var(--cpu-soft);  color: var(--cpu); }
+
+  .opt-body { padding: 20px 22px 22px; }
+
+  figure { margin: 0 0 20px; }
+  figure svg { display: block; width: 100%; height: auto; max-width: 100%; }
+  figcaption {
+    font-size: 13.5px;
+    color: var(--ink-2);
+    margin-top: 10px;
+    padding-top: 9px;
+    border-top: 1px solid var(--rule);
+    max-width: 72ch;
+  }
+
+  .cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 30px;
+  }
+  @media (max-width: 640px) { .cols { grid-template-columns: 1fr; } }
+
+  .label {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 0 7px;
+  }
+  .cols p { font-size: 14.6px; margin-bottom: 10px; }
+
+  ul.tight { margin: 0; padding-left: 17px; }
+  ul.tight li { font-size: 14.6px; margin-bottom: 7px; color: var(--ink-2); }
+  ul.tight li strong { color: var(--ink); font-weight: 600; }
+
+  .num { font-family: var(--f-mono); font-size: 0.93em; font-variant-numeric: tabular-nums; }
+
+  /* ---------- table ---------- */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; min-width: 620px; background: var(--surface); }
+  th, td {
+    text-align: left;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14px;
+    vertical-align: top;
+  }
+  thead th {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    background: var(--sunk);
+    border-bottom: 1px solid var(--rule-firm);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody th {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  td.n { font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-size: 13.4px; }
+  tr.hl td, tr.hl th { background: var(--cpu-soft); }
+
+  /* ---------- callout ---------- */
+  .callout {
+    border-left: 3px solid var(--dead);
+    background: var(--dead-soft);
+    padding: 15px 18px;
+    border-radius: 0 3px 3px 0;
+    margin-block: 22px;
+  }
+  .callout p { font-size: 14.8px; margin-bottom: 8px; }
+  .callout .label { color: var(--dead); }
+
+  .verdict {
+    border: 2px solid var(--pick);
+    border-radius: 4px;
+    padding: 24px 24px 20px;
+    background: var(--surface);
+  }
+  .verdict h2 { margin-bottom: 12px; }
+
+  footer.foot {
+    margin-top: 50px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    color: var(--ink-3);
+    line-height: 1.8;
+  }
+  a { color: var(--cpu); }
+  :focus-visible { outline: 2px solid var(--cpu); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <p class="eyebrow">NetSentinel Tier 2 · 12 September 2026</p>
+  <h1>The Sentry Decision</h1>
+  <p class="standfirst">Four shapes for the Inspector–Sentry cascade. The original reason for the
+  cascade — GPU cost — <strong>does not survive measurement</strong>. These are the options that remain,
+  and the evidence for each.</p>
+</header>
+
+<!-- ============ SHARED SUBSTRATE ============ -->
+<section class="section">
+  <h2>What every option shares</h2>
+  <p class="lede">The sensor and feature pipeline are identical in all four. Nothing below this line is
+  being decided.</p>
+
+  <div class="substrate">
+    <figure>
+      <svg viewBox="0 0 760 96" role="img" aria-label="Shared pipeline: network tap through a data diode to whole-packet capture, then Zeek and QUIC Initial decryption, then the category resolver, producing the host by day by window by category by feature tensor.">
+        <defs>
+          <marker id="arS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <polygon points="0,1 10,5 0,9" fill="currentColor"/>
+          </marker>
+        </defs>
+        <g fill="none" stroke="currentColor" stroke-width="1.3" marker-end="url(#arS)" opacity="0.75">
+          <line x1="118" y1="44" x2="152" y2="44"/>
+          <line x1="264" y1="44" x2="298" y2="44"/>
+          <line x1="418" y1="44" x2="452" y2="44"/>
+          <line x1="566" y1="44" x2="600" y2="44"/>
+        </g>
+        <g stroke="currentColor" stroke-width="1.3" fill="none" opacity="0.55">
+          <rect x="6"   y="24" width="112" height="40" rx="3"/>
+          <rect x="152" y="24" width="112" height="40" rx="3"/>
+          <rect x="298" y="24" width="120" height="40" rx="3"/>
+          <rect x="452" y="24" width="114" height="40" rx="3"/>
+        </g>
+        <rect x="600" y="18" width="154" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <g font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" text-anchor="middle">
+          <text x="62"  y="41">TAP + diode</text>
+          <text x="62"  y="55" font-size="10" opacity="0.6">one-way</text>
+          <text x="208" y="41">dumpcap</text>
+          <text x="208" y="55" font-size="10" opacity="0.6">snaplen 0</text>
+          <text x="358" y="41">Zeek + QUIC</text>
+          <text x="358" y="55" font-size="10" opacity="0.6">RFC 9001 SNI</text>
+          <text x="509" y="41">resolver</text>
+          <text x="509" y="55" font-size="10" opacity="0.6">9 categories</text>
+          <text x="677" y="39" font-weight="600">edge tensor</text>
+        </g>
+        <text x="677" y="55" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="currentColor" text-anchor="middle" opacity="0.65">host·day·24w·9c·10f</text>
+        <text x="380" y="88" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity="0.5">measured: 0% truncation · 90.1% TLS hostnames recovered</text>
+      </svg>
+      <figcaption>The capture path is settled and measured. The decision is only what consumes the
+      tensor on the right.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<div class="callout">
+  <p class="label">The finding that reopened this</p>
+  <p>At <span class="num">100,000</span> hosts with a <span class="num">200-million</span>-parameter teacher —
+  a thousand times larger than the current one — inspecting <em>every</em> host-hour for a year costs
+  <strong class="num">$150</strong>. The cascade saves <span class="num">$135</span> of it. The cost
+  argument for putting a cheap model first is arithmetically real and economically irrelevant at any
+  scale below roughly ten million hosts.</p>
+  <p>Separately: on LANL, six methods spanning a 205k-parameter graph transformer down to a
+  median-and-MAD all score between <span class="num">0.54</span> and <span class="num">0.58</span>
+  within-host. Accuracy does not discriminate between these options either.</p>
+</div>
+
+<!-- ============ TIME AXIS ============ -->
+<section class="section">
+  <h2>The time axis — shared by A, C and D</h2>
+  <p class="lede">The four diagrams below show steady-state data flow. This is the other half: what
+  happens to a single host over its life, which is where the commissioning period and the teaching sit.</p>
+
+  <div class="substrate">
+    <figure>
+      <svg viewBox="0 0 760 286" role="img" aria-label="One host over time. During commissioning the Inspector runs on every host-day while the Sentry runs in parallel learning from it. At promotion, gated on evidence rather than a fixed number of days, the Sentry becomes primary and the Inspector drops to escalations plus a blind audit sample. Escalations round-trip to the Inspector for a verdict and return.">
+        <defs>
+          <marker id="arT" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <polygon points="0,1 10,5 0,9" fill="currentColor"/>
+          </marker>
+          <marker id="arTg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <polygon points="0,1 10,5 0,9" fill="var(--gpu)"/>
+          </marker>
+          <marker id="arTc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <polygon points="0,1 10,5 0,9" fill="var(--cpu)"/>
+          </marker>
+        </defs>
+
+        <text x="196" y="18" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="currentColor" text-anchor="middle" opacity="0.7">COMMISSIONING</text>
+        <text x="530" y="18" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="currentColor" text-anchor="middle" opacity="0.7">SENTRY PRIMARY</text>
+
+        <line x1="340" y1="26" x2="340" y2="214" stroke="var(--cpu)" stroke-width="1.6" stroke-dasharray="5 4"/>
+
+        <!-- Inspector lane -->
+        <text x="96" y="62" font-family="IBM Plex Sans Condensed, sans-serif" font-weight="700" font-size="12" fill="var(--gpu)" text-anchor="end">INSPECTOR</text>
+        <text x="96" y="76" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--gpu)" text-anchor="end" opacity="0.75">GPU</text>
+        <rect x="106" y="46" width="234" height="26" rx="2" fill="var(--gpu)" opacity="0.85"/>
+        <text x="223" y="63" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--surface)" text-anchor="middle" font-weight="600">every host-day</text>
+        <g fill="var(--gpu)" opacity="0.85">
+          <rect x="372" y="46" width="11" height="26" rx="1"/>
+          <rect x="437" y="46" width="11" height="26" rx="1"/>
+          <rect x="512" y="46" width="11" height="26" rx="1"/>
+          <rect x="589" y="46" width="11" height="26" rx="1"/>
+          <rect x="668" y="46" width="11" height="26" rx="1"/>
+        </g>
+        <line x1="372" y1="59" x2="679" y2="59" stroke="var(--gpu)" stroke-width="1" stroke-dasharray="2 4" opacity="0.45"/>
+        <text x="525" y="36" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--gpu)" text-anchor="middle">escalations + blind audit only — never fully idle</text>
+
+        <!-- Sentry lane -->
+        <text x="96" y="152" font-family="IBM Plex Sans Condensed, sans-serif" font-weight="700" font-size="12" fill="var(--cpu)" text-anchor="end">SENTRY</text>
+        <text x="96" y="166" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--cpu)" text-anchor="end" opacity="0.75">CPU</text>
+        <rect x="106" y="136" width="234" height="26" rx="2" fill="none" stroke="var(--cpu)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <text x="223" y="153" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--cpu)" text-anchor="middle">running + learning</text>
+        <rect x="340" y="136" width="339" height="26" rx="2" fill="var(--cpu)" opacity="0.85"/>
+        <text x="509" y="153" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--surface)" text-anchor="middle" font-weight="600">scores every hour, routes</text>
+
+        <!-- teaching arrow, during commissioning only -->
+        <path d="M 223 78 L 223 130" fill="none" stroke="var(--gpu)" stroke-width="1.5" marker-end="url(#arTc)"/>
+        <text x="232" y="108" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="currentColor" opacity="0.75">teaches — this window is the only source of labels</text>
+
+        <!-- escalation round trip -->
+        <path d="M 437 136 L 437 78" fill="none" stroke="var(--cpu)" stroke-width="1.5" marker-end="url(#arTg)"/>
+        <path d="M 460 78 L 460 130" fill="none" stroke="var(--gpu)" stroke-width="1.5" marker-end="url(#arTc)"/>
+        <text x="472" y="100" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="currentColor" opacity="0.75">escalate ↑  verdict ↓</text>
+
+        <!-- promotion gate callout -->
+        <text x="340" y="196" font-family="IBM Plex Sans Condensed, sans-serif" font-weight="700" font-size="12" fill="var(--cpu)" text-anchor="middle">PROMOTION</text>
+        <text x="340" y="210" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--dead)" text-anchor="middle">not a 14-day timer</text>
+
+        <line x1="106" y1="232" x2="700" y2="232" stroke="currentColor" stroke-width="1.2" opacity="0.5" marker-end="url(#arT)"/>
+        <text x="110" y="248" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="currentColor" opacity="0.55">day 0</text>
+        <text x="700" y="248" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="currentColor" text-anchor="end" opacity="0.55">ongoing</text>
+
+        <text x="403" y="272" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="currentColor" text-anchor="middle" opacity="0.6">gate: 240 live windows · 10 distinct days · a weekend observed · 200 reference samples · score drift ≤ 0.35σ</text>
+      </svg>
+      <figcaption>The original two-phase idea, with the two corrections that came out of building it: the
+      Sentry runs from day one because commissioning is the only period that produces its training
+      labels, and the Inspector keeps a blind audit sample forever because otherwise nothing detects the
+      Sentry drifting away from it.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ OPTION A ============ -->
+<section class="section">
+  <h2>The four options</h2>
+  <p class="lede">Same four nodes in every diagram, in the same positions. What changes between them is
+  which edges exist and where the boundary falls.</p>
+</section>
+
+<article class="option">
+  <div class="opt-head">
+    <span class="opt-letter">A</span>
+    <span class="opt-name">Cascade as built</span>
+    <span class="chip no">Justification broken</span>
+  </div>
+  <div class="opt-body">
+    <figure>
+      <svg viewBox="0 0 720 186" role="img" aria-label="Option A: every window enters the Sentry, which routes the top five percent to the Inspector, which confirms and emits an alert. The Sentry is distilled from the Inspector.">
+        <defs>
+          <marker id="arA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon points="0,1 10,5 0,9" fill="currentColor"/>
+          </marker>
+          <marker id="arAd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon points="0,1 10,5 0,9" fill="currentColor" opacity="0.5"/>
+          </marker>
+        </defs>
+
+        <rect x="4" y="52" width="92" height="42" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+        <text x="50" y="72" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" text-anchor="middle" opacity="0.8">windows</text>
+        <text x="50" y="85" font-family="IBM Plex Mono, monospace" font-size="9" fill="currentColor" text-anchor="middle" opacity="0.55">24 / host-day</text>
+
+        <rect x="158" y="40" width="146" height="66" rx="3" fill="none" stroke="var(--cpu)" stroke-width="1.8"/>
+        <text x="231" y="63" font-family="IBM Plex Sans Condensed, sans-serif" font-weight="700" font-size="14" fill="var(--cpu)" text-anchor="middle">SENTRY</text>
+        <text x="231" y="79" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--cpu)" text-anchor="middle">14,992 params</text>
+        <text x="231" y="93" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--cpu)" text-anchor="middle" opacity="0.75">CPU · all windows</text>
+
+        <rect x="392" y="40" width="164" height="66" rx="3" fill="none" stroke="var(--gpu)" stroke-width="1.8"/>
+        <text x="474" y="63" font-family="IBM Plex Sans Condensed, sans-serif" font-weight="700" font-size="14" fill="var(--gpu)" text-anchor="middle">INSPECTOR</text>
+        <text x="474" y="79" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--gpu)" text-anchor="middle">205,546 params</text>
+        <text x="474" y="93" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--gpu)" text-anchor="middle" opacity="0.75">GPU · whole host-day</text>
+
+        <rect x="628" y="52" width="88" height="42" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="672" y="77" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" text-anchor="middle">alert</text>
+
+        <g fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#arA)">
+          <line x1="96"  y1="73" x2="152" y2="73"/>
+          <line x1="304" y1="73" x2="386" y2="73"/>
+          <line x1="556" y1="73" x2="622" y2="73"/>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="9.5" fill="currentColor" text-anchor="middle" opacity="0.8">
+          <text x="124" y="65">all</text>
+          <text x="345" y="65">top 5%</text>
+          <text x="589" y="65">confirm</text>
+        </g>
+
+        <path d="M 474 106 L 474 142 L 231 142 L 231 110" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.5" marker-end="url(#arAd)"/>
+        <text x="352" y="156" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="currentColor" text-anchor="middle" opacity="0.55">distilled from · λ=4 anomaly-weighted encoder loss</text>
+
+        <text x="345" y="24" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--dead)" text-anchor="middle">5% of windows actually re-runs 49% of host-days</text>
+      </svg>
+      <figcaption>The shape you have today. The router is faithful — it recovers 96.9% of the
+      Inspector's flags at a 5% budget — but a 5% <em>window</em> budget scatters across 49% of
+      <em>host-days</em>, so the Inspector still runs on nearly half of them.</figcaption>
+    </figure>
+
+    <div class="cols">
+      <div>
+        <p class="label">Why it was chosen</p>
+        <p>To avoid running a 205k-parameter graph model on every host-hour. That premise has now been
+        measured and it does not hold.</p>
+      </div>
+      <div>
+        <p class="label">What breaks under scrutiny</p>
+        <ul class="tight">
+          <li>Cost saving is <strong class="num">$135/year</strong> at 100k hosts</li>
+          <li>Budget counted in windows, load incurred in host-days — a <strong class="num">9.8×</strong> gap</li>
+          <li>Alert volume falls only <strong class="num">3.1%</strong>; the router is faithful by design</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</article>
+
+<!-- ============ OPTION B ============ -->
+<article class="option">
+  <div class="opt-head">
+    <span class="opt-letter">B</span>
+    <span class="opt-name">Inspector only — drop the router</span>
+    <span class="chip maybe">Simplest, loses two properties</span>
+  </div>
+  <div class="opt-body">
+    <figure>
+      <svg viewBox="0 0 720 186" role="img" aria-label="Option B: the Sentry is removed. Every host-day goes straight to the Inspector, which emits alerts.">
+        <defs>
+          <marker id="arB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon points="0,1 10,5 0,9" fill="currentColor"/>
+          </marker>
+        </defs>
+
+        <rect x="4" y="52" width="92" height="42" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+        <text x="50" y="72" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" text-anchor="middle" opacity="0.8">windows</text>
+        <text x="50" y="85" font-family="IBM Plex Mono, monospace" font-size="9" fill="currentColor" text-anchor="middle" opacity="0.55">24 / host-day</text>
+
+        <rect x="158" y="40" width="146" height="66" rx="3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-dasharray="5 4" opacity="0.32"/>
+        <text x="231" y="70" font-family="IBM Plex Sans Condensed, sans-serif" font-weight="700" font-size="14" fill="currentColor" text-anchor="middle" opacity="0.32">SENTRY</text>
+        <text x="231" y="86" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--dead)" text-anchor="middle">removed</text>
+
+        <rect x="392" y="40" width="164" height="66" rx="3" fill="none" stroke="var(--gpu)" stroke-width="1.8"/>
+        <text x="474" y="63" font-family="IBM Plex Sans Condensed, sans-serif" font-weight="700" font-size="14" fill="var(--gpu)" text-anchor="middle">INSPECTOR</text>
+        <text x="474" y="79" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--gpu)" text-anchor="middle">205,546 params</text>
+        <text x="474" y="93" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--gpu)" text-anchor="middle" opacity="0.75">every host-day</text>
+
+        <rect x="628" y="52" width="88" height="42" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="672" y="77" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" text-anchor="middle">alert</text>
+
+        <path d="M 96 73 L 128 73 L 128 26 L 360 26 L 360 73 L 386 73"
+              fill="none" stroke="var(--gpu)" stroke-width="1.7" marker-end="url(#arB)"/>
+        <text x="244" y="19" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--gpu)" text-anchor="middle">every host-day, straight through</text>
+
+        <line x1="556" y1="73" x2="622" y2="73" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#arB)"/>
+        <text x="589" y="65" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="currentColor" text-anchor="middle" opacity="0.8">flag</text>
+
+        <text x="360" y="150" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="currentColor" text-anchor="middle" opacity="0.6">123 CPU-seconds per year at 1,000 hosts — the whole annual workload</text>
+        <text x="360" y="166" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--dead)" text-anchor="middle">no hourly score · needs cross-host cohort · cannot sit at the edge</text>
+      </svg>
+      <figcaption>The honest consequence of the cost finding: if compute is free, route nothing.
+      Accuracy is unchanged, and two operational properties are lost.</figcaption>
+    </figure>
+
+    <div class="cols">
+      <div>
+        <p class="label">What it gains</p>
+        <ul class="tight">
+          <li>One model, one threshold, no distillation, no routing loss</li>
+          <li>Nothing to explain about budgets or fidelity</li>
+          <li>Recovers the <strong class="num">3.1%</strong> of teacher flags the router drops</li>
+        </ul>
+      </div>
+      <div>
+        <p class="label">What it costs</p>
+        <ul class="tight">
+          <li><strong>Latency.</strong> The Inspector consumes a complete 24-window day. Nothing is
+          scored until midnight.</li>
+          <li><strong>Placement.</strong> It needs hop-2 cohort — other hosts' traffic in the same
+          window — so it cannot run at a single site behind a diode.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</article>
+
+<!-- ============ OPTION C ============ -->
+<article class="option picked">
+  <div class="opt-head">
+    <span class="opt-letter">C</span>
+    <span class="opt-name">Two-speed split — edge and centre</span>
+    <span class="chip yes">Recommended shape</span>
+  </div>
+  <div class="opt-body">
+    <figure>
+      <svg viewBox="0 0 720 252" role="img" aria-label="Option C: the Sentry runs at the edge site on local traffic only and emits an hourly score. It sends the top-k host-days across the site boundary to a central Inspector, which uses cross-host cohort context and emits a deep next-day alert.">
+        <defs>
+          <marker id="arC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon points="0,1 10,5 0,9" fill="currentColor"/>
+          </marker>
+          <marker id="arCg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon points="0,1 10,5 0,9" fill="var(--gpu)"/>
+          </marker>
+          <marker id="arCc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon points="0,1 10,5 0,9" fill="var(--cpu)"/>
+          </marker>
+        </defs>
+
+        <line x1="330" y1="8" x2="330" y2="244" stroke="var(--rule-firm)" stroke-width="1.4" stroke-dasharray="6 5"/>
+        <text x="168" y="20" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="currentColor" text-anchor="middle" opacity="0.65">EDGE · one site · local traffic only</text>
+        <text x="530" y="20" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="currentColor" text-anchor="middle" opacity="0.65">CENTRAL · all hosts</text>
+
+        <rect x="4" y="112" width="86" height="42" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+        <text x="47" y="138" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" text-anchor="middle" opacity="0.8">windows</text>
+
+        <rect x="122" y="100" width="146" height="66" rx="3" fill="none" stroke="var(--cpu)" stroke-width="1.8"/>
+        <text x="195" y="123" font-family="IBM Plex Sans Condensed, sans-serif" font-weight="700" font-size="14" fill="var(--cpu)" text-anchor="middle">SENTRY</text>
+        <text x="195" y="139" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--cpu)" text-anchor="middle">14,992 · CPU</text>
+        <text x="195" y="153" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--cpu)" text-anchor="middle" opacity="0.75">no cohort needed</text>
+
+        <rect x="392" y="46" width="164" height="66" rx="3" fill="none" stroke="var(--gpu)" stroke-width="1.8"/>
+        <text x="474" y="69" font-family="IBM Plex Sans Condensed, sans-serif" font-weight="700" font-size="14" fill="var(--gpu)" text-anchor="middle">INSPECTOR</text>
+        <text x="474" y="85" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--gpu)" text-anchor="middle">205,546 · GPU</text>
+        <text x="474" y="99" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--gpu)" text-anchor="middle" opacity="0.75">needs hop-2 cohort</text>
+
+        <rect x="124" y="200" width="142" height="40" rx="3" fill="none" stroke="var(--cpu)" stroke-width="1.4"/>
+        <text x="195" y="217" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="var(--cpu)" text-anchor="middle">hourly score</text>
+        <text x="195" y="231" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--cpu)" text-anchor="middle" opacity="0.75">same-day triage</text>
+
+        <rect x="602" y="59" width="114" height="40" rx="3" fill="none" stroke="var(--gpu)" stroke-width="1.4"/>
+        <text x="659" y="76" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="var(--gpu)" text-anchor="middle">deep alert</text>
+        <text x="659" y="90" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--gpu)" text-anchor="middle" opacity="0.75">next-day, full chain</text>
+
+        <line x1="90" y1="133" x2="116" y2="133" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#arC)"/>
+
+        <line x1="195" y1="166" x2="195" y2="194" fill="none" stroke="var(--cpu)" stroke-width="1.6" marker-end="url(#arCc)"/>
+        <text x="284" y="184" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--cpu)" text-anchor="middle">every hour</text>
+
+        <path d="M 268 118 L 320 118 L 320 79 L 386 79" fill="none" stroke="var(--gpu)" stroke-width="1.7" marker-end="url(#arCg)"/>
+        <text x="316" y="38" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--gpu)" text-anchor="middle">top-k host-days cross the boundary</text>
+
+        <line x1="556" y1="79" x2="596" y2="79" fill="none" stroke="var(--gpu)" stroke-width="1.6" marker-end="url(#arCg)"/>
+
+        <text x="474" y="132" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="currentColor" text-anchor="middle" opacity="0.55">cohort = other hosts, same window → only exists centrally</text>
+      </svg>
+      <figcaption>Identical models to Option A, justified differently and placed differently. The
+      boundary is the argument: the Sentry needs no cross-host context, so it runs where the traffic is;
+      the Inspector needs it, so it runs where all traffic converges.</figcaption>
+    </figure>
+
+    <div class="cols">
+      <div>
+        <p class="label">Why this is the defensible one</p>
+        <ul class="tight">
+          <li><strong>Latency is structural, not a claim.</strong> The Inspector is a Transformer over
+          all 24 windows; the Sentry is a unidirectional GRU that scores after each hour.</li>
+          <li><strong>Placement is structural too.</strong> Cohort context does not exist at a single
+          diode-separated site. The Sentry does not need it.</li>
+          <li>Both arguments survive a reviewer with a calculator. The cost argument does not.</li>
+        </ul>
+      </div>
+      <div>
+        <p class="label">What you must not say</p>
+        <ul class="tight">
+          <li>Do not carry <strong class="num">8.6×</strong> onto a GPU slide. It is CPU-to-CPU. The
+          Inspector's Transformer parallelises across all 24 windows; the Sentry's GRU is 24 sequential
+          steps a GPU cannot parallelise. On GPU the gap shrinks and may invert.</li>
+          <li>That is precisely why the Sentry belongs on CPU — present it as a placement decision,
+          backed by a benchmark you have run.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</article>
+
+<!-- ============ OPTION D ============ -->
+<article class="option">
+  <div class="opt-head">
+    <span class="opt-letter">D</span>
+    <span class="opt-name">Baseline-primary — the measured best detector leads</span>
+    <span class="chip maybe">Best accuracy, weakest story</span>
+  </div>
+  <div class="opt-body">
+    <figure>
+      <svg viewBox="0 0 720 186" role="img" aria-label="Option D: a per-host median and MAD baseline with essentially zero parameters becomes the primary detector and emits alerts directly. The Inspector becomes an optional second opinion on escalated host-days.">
+        <defs>
+          <marker id="arD" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon points="0,1 10,5 0,9" fill="currentColor"/>
+          </marker>
+          <marker id="arDf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon points="0,1 10,5 0,9" fill="currentColor" opacity="0.45"/>
+          </marker>
+        </defs>
+
+        <rect x="4" y="52" width="92" height="42" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+        <text x="50" y="77" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" text-anchor="middle" opacity="0.8">windows</text>
+
+        <rect x="158" y="40" width="146" height="66" rx="3" fill="none" stroke="var(--cpu)" stroke-width="1.8"/>
+        <text x="231" y="61" font-family="IBM Plex Sans Condensed, sans-serif" font-weight="700" font-size="13" fill="var(--cpu)" text-anchor="middle">PER-HOST BASELINE</text>
+        <text x="231" y="77" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--cpu)" text-anchor="middle">median + MAD</text>
+        <text x="231" y="91" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--cpu)" text-anchor="middle" opacity="0.75">~0 params · CPU</text>
+
+        <rect x="392" y="40" width="164" height="66" rx="3" fill="none" stroke="var(--gpu)" stroke-width="1.3" stroke-dasharray="5 4" opacity="0.6"/>
+        <text x="474" y="66" font-family="IBM Plex Sans Condensed, sans-serif" font-weight="700" font-size="14" fill="var(--gpu)" text-anchor="middle" opacity="0.8">INSPECTOR</text>
+        <text x="474" y="86" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--gpu)" text-anchor="middle" opacity="0.7">optional second opinion</text>
+
+        <rect x="628" y="52" width="88" height="42" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="672" y="77" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" text-anchor="middle">alert</text>
+
+        <line x1="96" y1="73" x2="152" y2="73" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#arD)"/>
+
+        <path d="M 304 62 L 344 62 L 344 22 L 668 22 L 668 46" fill="none" stroke="var(--cpu)" stroke-width="1.7" marker-end="url(#arDf)"/>
+        <text x="500" y="15" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--cpu)" text-anchor="middle">flags directly — no routing hop</text>
+
+        <line x1="304" y1="88" x2="386" y2="88" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.5" marker-end="url(#arDf)"/>
+        <text x="345" y="104" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="currentColor" text-anchor="middle" opacity="0.55">top-k</text>
+
+        <line x1="556" y1="88" x2="622" y2="88" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.5" marker-end="url(#arDf)"/>
+
+        <text x="360" y="150" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="currentColor" text-anchor="middle" opacity="0.6">within-host AUC 0.578 — the highest of the six methods measured on LANL</text>
+        <text x="360" y="166" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--dead)" text-anchor="middle">but 0.578 is still near chance, and the AI contribution largely disappears</text>
+      </svg>
+      <figcaption>Follows the evidence literally. The zero-parameter baseline is the best-scoring
+      method measured, beating the Inspector on 40 of 77 attacked hosts.</figcaption>
+    </figure>
+
+    <div class="cols">
+      <div>
+        <p class="label">The case for it</p>
+        <ul class="tight">
+          <li>Highest measured within-host AUC of anything tested: <strong class="num">0.578</strong></li>
+          <li>No training, no distillation, no GPU, trivially explainable to an auditor</li>
+          <li>Honest: it is what the numbers say</li>
+        </ul>
+      </div>
+      <div>
+        <p class="label">The case against</p>
+        <ul class="tight">
+          <li><span class="num">0.578</span> is still near chance — this is not "the baseline works",
+          it is "nothing works on LANL"</li>
+          <li>Discards the one thing that can use cross-service structure before you have tested it on
+          a corpus that <em>has</em> cross-service structure</li>
+          <li>Ensembling it with the Inspector was tested and beat neither parent</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</article>
+
+<!-- ============ COMPARISON ============ -->
+<section class="section">
+  <h2>Side by side</h2>
+  <p class="lede">Every figure measured on LANL cyber1, 612 hosts × 13 days, or on the throughput
+  benchmark in <span class="num">escalate.json</span>.</p>
+
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Option</th>
+          <th scope="col">Alert latency</th>
+          <th scope="col">Runs at edge</th>
+          <th scope="col">Within-host AUC</th>
+          <th scope="col">GPU footprint</th>
+          <th scope="col">Survives review</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">A · as built</th>
+          <td>hourly</td>
+          <td>no — Sentry not placed there</td>
+          <td class="n">0.542</td>
+          <td class="n">205,546</td>
+          <td>no — cost claim fails</td>
+        </tr>
+        <tr>
+          <th scope="row">B · Inspector only</th>
+          <td>next-day</td>
+          <td>no</td>
+          <td class="n">0.542</td>
+          <td class="n">205,546</td>
+          <td>yes, but loses both properties</td>
+        </tr>
+        <tr class="hl">
+          <th scope="row">C · two-speed</th>
+          <td>hourly + next-day</td>
+          <td>yes — Sentry needs no cohort</td>
+          <td class="n">0.542</td>
+          <td class="n">205,546 central only</td>
+          <td>yes — latency &amp; locality</td>
+        </tr>
+        <tr>
+          <th scope="row">D · baseline-primary</th>
+          <td>hourly</td>
+          <td>yes</td>
+          <td class="n">0.578</td>
+          <td class="n">~0</td>
+          <td>yes, but concedes the AI claim</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:12px;font-size:13.5px;color:var(--ink-3);">Inspector within-host AUC is
+  <span class="num">0.542</span> for the single checkpoint all six methods were compared against;
+  the 3-seed mean is <span class="num">0.557 ± 0.013</span>. The bag baseline's <span class="num">0.578</span>
+  carries a per-host spread of <span class="num">± 0.273</span> across 77 hosts. Neither is meaningfully
+  above chance.</p>
+</section>
+
+<!-- ============ VERDICT ============ -->
+<section class="section verdict">
+  <h2>What to do</h2>
+  <p><strong>Take Option C's shape.</strong> It keeps both models, changes nothing you have already
+  built, and replaces a justification that fails arithmetic with two that are structural: the Inspector
+  cannot emit before midnight, and it cannot run where cross-host context does not exist. Neither
+  depends on a price list.</p>
+  <p><strong>Leave the teacher undecided.</strong> A, B, C and D all score the same on LANL because
+  <em>everything</em> scores the same on LANL — six methods between 0.54 and 0.58. That corpus is
+  de-identified, all-internal, and substitutes a port-derived taxonomy; it cannot test a hypothesis
+  about named service combinations. Choosing the teacher on its evidence is choosing on noise.</p>
+  <p><strong>Decide it on 17 September</strong>, when the snaplen-0 capture has five days — the only
+  corpus that has ever contained the signal this architecture was built for. Run the same three tests
+  already scripted: the Inspector, the bag baseline, and the paired sign test between them. Whichever
+  wins there is the teacher, and the answer is publishable either way.</p>
+</section>
+
+<footer class="foot">
+  Sources · lanl_novelty.json · lanl_novelty_hn.json · lanl_p0b.json · lanl_ensemble.json ·
+  paired_synth.json · ablation_order_hard.json · escalate.json · capture_probe.json<br>
+  Full detail in TIER2_BRIEF.md §7. No figure on this page appears outside those files.
+</footer>
+
+</div>
