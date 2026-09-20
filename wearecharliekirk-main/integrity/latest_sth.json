@@ -1,0 +1,9 @@
+{
+  "tree_size": 173,
+  "root_hash": "418f8ddf573ef185e764a0b0e178d215b27c15eb7aefb9678258b8e96b6a8e50",
+  "timestamp_rfc3339": "2026-09-12T15:21:58Z",
+  "unix_seconds": 1789226518,
+  "checkpoint_sequence": 89,
+  "nid_pubkey": "aa9380835ea139de6151682d6c677db830292825d211f7139807dadd3b7443e3",
+  "signature": "b70b94d9ec3816211c36b1a41b89c3234ef51ff32556dcecfb8c16c468add0aea467e39566c56fb5c7f26bde514179fdec41c7aadb1627c0566e480d04161707"
+}

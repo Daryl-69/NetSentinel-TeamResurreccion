@@ -1,0 +1,143 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+uploads/*.pcap
+pcaps/*.pcap
+!pcaps/.gitkeep
+
+# Large test files (download separately)
+Friday-WorkingHours.pcap
+Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv
+
+# Keep only small test PCAPs
+!test_portscan.pcap
+!test_attacks.pcap
+!dummy.pcap
+
+# Cache
+.cache/
+*.csv
+!friday.csv
+
+# Temporary analysis files
+ks_results.csv
+ks_summary.txt
+ours.csv
+
+# HuggingFace upload staging (local only)
+hf_upload/
+
+# Graphify output (generated)
+graphify-out/
+
+# Temporary test/debug scripts
+check_evidence.py
+test_port_scan_evidence.py
+fix_sklearn_version.py
+prepare_hf_upload.py
+upload_to_hf.py
+retrain_exfil_scaler.py
+generate_portscan_pcap.py
+quickstart.py
+validate_fixes.py
+
+# Redundant documentation (consolidated)
+ACTION_ITEMS.md
+BACKEND_EVIDENCE_PATCH.md
+BACKEND_REMEDIATION_TODO.md
+CRITICAL_FIXES_SUMMARY.md
+FINAL_STATUS.md
+FIXES_APPLIED.md
+README_FIXES.md
+NEXT_STEPS.md
+START_HERE.md
+MASTER_RUN_GUIDE.md
+
+# Frontend
+frontend/node_modules/
+frontend/.figma/
+frontend/dist/
+frontend/.vite/
+frontend/pnpm-lock.yaml
+
+# Ignored scripts and large files
+*.ps1
+*.bat
+*.pcap
+scratch/
+*_REPORT.md
+*_SUMMARY.md
+
+
+# Large files excluded from repository
+*.pcap
+*.pcapng
+*.csv
+*.parquet
+
+# Reference directories
+aethel_ref/
+cicflowmeter_ref/
+ram_ref/
+
+# Temporary and cache directories
+uploads/
+graphify-out/
+hf_upload/
+__pycache__/
+.cache/
+.pytest_cache/
+
+# Jupyter notebooks (optional - uncomment if you want to include)
+# *.ipynb
+
+# Model files (too large for GitHub - add download instructions)
+# models/
+
+# Integrity layer — sensitive/ephemeral data
+netsentinel/integrity/nid_ed25519.key
+netsentinel/integrity/ledger.jsonl
+netsentinel/integrity/blobs/
+netsentinel/integrity/proofs/
+netsentinel/integrity/data/
+netsentinel/integrity/seq_state.json

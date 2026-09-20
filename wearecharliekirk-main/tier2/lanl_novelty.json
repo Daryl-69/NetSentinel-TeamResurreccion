@@ -1,0 +1,759 @@
+{
+  "source": [
+    "D:\\Downloads\\flows.txt.gz"
+  ],
+  "dataset": "LANL cyber1",
+  "hosts": 612,
+  "days": 13,
+  "seeds": 3,
+  "novelty_features": true,
+  "feature_names": [
+    "log_n_flows",
+    "log_bytes_up",
+    "new_peer_ratio",
+    "new_service_flag",
+    "iat_cv",
+    "ks_uniform",
+    "ks_exponential",
+    "fft_prominence",
+    "distinct_endpoint_ratio",
+    "log_duration_mean"
+  ],
+  "feature_available": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "novelty_stats": {
+    "mean_new_peer_ratio": 0.020965072955042137,
+    "mean_new_service_flag": 0.008102007863966572,
+    "hosts_peer_memory_saturated": 0,
+    "edges_scored": 348679,
+    "baseline_days": 6
+  },
+  "categories": [
+    "Directory",
+    "FileShare",
+    "RemoteAccess",
+    "Mail",
+    "WebProxy",
+    "Database",
+    "Infra",
+    "Workstation",
+    "Unknown"
+  ],
+  "category_counts": {
+    "Directory": 60003,
+    "FileShare": 101098,
+    "RemoteAccess": 2135,
+    "Mail": 484,
+    "WebProxy": 58574,
+    "Database": 3929,
+    "Infra": 85661,
+    "Workstation": 22771,
+    "Unknown": 14024
+  },
+  "resolver_hit_rate": null,
+  "has_attack_labels": true,
+  "label_policy": "both endpoints of each red-team auth event marked",
+  "redteam_events": 749,
+  "redteam_sources_modelled": 1,
+  "redteam_dests_modelled": 119,
+  "n_attack_windows": 131,
+  "n_attack_daylevel": 1777,
+  "n_attacked_hosts": 80,
+  "n_live_windows": 39492,
+  "live_density_attacked": 0.8106060606060607,
+  "live_density_other": 0.5296657694033199,
+  "runs": [
+    {
+      "seed": 0,
+      "flag_rate": 0.026511698571862655,
+      "router_auc": {
+        "A_distilled_detector": 0.9953074282304333,
+        "B_encoder_mahalanobis": 0.6346469478532886
+      },
+      "curves": {
+        "A_distilled_detector": [
+          {
+            "budget": 0.005,
+            "actual": 0.004988352071305581,
+            "recall_teacher": 0.1833810888252149,
+            "recall_attack": 0.04580152671755725
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.010002025726729464,
+            "recall_teacher": 0.36198662846227314,
+            "recall_attack": 0.07633587786259542
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.02000405145345893,
+            "recall_teacher": 0.6905444126074498,
+            "recall_attack": 0.183206106870229
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.03000607718018839,
+            "recall_teacher": 0.9073543457497613,
+            "recall_attack": 0.29770992366412213
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.05001012863364732,
+            "recall_teacher": 0.9808978032473734,
+            "recall_attack": 0.3511450381679389
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.07500253215841184,
+            "recall_teacher": 0.9933142311365807,
+            "recall_attack": 0.3969465648854962
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.09999493568317634,
+            "recall_teacher": 0.9952244508118434,
+            "recall_attack": 0.4351145038167939
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15000506431682367,
+            "recall_teacher": 0.9952244508118434,
+            "recall_attack": 0.48854961832061067
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.19998987136635268,
+            "recall_teacher": 0.9961795606494747,
+            "recall_attack": 0.549618320610687
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.30001012863364734,
+            "recall_teacher": 0.9961795606494747,
+            "recall_attack": 0.6259541984732825
+          }
+        ],
+        "B_encoder_mahalanobis": [
+          {
+            "budget": 0.005,
+            "actual": 0.004988352071305581,
+            "recall_teacher": 0.0,
+            "recall_attack": 0.0
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.010002025726729464,
+            "recall_teacher": 0.007640878701050621,
+            "recall_attack": 0.015267175572519083
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.02000405145345893,
+            "recall_teacher": 0.01623686723973257,
+            "recall_attack": 0.015267175572519083
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.03000607718018839,
+            "recall_teacher": 0.09933142311365807,
+            "recall_attack": 0.022900763358778626
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.05001012863364732,
+            "recall_teacher": 0.14040114613180515,
+            "recall_attack": 0.030534351145038167
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.07500253215841184,
+            "recall_teacher": 0.18051575931232092,
+            "recall_attack": 0.03816793893129771
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.09999493568317634,
+            "recall_teacher": 0.22063037249283668,
+            "recall_attack": 0.04580152671755725
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15000506431682367,
+            "recall_teacher": 0.2636103151862464,
+            "recall_attack": 0.06870229007633588
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.19998987136635268,
+            "recall_teacher": 0.30754536771728747,
+            "recall_attack": 0.08396946564885496
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.30001012863364734,
+            "recall_teacher": 0.4364851957975167,
+            "recall_attack": 0.11450381679389313
+          }
+        ]
+      },
+      "curves_daylevel": {
+        "A_distilled_detector": [
+          {
+            "budget": 0.005,
+            "actual": 0.004988352071305581,
+            "recall_teacher": 0.1833810888252149,
+            "recall_attack": 0.021384355655599326
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.010002025726729464,
+            "recall_teacher": 0.36198662846227314,
+            "recall_attack": 0.038266741699493526
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.02000405145345893,
+            "recall_teacher": 0.6905444126074498,
+            "recall_attack": 0.08103545301069218
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.03000607718018839,
+            "recall_teacher": 0.9073543457497613,
+            "recall_attack": 0.12436691052335397
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.05001012863364732,
+            "recall_teacher": 0.9808978032473734,
+            "recall_attack": 0.16319639842431063
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.07500253215841184,
+            "recall_teacher": 0.9933142311365807,
+            "recall_attack": 0.18851997749015195
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.09999493568317634,
+            "recall_teacher": 0.9952244508118434,
+            "recall_attack": 0.22960045019696118
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15000506431682367,
+            "recall_teacher": 0.9952244508118434,
+            "recall_attack": 0.3134496342149691
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.19998987136635268,
+            "recall_teacher": 0.9961795606494747,
+            "recall_attack": 0.3702870005627462
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.30001012863364734,
+            "recall_teacher": 0.9961795606494747,
+            "recall_attack": 0.4985931344963421
+          }
+        ]
+      },
+      "oracle": {
+        "auc_vs_attack_window": 0.7435643178400908,
+        "auc_vs_attack_day": 0.640200595184495,
+        "auc_vs_attack_window_ci95": [
+          0.6997843653509858,
+          0.7839539360753689
+        ],
+        "within_host_auc_mean": 0.5414310323071065,
+        "within_host_auc_std": 0.3099901607650418,
+        "within_host_n_hosts": 77,
+        "within_host_n_positives": 106,
+        "router_A_within_host_auc_mean": 0.5249868080035502,
+        "router_A_within_host_auc_std": 0.31735121834928515,
+        "router_A_within_host_n_hosts": 77
+      },
+      "geometry": {
+        "knn_overlap@20": 0.43876666666666664,
+        "trustworthiness": 0.98192346603153,
+        "spearman_score": 0.7276916502253837,
+        "n": 39492
+      },
+      "verdict": [
+        "MARGINAL",
+        "Partial geometry preservation (overlap 0.44). The Mahalanobis router depends on this geometry and came LAST in the measured comparison, with ~7x the seed variance of the learned heads -- consistent with only partial preservation. Report the overlap alongside any recall claim, and re-check it whenever student capacity or the distillation loss changes."
+      ],
+      "n_params": [
+        205546,
+        14992
+      ]
+    },
+    {
+      "seed": 1,
+      "flag_rate": 0.02772713460954117,
+      "router_auc": {
+        "A_distilled_detector": 0.9934635066500035,
+        "B_encoder_mahalanobis": 0.6251988032265173
+      },
+      "curves": {
+        "A_distilled_detector": [
+          {
+            "budget": 0.005,
+            "actual": 0.004988352071305581,
+            "recall_teacher": 0.17625570776255708,
+            "recall_attack": 0.08396946564885496
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.010002025726729464,
+            "recall_teacher": 0.34885844748858447,
+            "recall_attack": 0.12213740458015267
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.02000405145345893,
+            "recall_teacher": 0.639269406392694,
+            "recall_attack": 0.1984732824427481
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.03000607718018839,
+            "recall_teacher": 0.8091324200913242,
+            "recall_attack": 0.2595419847328244
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.05001012863364732,
+            "recall_teacher": 0.971689497716895,
+            "recall_attack": 0.37404580152671757
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.07500253215841184,
+            "recall_teacher": 0.9863013698630136,
+            "recall_attack": 0.42748091603053434
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.09999493568317634,
+            "recall_teacher": 0.9917808219178083,
+            "recall_attack": 0.4732824427480916
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15000506431682367,
+            "recall_teacher": 0.9945205479452055,
+            "recall_attack": 0.5648854961832062
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.19998987136635268,
+            "recall_teacher": 0.9963470319634703,
+            "recall_attack": 0.6183206106870229
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.30001012863364734,
+            "recall_teacher": 0.9972602739726028,
+            "recall_attack": 0.7099236641221374
+          }
+        ],
+        "B_encoder_mahalanobis": [
+          {
+            "budget": 0.005,
+            "actual": 0.004988352071305581,
+            "recall_teacher": 0.0273972602739726,
+            "recall_attack": 0.007633587786259542
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.010002025726729464,
+            "recall_teacher": 0.06484018264840183,
+            "recall_attack": 0.015267175572519083
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.02000405145345893,
+            "recall_teacher": 0.11232876712328767,
+            "recall_attack": 0.015267175572519083
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.03000607718018839,
+            "recall_teacher": 0.12694063926940638,
+            "recall_attack": 0.015267175572519083
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.05001012863364732,
+            "recall_teacher": 0.1634703196347032,
+            "recall_attack": 0.022900763358778626
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.07500253215841184,
+            "recall_teacher": 0.1917808219178082,
+            "recall_attack": 0.022900763358778626
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.09999493568317634,
+            "recall_teacher": 0.22100456621004566,
+            "recall_attack": 0.022900763358778626
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15000506431682367,
+            "recall_teacher": 0.26118721461187216,
+            "recall_attack": 0.061068702290076333
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.19998987136635268,
+            "recall_teacher": 0.29497716894977166,
+            "recall_attack": 0.06870229007633588
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.30001012863364734,
+            "recall_teacher": 0.4100456621004566,
+            "recall_attack": 0.0916030534351145
+          }
+        ]
+      },
+      "curves_daylevel": {
+        "A_distilled_detector": [
+          {
+            "budget": 0.005,
+            "actual": 0.004988352071305581,
+            "recall_teacher": 0.17625570776255708,
+            "recall_attack": 0.027574563871693866
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.010002025726729464,
+            "recall_teacher": 0.34885844748858447,
+            "recall_attack": 0.04276871131119865
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.02000405145345893,
+            "recall_teacher": 0.639269406392694,
+            "recall_attack": 0.09060213843556555
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.03000607718018839,
+            "recall_teacher": 0.8091324200913242,
+            "recall_attack": 0.12324141812042769
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.05001012863364732,
+            "recall_teacher": 0.971689497716895,
+            "recall_attack": 0.172763083849184
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.07500253215841184,
+            "recall_teacher": 0.9863013698630136,
+            "recall_attack": 0.21890827236916152
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.09999493568317634,
+            "recall_teacher": 0.9917808219178083,
+            "recall_attack": 0.2577377602701182
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15000506431682367,
+            "recall_teacher": 0.9945205479452055,
+            "recall_attack": 0.3393359594822735
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.19998987136635268,
+            "recall_teacher": 0.9963470319634703,
+            "recall_attack": 0.39898705683736635
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.30001012863364734,
+            "recall_teacher": 0.9972602739726028,
+            "recall_attack": 0.5002813731007316
+          }
+        ]
+      },
+      "oracle": {
+        "auc_vs_attack_window": 0.7484276973506733,
+        "auc_vs_attack_day": 0.6428942567583447,
+        "auc_vs_attack_window_ci95": [
+          0.7030782785533245,
+          0.7887743777455539
+        ],
+        "within_host_auc_mean": 0.555954255483663,
+        "within_host_auc_std": 0.30204068734071154,
+        "within_host_n_hosts": 77,
+        "within_host_n_positives": 106,
+        "router_A_within_host_auc_mean": 0.5661926866501382,
+        "router_A_within_host_auc_std": 0.2861066754671959,
+        "router_A_within_host_n_hosts": 77
+      },
+      "geometry": {
+        "knn_overlap@20": 0.4395333333333333,
+        "trustworthiness": 0.9762944085289781,
+        "spearman_score": 0.7665078635693814,
+        "n": 39492
+      },
+      "verdict": [
+        "MARGINAL",
+        "Partial geometry preservation (overlap 0.44). The Mahalanobis router depends on this geometry and came LAST in the measured comparison, with ~7x the seed variance of the learned heads -- consistent with only partial preservation. Report the overlap alongside any recall claim, and re-check it whenever student capacity or the distillation loss changes."
+      ],
+      "n_params": [
+        205546,
+        14992
+      ]
+    },
+    {
+      "seed": 2,
+      "flag_rate": 0.022662817785880685,
+      "router_auc": {
+        "A_distilled_detector": 0.9874994771209098,
+        "B_encoder_mahalanobis": 0.6423104641096515
+      },
+      "curves": {
+        "A_distilled_detector": [
+          {
+            "budget": 0.005,
+            "actual": 0.004988352071305581,
+            "recall_teacher": 0.21564245810055865,
+            "recall_attack": 0.10687022900763359
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.010002025726729464,
+            "recall_teacher": 0.41899441340782123,
+            "recall_attack": 0.1450381679389313
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.02000405145345893,
+            "recall_teacher": 0.7106145251396648,
+            "recall_attack": 0.1984732824427481
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.03000607718018839,
+            "recall_teacher": 0.8513966480446927,
+            "recall_attack": 0.2595419847328244
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.05001012863364732,
+            "recall_teacher": 0.9541899441340782,
+            "recall_attack": 0.3435114503816794
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.07500253215841184,
+            "recall_teacher": 0.9810055865921787,
+            "recall_attack": 0.366412213740458
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.09999493568317634,
+            "recall_teacher": 0.9832402234636871,
+            "recall_attack": 0.4198473282442748
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15000506431682367,
+            "recall_teacher": 0.9888268156424581,
+            "recall_attack": 0.5190839694656488
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.19998987136635268,
+            "recall_teacher": 0.9921787709497206,
+            "recall_attack": 0.5648854961832062
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.30001012863364734,
+            "recall_teacher": 0.9921787709497206,
+            "recall_attack": 0.6717557251908397
+          }
+        ],
+        "B_encoder_mahalanobis": [
+          {
+            "budget": 0.005,
+            "actual": 0.004988352071305581,
+            "recall_teacher": 0.0,
+            "recall_attack": 0.0
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.010002025726729464,
+            "recall_teacher": 0.0893854748603352,
+            "recall_attack": 0.0
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.02000405145345893,
+            "recall_teacher": 0.17206703910614526,
+            "recall_attack": 0.015267175572519083
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.03000607718018839,
+            "recall_teacher": 0.20782122905027933,
+            "recall_attack": 0.015267175572519083
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.05001012863364732,
+            "recall_teacher": 0.24692737430167597,
+            "recall_attack": 0.04580152671755725
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.07500253215841184,
+            "recall_teacher": 0.2569832402234637,
+            "recall_attack": 0.05343511450381679
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.09999493568317634,
+            "recall_teacher": 0.264804469273743,
+            "recall_attack": 0.06870229007633588
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15000506431682367,
+            "recall_teacher": 0.2905027932960894,
+            "recall_attack": 0.08396946564885496
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.19998987136635268,
+            "recall_teacher": 0.30502793296089387,
+            "recall_attack": 0.08396946564885496
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.30001012863364734,
+            "recall_teacher": 0.4011173184357542,
+            "recall_attack": 0.11450381679389313
+          }
+        ]
+      },
+      "curves_daylevel": {
+        "A_distilled_detector": [
+          {
+            "budget": 0.005,
+            "actual": 0.004988352071305581,
+            "recall_teacher": 0.21564245810055865,
+            "recall_attack": 0.030951041080472707
+          },
+          {
+            "budget": 0.01,
+            "actual": 0.010002025726729464,
+            "recall_teacher": 0.41899441340782123,
+            "recall_attack": 0.03995498030388295
+          },
+          {
+            "budget": 0.02,
+            "actual": 0.02000405145345893,
+            "recall_teacher": 0.7106145251396648,
+            "recall_attack": 0.07878446820483961
+          },
+          {
+            "budget": 0.03,
+            "actual": 0.03000607718018839,
+            "recall_teacher": 0.8513966480446927,
+            "recall_attack": 0.10579628587507034
+          },
+          {
+            "budget": 0.05,
+            "actual": 0.05001012863364732,
+            "recall_teacher": 0.9541899441340782,
+            "recall_attack": 0.14912774338773213
+          },
+          {
+            "budget": 0.075,
+            "actual": 0.07500253215841184,
+            "recall_teacher": 0.9810055865921787,
+            "recall_attack": 0.17726505346088914
+          },
+          {
+            "budget": 0.1,
+            "actual": 0.09999493568317634,
+            "recall_teacher": 0.9832402234636871,
+            "recall_attack": 0.21102982554867755
+          },
+          {
+            "budget": 0.15,
+            "actual": 0.15000506431682367,
+            "recall_teacher": 0.9888268156424581,
+            "recall_attack": 0.3044456949915588
+          },
+          {
+            "budget": 0.2,
+            "actual": 0.19998987136635268,
+            "recall_teacher": 0.9921787709497206,
+            "recall_attack": 0.3770399549803039
+          },
+          {
+            "budget": 0.3,
+            "actual": 0.30001012863364734,
+            "recall_teacher": 0.9921787709497206,
+            "recall_attack": 0.4907146876758582
+          }
+        ]
+      },
+      "oracle": {
+        "auc_vs_attack_window": 0.7442514396491587,
+        "auc_vs_attack_day": 0.6340790012705992,
+        "auc_vs_attack_window_ci95": [
+          0.6951968042532899,
+          0.7863353522910168
+        ],
+        "within_host_auc_mean": 0.5734557141041334,
+        "within_host_auc_std": 0.2796287290239612,
+        "within_host_n_hosts": 77,
+        "within_host_n_positives": 106,
+        "router_A_within_host_auc_mean": 0.5654742833886534,
+        "router_A_within_host_auc_std": 0.2794282472495659,
+        "router_A_within_host_n_hosts": 77
+      },
+      "geometry": {
+        "knn_overlap@20": 0.4192166666666667,
+        "trustworthiness": 0.980968356583872,
+        "spearman_score": 0.7245223133120102,
+        "n": 39492
+      },
+      "verdict": [
+        "MARGINAL",
+        "Partial geometry preservation (overlap 0.42). The Mahalanobis router depends on this geometry and came LAST in the measured comparison, with ~7x the seed variance of the learned heads -- consistent with only partial preservation. Report the overlap alongside any recall claim, and re-check it whenever student capacity or the distillation loss changes."
+      ],
+      "n_params": [
+        205546,
+        14992
+      ]
+    }
+  ],
+  "runtime_s": 843.3980257511139
+}

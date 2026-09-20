@@ -1,0 +1,70 @@
+{
+  "hosts": 700,
+  "days": 16,
+  "seeds": 3,
+  "epochs": 10,
+  "hard_negatives": true,
+  "confound_imposed": false,
+  "runs": [
+    {
+      "seed": 0,
+      "pooled_inspector": 0.7579846566571935,
+      "pooled_bag": 0.7169485471580406,
+      "within_inspector": 0.754258837161904,
+      "within_bag": 0.7240236753760044,
+      "paired": {
+        "hosts": 50,
+        "a_wins": 26,
+        "b_wins": 24,
+        "ties": 0,
+        "mean_diff": 0.030235161785899627,
+        "median_diff": 0.009645149793160945,
+        "p": 0.887724827340783
+      }
+    },
+    {
+      "seed": 1,
+      "pooled_inspector": 0.7466311190453755,
+      "pooled_bag": 0.7076361773252305,
+      "within_inspector": 0.7748953055563401,
+      "within_bag": 0.7383737241191985,
+      "paired": {
+        "hosts": 48,
+        "a_wins": 24,
+        "b_wins": 24,
+        "ties": 0,
+        "mean_diff": 0.036521581437141515,
+        "median_diff": -0.0004158319287034251,
+        "p": 1.0
+      }
+    },
+    {
+      "seed": 2,
+      "pooled_inspector": 0.726678875428954,
+      "pooled_bag": 0.6998629202692361,
+      "within_inspector": 0.7550125019903065,
+      "within_bag": 0.7452583056989958,
+      "paired": {
+        "hosts": 52,
+        "a_wins": 20,
+        "b_wins": 31,
+        "ties": 1,
+        "mean_diff": 0.009754196291310578,
+        "median_diff": -0.02642458532638442,
+        "p": 0.16077960181198847
+      }
+    }
+  ],
+  "seeds_significant": 0,
+  "mean_paired_diff": 0.02550364650478391,
+  "pooled_inspector_wins": 70,
+  "pooled_bag_wins": 79,
+  "median_paired_diff": -0.0057317558206423,
+  "pooled_n": 149,
+  "pooled_sign_test_p": 0.5123564769095192,
+  "min_detectable_split": [
+    87,
+    62
+  ],
+  "verdict": "NO DIFFERENCE DETECTED at n=149 (p=0.512), though the means favour the Inspector by +0.026. This is not evidence of a tie -- it is absence of evidence either way. Quote it as 'we could not detect a difference', never as 'the Inspector wins'."
+}

@@ -1,0 +1,67 @@
+{
+  "model_name": "NetSentinel DDoS Detector",
+  "model_type": "XGBoost Gradient-Boosted Trees",
+  "version": "1.0.0",
+  "binary_classifier": {
+    "model": "DDoS_XGBoost_Binary",
+    "accuracy": 0.9995247754274124,
+    "precision": 0.9999250127478329,
+    "recall": 0.9994603426823967,
+    "f1": 0.9996926237189531,
+    "auc_roc": 0.999999274456427,
+    "train_samples": 345096,
+    "test_samples": 86275,
+    "n_features": 59,
+    "training_time_seconds": 20.140197277069092
+  },
+  "multi_classifier": {
+    "macro_f1": 0.5515593702797084,
+    "weighted_f1": 0.9356516953272278,
+    "n_classes": 18,
+    "training_time_seconds": 331.0018916130066
+  },
+  "dataset": {
+    "primary": "CIC-DDoS2019",
+    "total_samples": 431371,
+    "train_samples": 345096,
+    "test_samples": 86275
+  },
+  "inference": {
+    "format": "ONNX",
+    "latency_ms": 0.031202847000031394,
+    "throughput_per_sec": 32048.35763861528
+  },
+  "feature_count": 59,
+  "top_10_features": [
+    "Fwd Packet Length Min",
+    "Idle Std",
+    "Avg Fwd Segment Size",
+    "Fwd Packet Length Mean",
+    "Flow IAT Mean",
+    "ACK Flag Count",
+    "Total Backward Packets",
+    "URG Flag Count",
+    "Init Fwd Win Bytes",
+    "Protocol"
+  ],
+  "label_mapping": {
+    "0": "Benign",
+    "1": "DrDoS_DNS",
+    "2": "DrDoS_LDAP",
+    "3": "DrDoS_MSSQL",
+    "4": "DrDoS_NTP",
+    "5": "DrDoS_NetBIOS",
+    "6": "DrDoS_SNMP",
+    "7": "DrDoS_UDP",
+    "8": "LDAP",
+    "9": "MSSQL",
+    "10": "NetBIOS",
+    "11": "Portmap",
+    "12": "Syn",
+    "13": "TFTP",
+    "14": "UDP",
+    "15": "UDP-lag",
+    "16": "UDPLag",
+    "17": "WebDDoS"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "0": "BROWSING",
+  "1": "CHAT",
+  "2": "FT",
+  "3": "MAIL",
+  "4": "P2P",
+  "5": "STREAMING",
+  "6": "VOIP",
+  "7": "VPN-BROWSING",
+  "8": "VPN-CHAT",
+  "9": "VPN-FT",
+  "10": "VPN-MAIL",
+  "11": "VPN-P2P",
+  "12": "VPN-STREAMING",
+  "13": "VPN-VOIP"
+}

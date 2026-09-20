@@ -1,0 +1,27 @@
+{
+  "hosts": 200,
+  "days": 16,
+  "windows": 24,
+  "machine_reference": {
+    "matmul_512_seconds": 0.0009075520001715631,
+    "gflops": 295.7796974159664,
+    "torch_threads": 2,
+    "cpu_count": 2
+  },
+  "timing_caveat": "wall-clock on a shared container; these are load-dependent. Compare ratios, and compare them only against a run with a similar machine_reference.",
+  "cohort_seconds": 0.024357321000024967,
+  "cohort_win_per_s": 3153056.1181141916,
+  "inspector_seconds": 0.4098189739997906,
+  "inspector_win_per_s": 93699.90760852283,
+  "sentry_seconds": 0.049865910000335134,
+  "sentry_win_per_s": 770065.1607429188,
+  "sentry_speedup": 8.218419637725178,
+  "budget": 0.05,
+  "escalated_windows": 1280,
+  "host_days_total": 1600,
+  "host_days_inspected": 775,
+  "host_days_confirmed": 560,
+  "confirm_precision": 0.12678571428571428,
+  "cascade_seconds": 0.2478797389999272,
+  "full_inspect_seconds": 0.4098189739997906
+}

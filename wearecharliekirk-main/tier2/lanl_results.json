@@ -1,0 +1,172 @@
+{
+  "source": [
+    "D:\\Downloads"
+  ],
+  "hosts": 500,
+  "days": 14,
+  "dataset": "LANL-cyber1",
+  "category_counts": {
+    "Directory": 16243,
+    "FileShare": 38095,
+    "RemoteAccess": 738,
+    "Mail": 172,
+    "WebProxy": 116274,
+    "Database": 887,
+    "Workstation": 154732,
+    "Infra": 20290,
+    "Unknown": 18982
+  },
+  "uncategorised_frac": 0.051804929971694946,
+  "flag_rate": 0.01547457627118644,
+  "router_auc": {
+    "A_distilled_detector": 0.9804313999597725,
+    "B_encoder_mahalanobis": 0.7748819136367021
+  },
+  "curves": {
+    "A_distilled_detector": [
+      {
+        "budget": 0.005,
+        "actual": 0.005,
+        "recall_teacher": 0.29244249726177435,
+        "recall_attack": 0.0
+      },
+      {
+        "budget": 0.01,
+        "actual": 0.01,
+        "recall_teacher": 0.49726177437020813,
+        "recall_attack": 0.009433962264150943
+      },
+      {
+        "budget": 0.02,
+        "actual": 0.02,
+        "recall_teacher": 0.7042716319824753,
+        "recall_attack": 0.05188679245283019
+      },
+      {
+        "budget": 0.03,
+        "actual": 0.03,
+        "recall_teacher": 0.8192771084337349,
+        "recall_attack": 0.10849056603773585
+      },
+      {
+        "budget": 0.05,
+        "actual": 0.05,
+        "recall_teacher": 0.8992332968236583,
+        "recall_attack": 0.1792452830188679
+      },
+      {
+        "budget": 0.075,
+        "actual": 0.075,
+        "recall_teacher": 0.9266155531215772,
+        "recall_attack": 0.24056603773584906
+      },
+      {
+        "budget": 0.1,
+        "actual": 0.1,
+        "recall_teacher": 0.9474260679079957,
+        "recall_attack": 0.27358490566037735
+      },
+      {
+        "budget": 0.15,
+        "actual": 0.15,
+        "recall_teacher": 0.9748083242059146,
+        "recall_attack": 0.3915094339622642
+      },
+      {
+        "budget": 0.2,
+        "actual": 0.2,
+        "recall_teacher": 0.9813800657174151,
+        "recall_attack": 0.49056603773584906
+      },
+      {
+        "budget": 0.3,
+        "actual": 0.3,
+        "recall_teacher": 0.9945235487404163,
+        "recall_attack": 0.6320754716981132
+      }
+    ],
+    "B_encoder_mahalanobis": [
+      {
+        "budget": 0.005,
+        "actual": 0.005,
+        "recall_teacher": 0.013143483023001095,
+        "recall_attack": 0.0
+      },
+      {
+        "budget": 0.01,
+        "actual": 0.01,
+        "recall_teacher": 0.024096385542168676,
+        "recall_attack": 0.0
+      },
+      {
+        "budget": 0.02,
+        "actual": 0.02,
+        "recall_teacher": 0.04819277108433735,
+        "recall_attack": 0.0
+      },
+      {
+        "budget": 0.03,
+        "actual": 0.03,
+        "recall_teacher": 0.06571741511500548,
+        "recall_attack": 0.0
+      },
+      {
+        "budget": 0.05,
+        "actual": 0.05,
+        "recall_teacher": 0.16538882803943045,
+        "recall_attack": 0.0
+      },
+      {
+        "budget": 0.075,
+        "actual": 0.075,
+        "recall_teacher": 0.2617743702081051,
+        "recall_attack": 0.009433962264150943
+      },
+      {
+        "budget": 0.1,
+        "actual": 0.1,
+        "recall_teacher": 0.3702081051478642,
+        "recall_attack": 0.02358490566037736
+      },
+      {
+        "budget": 0.15,
+        "actual": 0.15,
+        "recall_teacher": 0.4950711938663746,
+        "recall_attack": 0.08018867924528301
+      },
+      {
+        "budget": 0.2,
+        "actual": 0.2,
+        "recall_teacher": 0.588170865279299,
+        "recall_attack": 0.3113207547169811
+      },
+      {
+        "budget": 0.3,
+        "actual": 0.3,
+        "recall_teacher": 0.7228915662650602,
+        "recall_attack": 0.49528301886792453
+      }
+    ]
+  },
+  "geometry": {
+    "knn_overlap@20": 0.30748333333333333,
+    "trustworthiness": 0.9859364636497675,
+    "spearman_score": 0.8613907308383473,
+    "n": 59000
+  },
+  "verdict": [
+    "MARGINAL",
+    "Partial geometry preservation (overlap 0.31). The Mahalanobis router depends on this geometry and came LAST in the measured comparison, with ~7x the seed variance of the learned heads -- consistent with only partial preservation. Report the overlap alongside any recall claim, and re-check it whenever student capacity or the distillation loss changes."
+  ],
+  "has_redteam": true,
+  "redteam_metrics": {
+    "inspector_recall": 0.009433962264150943,
+    "inspector_detected": 2,
+    "total_attack_windows": 212,
+    "router_auc_vs_redteam": {
+      "A_distilled_detector": 0.6453932727254054,
+      "B_encoder_mahalanobis": 0.6699748440510899
+    }
+  },
+  "runtime_s": 364.1865828037262
+}

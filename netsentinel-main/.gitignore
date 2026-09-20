@@ -109,3 +109,21 @@ v2/__pycache__/
 
 # Graphify cache (contains auto-generated local paths)
 graphify-out/cache/
+
+# --- AUDIT F1/F2/F4: capture artefacts never belong in the repo -------------
+# Raw captures run at snaplen 0 (whole packets), so they contain application
+# payload for the six capture subjects. Keep them on the capture machine.
+*.pcap
+*.pcapng
+!test_portscan.pcap
+!test_attacks.pcap
+!dummy.pcap
+capture/
+D_capture/
+
+# capture_probe.py persists the top destination hostnames only with
+# --include-names. Belt and braces: never commit the probe output either, and
+# never the derived tensor, which is built from the same traffic.
+v2/capture_probe.json
+v2/own_corpus*.npz
+v2/capture.log

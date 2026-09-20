@@ -1,0 +1,52 @@
+{
+  "hosts": 200,
+  "days": 8,
+  "host_days": 1600,
+  "tier_mix": {
+    "standard": 117,
+    "bulk": 70,
+    "elevated": 11,
+    "crown_jewel": 2
+  },
+  "load": {
+    "host_days": 1600,
+    "inspected": 179,
+    "fraction": 0.111875,
+    "by_reason": {
+      "commissioning": 7,
+      "audit": 89,
+      "router": 83
+    },
+    "budget_controlled": 0.46368715083798884,
+    "churn_driven": 0.03910614525139665,
+    "audit_driven": 0.4972067039106145
+  },
+  "latency_median_hour": 17.0,
+  "latency_iqr": [
+    14.0,
+    20.0
+  ],
+  "audit_sweep": {
+    "0.02": {
+      "inspected": 110,
+      "fraction": 0.06875,
+      "ette_days_p50": 100.0
+    },
+    "0.05": {
+      "inspected": 158,
+      "fraction": 0.09875,
+      "ette_days_p50": 40.0
+    },
+    "0.2": {
+      "inspected": 371,
+      "fraction": 0.231875,
+      "ette_days_p50": 10.0
+    },
+    "1.0": {
+      "inspected": 1600,
+      "fraction": 1.0,
+      "ette_days_p50": 2.0
+    }
+  },
+  "note": "Untrained models. This demonstrates architecture behaviour -- who can answer when, what crosses the boundary, what it costs -- not detection performance."
+}

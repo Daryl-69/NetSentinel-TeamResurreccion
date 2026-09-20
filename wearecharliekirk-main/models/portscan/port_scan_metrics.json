@@ -1,0 +1,16 @@
+{
+  "accuracy": 0.99844,
+  "precision": 0.996145,
+  "recall": 0.999969,
+  "f1": 0.998053,
+  "auc_roc": 0.999684,
+  "n_features": 69,
+  "n_train": 317860,
+  "n_test": 79465,
+  "best_iteration": 56,
+  "datasets": [
+    "CIC-IDS2017 Friday PortScan",
+    "CIC-IDS2017 Thursday Benign"
+  ],
+  "feature_schema": "CIC (CICFlowMeter native)"
+}

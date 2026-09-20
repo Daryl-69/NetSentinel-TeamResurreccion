@@ -1,0 +1,49 @@
+{
+  "model": "Expert 6: Data Exfiltration",
+  "type": "Unsupervised (vae_recon)",
+  "roc_auc": 0.7800803397421994,
+  "pr_auc": 0.8330455924086685,
+  "best_f1": 0.890617415667924,
+  "accuracy": 0.8170780126127624,
+  "flip": true,
+  "n_features": 24,
+  "features": [
+    "dns_bigram_entropy",
+    "dns_digit_ratio",
+    "dns_entropy",
+    "dns_hex_ratio",
+    "dns_len",
+    "dns_log_len",
+    "dns_longest_token",
+    "dns_lower_ratio",
+    "dns_max_repeat",
+    "dns_norm_entropy",
+    "dns_special_ratio",
+    "dns_unique_chars",
+    "dns_unique_ratio",
+    "dns_vowel_ratio",
+    "entropy",
+    "fqdn_count",
+    "labels_average",
+    "labels_max",
+    "len",
+    "lower",
+    "numeric",
+    "special",
+    "subdomain",
+    "subdomain_length"
+  ],
+  "scorer_aucs": {
+    "vae_recon": 0.7807706130043789,
+    "vae_latent": 0.7404875023310473,
+    "iso": 0.520501088164082,
+    "inp_maha": 0.7240280430301167,
+    "fusion": 0.6463878180031183
+  },
+  "mitre": {
+    "T1041": "Exfil Over C2",
+    "T1048": "Exfil Alt Protocol",
+    "T1071.004": "DNS"
+  },
+  "dataset": "CIC-Bell-DNS-EXF-2021"
+}

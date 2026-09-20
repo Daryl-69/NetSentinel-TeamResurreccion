@@ -194,6 +194,70 @@ def _benign_window(rng, role, hour, is_weekend, devops_chain_today, W):
     return edges, mask
 
 
+def _habits(rng, n_hosts, roles, enabled):
+    """Assign persistent benign habits that LOOK like the attack.
+
+    Measured 2026-09-11 with ablation_order.py: without these, the single
+    feature "longest consecutive run of Messaging_API in the day" separates
+    attack days from benign days at ROC-AUC 1.000, at every stealth level.
+    A one-line counter solved the entire benchmark. That means no result
+    measured on the old generator -- ours or anyone's -- said anything about
+    the model, the cascade, or sequence reasoning. It only said the attacker
+    was the only host that ever chatted for nine hours straight.
+
+    Two habits fix that, and both are things real networks are full of:
+
+      chatty : a person with a chat client open all day. Produces the same
+               long Messaging_API presence run the C2 beacon produces.
+               Kills the presence/run-length shortcut.
+      poller : a legitimate integration on a schedule -- backup agent, CI
+               webhook, monitoring probe. Produces LOW-jitter, near-uniform
+               inter-arrival times, which is precisely the surface our
+               "Jitter-Trap" keys on. This is the hard negative that tests
+               whether uniform IATs mean "beacon" or just "cron".
+
+    If the detector cannot separate the attack from these, the honest
+    conclusion is that it was never separating anything difficult.
+    """
+    out = [dict() for _ in range(n_hosts)]
+    if not enabled:
+        return out
+    for h in range(n_hosts):
+        if rng.random() < 0.35:
+            out[h]["chatty"] = True
+        if rng.random() < 0.25:
+            out[h]["poller"] = rng.choice(["Messaging_API", "CI_CD", "Sync"])
+            out[h]["poll_period"] = float(rng.choice([60, 120, 300, 900]))
+    return out
+
+
+def _apply_habits(rng, edges, mask, hour, is_weekend, habit, W):
+    """Overlay one host's benign habits onto a window."""
+    if habit.get("chatty") and 6 <= hour <= 23 and rng.random() < 0.85:
+        ci = CAT_INDEX["Messaging_API"]
+        n = max(3, int(rng.gamma(3.0, 7.0)))
+        iats = _human_iats(rng, n, 3600.0 / max(n, 1) * W["iat_scale"],
+                           W["human_sigma"])
+        up, down = rng.gamma(2, 1e4), rng.gamma(2, 4e4)
+        edges[ci] = _edge_row(rng, n, up, down, iats,
+                              distinct_ratio=rng.uniform(0.05, 0.3),
+                              dur_mean=rng.gamma(2, 3))
+        mask[ci] = 1.0
+
+    pol = habit.get("poller")
+    if pol and rng.random() < 0.9:
+        ci = CAT_INDEX[pol]
+        period = habit.get("poll_period", 300.0)
+        n = max(2, int(3600.0 / period))
+        # a scheduler is regular but not perfect: small proportional jitter.
+        iats = rng.normal(period, period * 0.06, size=n).clip(5, None)
+        up, down = rng.gamma(2, 5e3), rng.gamma(2, 2e4)
+        edges[ci] = _edge_row(rng, n, up, down, iats,
+                              distinct_ratio=rng.uniform(0.02, 0.15),
+                              dur_mean=rng.gamma(2, 2))
+        mask[ci] = 1.0
+
+
 def _inject_lsa(rng, edges, mask, hour, stage_hours, stealth):
     """Overlay one LSA stage. `stealth` in [0,1]: 1.0 = fully shaped adversary.
 
@@ -244,7 +308,7 @@ def _inject_lsa(rng, edges, mask, hour, stage_hours, stealth):
 
 
 def generate(n_hosts=300, n_days=24, attack_host_frac=0.08, seed=0,
-             stealth_range=(0.0, 1.0), world_cfg="A"):
+             stealth_range=(0.0, 1.0), world_cfg="A", hard_negatives=False):
     """Return dict of arrays.
 
     edges : (H, D, W, C, F)   host-day-window-category-feature
@@ -272,6 +336,8 @@ def generate(n_hosts=300, n_days=24, attack_host_frac=0.08, seed=0,
                    **{h: "Messaging_API" for h in range(11, 20)},
                    20: "Cloud_Storage"}
 
+    habits = _habits(rng, n_hosts, roles, hard_negatives)
+
     for h in range(n_hosts):
         role = roles[h]
         is_attacker = stealth[h] > 0 or h in attack_hosts
@@ -282,6 +348,7 @@ def generate(n_hosts=300, n_days=24, attack_host_frac=0.08, seed=0,
             hit = False
             for w in range(WINDOWS_PER_DAY):
                 e, m = _benign_window(rng, role, w, weekend, devops_today, W)
+                _apply_habits(rng, e, m, w, weekend, habits[h], W)
                 if attacking:
                     hit |= _inject_lsa(rng, e, m, w, stage_hours, float(stealth[h]))
                 E[h, d, w] = e
@@ -289,5 +356,6 @@ def generate(n_hosts=300, n_days=24, attack_host_frac=0.08, seed=0,
             A[h, d] = attacking and hit
 
     return dict(edges=E, mask=M, is_attack_day=A, stealth=stealth,
-                roles=roles, activate_day=activate_day,
+                roles=roles, activate_day=activate_day, habits=habits,
+                hard_negatives=hard_negatives,
                 host_ids=np.arange(n_hosts), world=W)

@@ -1,0 +1,20 @@
+{
+  "hosts": 200,
+  "days": 16,
+  "windows": 24,
+  "cohort_seconds": 0.04107997500000238,
+  "cohort_win_per_s": 1869524.0199147044,
+  "inspector_seconds": 0.5412225720000379,
+  "inspector_win_per_s": 70950.4776530224,
+  "sentry_seconds": 0.06303478299992094,
+  "sentry_win_per_s": 609187.4703534422,
+  "sentry_speedup": 8.586093998304344,
+  "budget": 0.05,
+  "escalated_windows": 1282,
+  "host_days_total": 1600,
+  "host_days_inspected": 790,
+  "host_days_confirmed": 529,
+  "confirm_precision": 0.1266540642722117,
+  "cascade_seconds": 0.30505671000003076,
+  "full_inspect_seconds": 0.5412225720000379
+}

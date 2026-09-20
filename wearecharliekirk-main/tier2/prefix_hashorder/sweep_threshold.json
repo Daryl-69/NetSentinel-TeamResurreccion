@@ -1,0 +1,150 @@
+{
+  "seeds": 3,
+  "hosts": 200,
+  "days": 16,
+  "budget": 0.05,
+  "capacity": 0.02,
+  "escalated": 240,
+  "attack_escalated": 21,
+  "total_attack_days": 221,
+  "total_host_days": 4800,
+  "sweep": [
+    {
+      "sigma": 0.5,
+      "confirmed": 240,
+      "precision": 0.0875,
+      "recall": 0.09502262443438914,
+      "f1": 0.09110629067245118,
+      "alerts_per_1k_host_days": 50.0
+    },
+    {
+      "sigma": 1.0,
+      "confirmed": 240,
+      "precision": 0.0875,
+      "recall": 0.09502262443438914,
+      "f1": 0.09110629067245118,
+      "alerts_per_1k_host_days": 50.0
+    },
+    {
+      "sigma": 1.5,
+      "confirmed": 239,
+      "precision": 0.08786610878661087,
+      "recall": 0.09502262443438914,
+      "f1": 0.09130434782608696,
+      "alerts_per_1k_host_days": 49.791666666666664
+    },
+    {
+      "sigma": 2.0,
+      "confirmed": 232,
+      "precision": 0.09051724137931035,
+      "recall": 0.09502262443438914,
+      "f1": 0.09271523178807947,
+      "alerts_per_1k_host_days": 48.333333333333336
+    },
+    {
+      "sigma": 2.5,
+      "confirmed": 211,
+      "precision": 0.0995260663507109,
+      "recall": 0.09502262443438914,
+      "f1": 0.09722222222222222,
+      "alerts_per_1k_host_days": 43.958333333333336
+    },
+    {
+      "sigma": 3.0,
+      "confirmed": 175,
+      "precision": 0.12,
+      "recall": 0.09502262443438914,
+      "f1": 0.10606060606060606,
+      "alerts_per_1k_host_days": 36.458333333333336
+    },
+    {
+      "sigma": 3.5,
+      "confirmed": 149,
+      "precision": 0.14093959731543623,
+      "recall": 0.09502262443438914,
+      "f1": 0.11351351351351352,
+      "alerts_per_1k_host_days": 31.041666666666668
+    },
+    {
+      "sigma": 4.0,
+      "confirmed": 121,
+      "precision": 0.17355371900826447,
+      "recall": 0.09502262443438914,
+      "f1": 0.12280701754385966,
+      "alerts_per_1k_host_days": 25.208333333333332
+    },
+    {
+      "sigma": 5.0,
+      "confirmed": 81,
+      "precision": 0.25925925925925924,
+      "recall": 0.09502262443438914,
+      "f1": 0.1390728476821192,
+      "alerts_per_1k_host_days": 16.875
+    },
+    {
+      "sigma": 6.0,
+      "confirmed": 61,
+      "precision": 0.3442622950819672,
+      "recall": 0.09502262443438914,
+      "f1": 0.14893617021276595,
+      "alerts_per_1k_host_days": 12.708333333333334
+    },
+    {
+      "sigma": 8.0,
+      "confirmed": 47,
+      "precision": 0.44680851063829785,
+      "recall": 0.09502262443438914,
+      "f1": 0.15671641791044777,
+      "alerts_per_1k_host_days": 9.791666666666666
+    },
+    {
+      "sigma": 10.0,
+      "confirmed": 32,
+      "precision": 0.4375,
+      "recall": 0.06334841628959276,
+      "f1": 0.11067193675889328,
+      "alerts_per_1k_host_days": 6.666666666666667
+    }
+  ],
+  "stealth": [
+    0.9,
+    1.0
+  ],
+  "hard_negatives": true,
+  "vs_random": {
+    "expected": 11.05,
+    "observed": 21,
+    "lift": 1.9004524886877827,
+    "p_value": 0.003883805481602297,
+    "recall_ci": [
+      0.05978679361792233,
+      0.14158170037168702
+    ],
+    "beats_random": true
+  },
+  "current_3sigma": {
+    "sigma": 3.0,
+    "confirmed": 175,
+    "precision": 0.12,
+    "recall": 0.09502262443438914,
+    "f1": 0.10606060606060606,
+    "alerts_per_1k_host_days": 36.458333333333336
+  },
+  "best_f1": {
+    "sigma": 8.0,
+    "confirmed": 47,
+    "precision": 0.44680851063829785,
+    "recall": 0.09502262443438914,
+    "f1": 0.15671641791044777,
+    "alerts_per_1k_host_days": 9.791666666666666
+  },
+  "best_within_capacity": {
+    "sigma": 5.0,
+    "confirmed": 81,
+    "precision": 0.25925925925925924,
+    "recall": 0.09502262443438914,
+    "f1": 0.1390728476821192,
+    "alerts_per_1k_host_days": 16.875
+  },
+  "source": "synthetic, stealth 0.9-1.0, hard negatives on"
+}

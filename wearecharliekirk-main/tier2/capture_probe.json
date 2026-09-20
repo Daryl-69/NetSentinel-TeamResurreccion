@@ -1,0 +1,33 @@
+{
+  "files": 2,
+  "packets": 173682,
+  "truncated": 0,
+  "snaplens_in_files": {
+    "262144": 2
+  },
+  "tls_clienthello": 342,
+  "tls_sni_ok": 308,
+  "tls_spanning_segments": 159,
+  "tls_ech": 32,
+  "snaplen_needed_median": 654,
+  "snaplen_needed_p95": 2041,
+  "snaplen_needed_max": 2186,
+  "snaplen_coverage": {
+    "160": 0.0,
+    "512": 16.7,
+    "1024": 53.5,
+    "1500": 53.5,
+    "2048": 95.6,
+    "4096": 100.0
+  },
+  "quic_long_header": 0,
+  "quic_sni_ok": 0,
+  "quic_ech": 0,
+  "quic_fail_reasons": {},
+  "dns_queries_readable": 1002,
+  "dns_distinct_names": 65,
+  "doh_connections": 0,
+  "doh_bytes_known_resolver_ips": 271732,
+  "named_destinations": 55,
+  "top_named_withheld": "AUDIT F2 -- the top destination hostnames identify the capture subjects' browsing. Not persisted. Re-run capture_probe.py --include-names only if you intend to publish them."
+}

@@ -1,0 +1,18 @@
+{
+  "model_name": "NetSentinel C2 Beacon Detector",
+  "model_type": "BiLSTM + FFT Periodicity Fusion",
+  "version": "1.0.0",
+  "f1": 0.9978344161252707,
+  "auc_roc": 0.9998213333333333,
+  "training_minutes": 0.7583314538002014,
+  "seq_len": 100,
+  "n_features": 4,
+  "fft_features": 5,
+  "data_sources": {
+    "beacon": "CTU-13 botnet",
+    "benign": "CIC-IDS2017 + CTU-13 Normal",
+    "real_beacon": 5250,
+    "real_benign": 15000,
+    "synthetic": 9750
+  }
+}

@@ -140,20 +140,26 @@ $dcArgs = @(
     "-b", "files:$ringFiles",
     "-b", "filesize:200000"
 )
-if (-not $FullPayload) {
-    # 160 bytes keeps every header we parse (Ethernet/IP/TCP + the TLS
-    # ClientHello SNI and the DNS query name) and discards the payload.
-    $dcArgs += @("-s", "160")
-}
+# Whole packets. Measured with v2\capture_probe.py on our own capture:
+#   snaplen 160 -> 0 of 442 TLS ClientHellos named (50.8% of packets cut)
+#   snaplen 512 -> 365 of 415 named (88.0%), but 0 of 805 QUIC Initials
+#                  readable: RFC 9000 s14.1 pads client Initials to >=1200
+#                  bytes, our measured median is 1,230, and QUIC is ~61% of
+#                  encrypted traffic here. 512 can never name any of it.
+#   snaplen 0   -> nothing truncated. Cost x1.84 bytes, ~1.01 GB/day,
+#                  ~12.1 GB for 12 days against a 40 GB budget.
+# The sensor keeps whole packets so it can read HANDSHAKES. The detector
+# reads flow records and handshake metadata only -- it never consumes
+# application payload. Those are two different statements and only the
+# second one is about the model.
+$dcArgs += @("-s", "0")
 
 Write-Host ""
 Write-Host "Starting capture."
 Write-Host "  one file per $HoursPerFile h, ring of $ringFiles files, ~$MaxGB GB cap"
-if ($FullPayload) {
-    Write-Host "  FULL PAYLOAD -- larger files and more sensitive. You asked for it."
-} else {
-    Write-Host "  headers only (snaplen 160) -- no payload is written to disk"
-}
+Write-Host "  whole packets (snaplen 0) -- required to read QUIC Initials"
+Write-Host "  these files contain application payload. Keep them local and private."
+Write-Host "  the DETECTOR still reads only flow records and handshake metadata."
 Write-Host ""
 Write-Host "Leave this window open. Ctrl+C stops it."
 Write-Host "Target: 12 days, so it must still be running on the 17th."

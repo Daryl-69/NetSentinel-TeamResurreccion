@@ -1,0 +1,194 @@
+{
+  "seed": 0,
+  "ladder": {
+    "k": 0.5,
+    "h": 10.597862243652344,
+    "arl0_days": 510.0564102564103,
+    "rungs": [
+      {
+        "rung": "0_commodity",
+        "per_window_auc_best": 1.0,
+        "per_window_auc": {
+          "upload_z": 0.942722375,
+          "timing_reg": 1.0,
+          "tls_mismatch": 1.0
+        },
+        "footprint_sigma": 2.0,
+        "cusum_delay_days": 1.7553846153846155,
+        "cusum_lost_in_noise": false
+      },
+      {
+        "rung": "1_jittered",
+        "per_window_auc_best": 1.0,
+        "per_window_auc": {
+          "upload_z": 0.942897625,
+          "timing_reg": 0.9999744375,
+          "tls_mismatch": 1.0
+        },
+        "footprint_sigma": 2.0,
+        "cusum_delay_days": 1.744205128205128,
+        "cusum_lost_in_noise": false
+      },
+      {
+        "rung": "2_matched_tls",
+        "per_window_auc_best": 0.9999745,
+        "per_window_auc": {
+          "upload_z": 0.941687125,
+          "timing_reg": 0.9999745,
+          "tls_mismatch": 0.0
+        },
+        "footprint_sigma": 2.0,
+        "cusum_delay_days": 1.743128205128205,
+        "cusum_lost_in_noise": false
+      },
+      {
+        "rung": "3_circadian",
+        "per_window_auc_best": 0.8373784375,
+        "per_window_auc": {
+          "upload_z": 0.8373784375,
+          "timing_reg": 0.491717,
+          "tls_mismatch": 0.0
+        },
+        "footprint_sigma": 1.0,
+        "cusum_delay_days": 5.604871794871795,
+        "cusum_lost_in_noise": false
+      },
+      {
+        "rung": "4_full_mimicry",
+        "per_window_auc_best": 0.679655125,
+        "per_window_auc": {
+          "upload_z": 0.679655125,
+          "timing_reg": 0.502120375,
+          "tls_mismatch": 0.0
+        },
+        "footprint_sigma": 0.4,
+        "cusum_delay_days": 75.4963076923077,
+        "cusum_lost_in_noise": false
+      }
+    ]
+  },
+  "frontier": {
+    "k": 0.5,
+    "h": 10.597862243652344,
+    "target_arl0_days": 513.0,
+    "arl0_measured_windows": 2002.5416,
+    "arl0_measured_days": 513.4722051282051,
+    "baseline_mean_bytes": 16126.392588298379,
+    "baseline_std_bytes": 13173.71738891392,
+    "active_windows_per_day": 3.9,
+    "floor_kb_per_day": 10.034667542336773,
+    "curve": [
+      {
+        "footprint_sigma": 0.05,
+        "delta_bytes": 658.685869445696,
+        "exfil_kb_per_day": 2.5086668855841934,
+        "delay_active_windows": 1713.0528,
+        "days_to_detect": 439.2443076923077,
+        "lost_in_noise": true
+      },
+      {
+        "footprint_sigma": 0.1,
+        "delta_bytes": 1317.371738891392,
+        "exfil_kb_per_day": 5.017333771168387,
+        "delay_active_windows": 1435.8898,
+        "days_to_detect": 368.1768717948718,
+        "lost_in_noise": true
+      },
+      {
+        "footprint_sigma": 0.15,
+        "delta_bytes": 1976.057608337088,
+        "exfil_kb_per_day": 7.526000656752581,
+        "delay_active_windows": 1197.9402,
+        "days_to_detect": 307.16415384615385,
+        "lost_in_noise": true
+      },
+      {
+        "footprint_sigma": 0.2,
+        "delta_bytes": 2634.743477782784,
+        "exfil_kb_per_day": 10.034667542336773,
+        "delay_active_windows": 974.4194,
+        "days_to_detect": 249.85112820512822,
+        "lost_in_noise": false
+      },
+      {
+        "footprint_sigma": 0.25,
+        "delta_bytes": 3293.42934722848,
+        "exfil_kb_per_day": 12.543334427920968,
+        "delay_active_windows": 763.0524,
+        "days_to_detect": 195.65446153846156,
+        "lost_in_noise": false
+      },
+      {
+        "footprint_sigma": 0.3,
+        "delta_bytes": 3952.115216674176,
+        "exfil_kb_per_day": 15.052001313505162,
+        "delay_active_windows": 569.4114,
+        "days_to_detect": 146.00292307692308,
+        "lost_in_noise": false
+      },
+      {
+        "footprint_sigma": 0.4,
+        "delta_bytes": 5269.486955565568,
+        "exfil_kb_per_day": 20.069335084673547,
+        "delay_active_windows": 301.7522,
+        "days_to_detect": 77.37235897435897,
+        "lost_in_noise": false
+      },
+      {
+        "footprint_sigma": 0.5,
+        "delta_bytes": 6586.85869445696,
+        "exfil_kb_per_day": 25.086668855841936,
+        "delay_active_windows": 152.938,
+        "days_to_detect": 39.21487179487179,
+        "lost_in_noise": false
+      },
+      {
+        "footprint_sigma": 0.75,
+        "delta_bytes": 9880.288041685439,
+        "exfil_kb_per_day": 37.6300032837629,
+        "delay_active_windows": 41.4572,
+        "days_to_detect": 10.630051282051282,
+        "lost_in_noise": false
+      },
+      {
+        "footprint_sigma": 1.0,
+        "delta_bytes": 13173.71738891392,
+        "exfil_kb_per_day": 50.17333771168387,
+        "delay_active_windows": 21.818,
+        "days_to_detect": 5.594358974358975,
+        "lost_in_noise": false
+      },
+      {
+        "footprint_sigma": 1.5,
+        "delta_bytes": 19760.576083370877,
+        "exfil_kb_per_day": 75.2600065675258,
+        "delay_active_windows": 10.5586,
+        "days_to_detect": 2.7073333333333336,
+        "lost_in_noise": false
+      },
+      {
+        "footprint_sigma": 2.0,
+        "delta_bytes": 26347.43477782784,
+        "exfil_kb_per_day": 100.34667542336774,
+        "delay_active_windows": 6.7494,
+        "days_to_detect": 1.7306153846153847,
+        "lost_in_noise": false
+      },
+      {
+        "footprint_sigma": 3.0,
+        "delta_bytes": 39521.152166741755,
+        "exfil_kb_per_day": 150.5200131350516,
+        "delay_active_windows": 3.8046,
+        "days_to_detect": 0.9755384615384616,
+        "lost_in_noise": false
+      }
+    ]
+  },
+  "baseline": {
+    "mean_bytes": 16126.392588298379,
+    "std_bytes": 13173.71738891392,
+    "active_windows_per_day": 3.9,
+    "anchor": "synth Messaging_API; real capture had 0 (G1)"
+  },
+  "claim": "bounded not solved: per-window AUC collapses under mimicry; CUSUM converts exfil bandwidth into bounded detection delay; guaranteed-invisible channel has ~zero capacity"
+}

@@ -1,0 +1,149 @@
+{
+  "config": {
+    "hosts": 40,
+    "days": 45,
+    "seeds": 5,
+    "out": "bench_evasion.json"
+  },
+  "ladder": {
+    "0_commodity": {
+      "best_feature_auc_mean": 0.9952645943960169,
+      "best_feature_auc_std": 0.0005724271744275055,
+      "per_feature": {
+        "iat_cv": 0.9952645943960169,
+        "ks_uniform": 0.8708897206242211,
+        "ks_exponential": 0.8641462726815154,
+        "fft_prominence": 0.8709063797374526
+      }
+    },
+    "1_jitter": {
+      "best_feature_auc_mean": 0.9957825633729429,
+      "best_feature_auc_std": 0.00036120122907362537,
+      "per_feature": {
+        "iat_cv": 0.9957825633729429,
+        "ks_uniform": 0.8692358795544284,
+        "ks_exponential": 0.6919936904883656,
+        "fft_prominence": 0.8699880250043037
+      }
+    },
+    "2_circadian": {
+      "best_feature_auc_mean": 0.9957795373354095,
+      "best_feature_auc_std": 0.0005166831960918257,
+      "per_feature": {
+        "iat_cv": 0.9957795373354095,
+        "ks_uniform": 0.8722183138360833,
+        "ks_exponential": 0.6924606639075713,
+        "fft_prominence": 0.8729541335556184
+      }
+    },
+    "3_duration": {
+      "best_feature_auc_mean": 0.9963691856069582,
+      "best_feature_auc_std": 0.0005321212068638173,
+      "per_feature": {
+        "iat_cv": 0.9963691856069582,
+        "ks_uniform": 0.8685509186244976,
+        "ks_exponential": 0.6277087854258245,
+        "fft_prominence": 0.8702175774851822
+      }
+    },
+    "4_low_rate": {
+      "best_feature_auc_mean": 0.9962546371536373,
+      "best_feature_auc_std": 0.0002524814295528377,
+      "per_feature": {
+        "iat_cv": 0.9962546371536373,
+        "ks_uniform": 0.8689431860824918,
+        "ks_exponential": 0.6261666132559107,
+        "fft_prominence": 0.8706253322623055
+      }
+    },
+    "5_full_mimic": {
+      "best_feature_auc_mean": 0.7072385944076451,
+      "best_feature_auc_std": 0.015939199828365228,
+      "per_feature": {
+        "iat_cv": 0.681576991773126,
+        "ks_uniform": 0.5213352168724991,
+        "ks_exponential": 0.6876182013069707,
+        "fft_prominence": 0.7057123567539271
+      }
+    }
+  },
+  "frontier": {
+    "mu0_bytes_per_hr": 200000.0,
+    "sigma_bytes_per_hr": 150000.0,
+    "k_sigma": 0.5,
+    "h_sigma": 6.18075954914093,
+    "target_arl0_days": 90,
+    "rows": [
+      {
+        "kb_per_day": 50,
+        "shift_over_sigma": 0.01388888888888889,
+        "detect_days": 91.53350515463917,
+        "frac_detected": 0.97,
+        "mb_stolen_before_detection": 4.576675257731958
+      },
+      {
+        "kb_per_day": 100,
+        "shift_over_sigma": 0.02777777777777778,
+        "detect_days": 82.68855752961083,
+        "frac_detected": 0.985,
+        "mb_stolen_before_detection": 8.268855752961082
+      },
+      {
+        "kb_per_day": 250,
+        "shift_over_sigma": 0.06944444444444443,
+        "detect_days": 61.00981620718463,
+        "frac_detected": 0.9975,
+        "mb_stolen_before_detection": 15.252454051796157
+      },
+      {
+        "kb_per_day": 500,
+        "shift_over_sigma": 0.13888888888888887,
+        "detect_days": 31.91395833333333,
+        "frac_detected": 1.0,
+        "mb_stolen_before_detection": 15.956979166666665
+      },
+      {
+        "kb_per_day": 1000,
+        "shift_over_sigma": 0.27777777777777773,
+        "detect_days": 9.4340625,
+        "frac_detected": 1.0,
+        "mb_stolen_before_detection": 9.4340625
+      },
+      {
+        "kb_per_day": 2500,
+        "shift_over_sigma": 0.6944444444444445,
+        "detect_days": 1.0285416666666667,
+        "frac_detected": 1.0,
+        "mb_stolen_before_detection": 2.5713541666666666
+      },
+      {
+        "kb_per_day": 5000,
+        "shift_over_sigma": 1.388888888888889,
+        "detect_days": 0.32197916666666665,
+        "frac_detected": 1.0,
+        "mb_stolen_before_detection": 1.6098958333333333
+      },
+      {
+        "kb_per_day": 10000,
+        "shift_over_sigma": 2.777777777777778,
+        "detect_days": 0.13385416666666666,
+        "frac_detected": 1.0,
+        "mb_stolen_before_detection": 1.3385416666666667
+      },
+      {
+        "kb_per_day": 25000,
+        "shift_over_sigma": 6.944444444444444,
+        "detect_days": 0.0584375,
+        "frac_detected": 1.0,
+        "mb_stolen_before_detection": 1.4609375
+      }
+    ]
+  },
+  "joint": {
+    "auc_mean": 0.9962777777777777,
+    "auc_std": 0.0028952920490656364,
+    "benign_mean_corr": 0.5338956135344282,
+    "infected_mean_corr": 0.4161358468541378
+  },
+  "note": "Per-window AUC collapses to chance under full mimicry, by construction and by measurement. The security claim is the capacity bound (CUSUM frontier) and the joint-correlation tell, NOT per-window detection of a perfect mimic."
+}
