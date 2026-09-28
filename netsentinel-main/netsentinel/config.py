@@ -57,6 +57,42 @@ def get_model_path(relative_path: str) -> str:
             local_dir_use_symlinks=False,  # Copy file directly, don't use symlinks
         )
         
+        # Also download companion .onnx.data file if this is an .onnx model
+        # (C2 Beacon, Encrypted Traffic Transformer, and Exfiltration VAE use external data)
+        if relative_path.endswith(".onnx"):
+            # Check for standard companion file (same name + .data)
+            data_filename = relative_path + ".data"
+            data_cache_path = os.path.join(HF_CACHE_DIR, data_filename)
+            if not os.path.exists(data_cache_path):
+                try:
+                    hf_hub_download(
+                        repo_id=HF_REPO_ID,
+                        filename=data_filename,
+                        cache_dir=HF_CACHE_DIR,
+                        local_dir=HF_CACHE_DIR,
+                        local_dir_use_symlinks=False,
+                    )
+                    print(f"  [OK] Downloaded companion: {data_filename}")
+                except Exception:
+                    pass  # Not all models have external data files
+            
+            # Special case: exfil_vae.onnx references expert6_vae.onnx.data
+            if "exfil_vae.onnx" in relative_path:
+                expert_data = relative_path.replace("exfil_vae.onnx", "expert6_vae.onnx.data")
+                expert_cache = os.path.join(HF_CACHE_DIR, expert_data)
+                if not os.path.exists(expert_cache):
+                    try:
+                        hf_hub_download(
+                            repo_id=HF_REPO_ID,
+                            filename=expert_data,
+                            cache_dir=HF_CACHE_DIR,
+                            local_dir=HF_CACHE_DIR,
+                            local_dir_use_symlinks=False,
+                        )
+                        print(f"  [OK] Downloaded companion: {expert_data}")
+                    except Exception:
+                        pass
+        
         print(f"  [OK] Downloaded: {relative_path}")
         return downloaded_path
         
