@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetSentinel Console</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1.5' y='1.5' width='13' height='13' rx='2' fill='none' stroke='%232563c9' stroke-width='2'/%3E%3Crect x='5' y='5' width='6' height='6' fill='%232563c9'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="console.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="titlebar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="13" rx="2"/><rect class="fill" x="5" y="5" width="6" height="6"/></svg>
+      <span class="brand-name">NetSentinel</span>
+      <span class="brand-sub">Console</span>
+    </div>
+    <div class="tb-sep"></div>
+    <div class="source-chip" id="sourceChip" data-kind="idle"><span class="dot"></span><span class="label">Idle</span></div>
+    <div class="sensor" id="sensorLabel" hidden></div>
+    <div class="spacer"></div>
+    <div class="conn" id="conn" data-state="connecting"><span class="dot"></span><span id="connText">Connecting</span></div>
+    <div class="clock mono" id="clock">--:--:--</div>
+    <button class="btn btn-quiet" id="settingsBtn" type="button">Settings</button>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist">
+    <button class="tab active" type="button" data-view="overview" role="tab">Overview</button>
+    <button class="tab" type="button" data-view="alerts" role="tab">Alerts <span class="tab-count" id="countAlerts">0</span></button>
+    <button class="tab" type="button" data-view="hosts" role="tab">Hosts <span class="tab-count" id="countHosts">0</span></button>
+    <button class="tab" type="button" data-view="models" role="tab">Models</button>
+    <button class="tab" type="button" data-view="tier2" role="tab">Inspector–Sentry</button>
+    <button class="tab" type="button" data-view="integrity" role="tab">Integrity</button>
+    <button class="tab" type="button" data-view="ingest" role="tab">Ingest</button>
+    <div class="spacer"></div>
+    <div class="tabs-hint">Press <kbd>/</kbd> to filter · <kbd>j</kbd> <kbd>k</kbd> to move · <kbd>p</kbd> to pause</div>
+  </nav>
+
+  <main class="views">
+
+    <!-- OVERVIEW (PS 26145) -->
+    <section class="view active" data-view="overview">
+      <div class="page page-col" id="overviewPage">
+        <div class="ov-head">
+          <div>
+            <h2 class="h2">Threat coverage <span class="muted">PS 26145 · AI-based detection of cyber threats in unidirectional IP traffic</span></h2>
+            <p class="note" id="ovSourceNote">Counts are alerts in this console session. Click a family to see its alerts.</p>
+          </div>
+          <div class="spacer"></div>
+          <div class="ov-schema mono" id="ovSchema"></div>
+        </div>
+        <div class="tiles" id="tiles"></div>
+
+        <div class="ov-grid">
+          <div class="panel" id="tpPanel">
+            <div class="panel-head"><h3>Throughput</h3><span class="muted" id="tpSource">—</span></div>
+            <div class="kpis" id="tpKpis"></div>
+            <div class="spark-wrap">
+              <div class="spark-title"><span>Flows per second</span><span class="muted" id="sparkFlowsMax"></span></div>
+              <svg class="spark" id="sparkFlows" preserveAspectRatio="none"></svg>
+              <div class="spark-title"><span>Mbps</span><span class="muted" id="sparkMbpsMax"></span></div>
+              <svg class="spark" id="sparkMbps" preserveAspectRatio="none"></svg>
+              <div class="spark-axis muted"><span>2 min ago</span><span>now</span></div>
+              <div class="spark-tip" id="sparkTip" hidden></div>
+            </div>
+            <div class="bench-line" id="benchLine"></div>
+          </div>
+
+          <div class="panel" id="latPanel">
+            <div class="panel-head"><h3>Latency</h3><span class="muted">measured, per event</span></div>
+            <table class="table table-compact" id="latTable">
+              <thead><tr><th>Stage</th><th class="num">p50 ms</th><th class="num">p95 ms</th><th class="num">p99 ms</th><th class="num">Samples</th></tr></thead>
+              <tbody></tbody>
+            </table>
+            <p class="note" id="latNote"></p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>Constraints</h3><span class="muted">how each one is met, with live values from the sensor</span></div>
+          <div class="constraints" id="constraints"></div>
+        </div>
+
+        <div class="ov-grid ov-grid-3">
+          <div class="panel">
+            <div class="panel-head"><h3>C2 watch list</h3><span class="muted">highest combined scores now</span></div>
+            <div id="c2Watch"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>TLS fingerprints</h3><span class="muted">most common JA4 on this sensor</span></div>
+            <div id="tlsFps"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Recent critical and high</h3><span class="muted">click to open</span></div>
+            <div id="recentHigh"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>Deliverables</h3><span class="muted">what the problem statement asks the solution to include</span></div>
+          <div class="deliver" id="deliverables"></div>
+        </div>
+
+        <div class="panel t2-teaser" id="t2Teaser">
+          <div class="panel-head"><h3>Tier 2 · Inspector–Sentry</h3><span class="muted">behaviour over days, beside the live sensor</span><span class="spacer"></span><button class="btn btn-small" type="button" data-goto="tier2">Open</button></div>
+          <div id="t2TeaserBody" class="t2-teaser-body"><span class="muted">Loading…</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ALERTS -->
+    <section class="view" data-view="alerts">
+      <div class="toolbar">
+        <div class="filter-box">
+          <input id="filterInput" class="input mono" type="search" spellcheck="false" autocomplete="off"
+                 placeholder="Filter: 10.0.0.5  class:dga  ps:c  sev:high  port:443  mitre:T1071">
+        </div>
+        <div class="sev-toggles" id="sevToggles"></div>
+        <select id="classSelect" class="select"><option value="">All classes</option></select>
+        <label class="check"><input type="checkbox" id="groupToggle"> Group repeats</label>
+        <div class="spacer"></div>
+        <span class="time-chip" id="timeChip" hidden><span id="timeChipText"></span><button type="button" id="timeChipClear" title="Clear time range">×</button></span>
+        <button class="btn" id="pauseBtn" type="button">Pause</button>
+        <button class="btn" id="saveBtn" type="button" title="Save these alerts to a session file">Save</button>
+        <button class="btn" id="openBtn" type="button" title="Open a saved session file">Open…</button>
+        <input type="file" id="openFile" accept=".json,application/json" hidden>
+      </div>
+
+      <div class="histo" id="histo">
+        <div class="histo-meta"><span id="histoTitle">Alerts over time</span><span class="muted">Click a bar to filter to that interval</span></div>
+        <svg id="histoSvg" preserveAspectRatio="none"></svg>
+        <div class="histo-axis" id="histoAxis"></div>
+        <div class="histo-tip" id="histoTip" hidden></div>
+      </div>
+
+      <div class="split">
+        <div class="grid-wrap" id="alertGrid">
+          <div class="grid-head" id="alertHead"></div>
+          <div class="grid-body" id="alertBody" tabindex="0">
+            <div class="grid-spacer" id="alertSpacer"></div>
+            <div class="grid-rows" id="alertRows"></div>
+          </div>
+          <div class="grid-empty" id="alertEmpty"></div>
+        </div>
+        <aside class="detail" id="detail" hidden></aside>
+      </div>
+    </section>
+
+    <!-- HOSTS -->
+    <section class="view" data-view="hosts">
+      <div class="toolbar">
+        <div class="filter-box"><input id="hostFilter" class="input mono" type="search" spellcheck="false" placeholder="Filter hosts"></div>
+        <label class="check"><input type="checkbox" id="hostInternalOnly"> Internal addresses only</label>
+        <div class="spacer"></div>
+        <span class="muted" id="hostNote">Built from the alerts in this session.</span>
+      </div>
+      <div class="table-scroll">
+        <table class="table" id="hostTable">
+          <thead><tr>
+            <th data-sort="ip">Address</th><th data-sort="scope">Scope</th>
+            <th data-sort="asSrc" class="num">As source</th><th data-sort="asDst" class="num">As destination</th>
+            <th>Classes</th><th data-sort="maxSev">Highest</th>
+            <th data-sort="first">First seen</th><th data-sort="last">Last seen</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="table-empty" id="hostEmpty">No hosts yet.</div>
+      </div>
+    </section>
+
+    <!-- MODELS -->
+    <section class="view" data-view="models">
+      <div class="page">
+        <div class="page-main">
+          <h2 class="h2">Detectors</h2>
+          <table class="table table-static" id="modelTable">
+            <thead><tr>
+              <th>Detector</th><th>Kind</th><th>PS</th><th>Status</th>
+              <th>Digest (sha256)</th><th class="num">Alerts</th><th class="num">p50 ms</th><th class="num">p95 ms</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+          <p class="note" id="modelNote">Model digests are the sha256 of the ONNX file; rule digests are the sha256 of the detector's name, version and parameters. Every receipt records the digest of whatever made the call, so a changed model or threshold shows up when an alert is verified.</p>
+          <h2 class="h2">Rule parameters</h2>
+          <div class="rule-params" id="ruleParams"></div>
+
+          <h2 class="h2">Pipeline</h2>
+          <div class="facts" id="pipelineFacts"></div>
+          <table class="table table-static table-narrow" id="distTable">
+            <thead><tr><th>Class</th><th class="num">Alerts (sensor total)</th></tr></thead>
+            <tbody></tbody>
+          </table>
+
+          <h2 class="h2">PS 26145 figures <span class="muted">made from this repository's result files (docs/figures/)</span></h2>
+          <div class="figs" id="psFigs"><span class="muted">Loading…</span></div>
+          <h2 class="h2">Model figures <span class="muted">from each model's own training and test split (models/*/)</span></h2>
+          <div class="figs" id="modelFigs"><span class="muted">Loading…</span></div>
+        </div>
+        <div class="page-side">
+          <h2 class="h2">Encrypted traffic mix</h2>
+          <p class="note">Flows labelled by the encrypted-traffic application classifier (FT-Transformer, ISCX VPN-nonVPN classes). Telemetry, not alerts. Payloads are never decrypted.</p>
+          <div class="bars" id="ettBars"></div>
+          <h2 class="h2">Not in this pipeline</h2>
+          <p class="note">Tier 2 (Inspector–Sentry, in <code>tier2/</code>) is verified standalone and is not wired into this sensor. It needs its own commissioning period on the site's traffic before it can score anything. See the <a href="#" data-goto="tier2">Inspector–Sentry</a> tab.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TIER 2: INSPECTOR-SENTRY -->
+    <section class="view" data-view="tier2">
+      <div class="page page-col" id="tier2Page">
+        <div class="ov-head">
+          <div>
+            <h2 class="h2">Inspector–Sentry <span class="muted">Tier 2 · how a host's mix of services changes over days</span></h2>
+            <p class="note" id="t2Status">Loading…</p>
+          </div>
+          <div class="spacer"></div>
+          <div class="ov-schema mono" id="t2Wired">verified standalone · not wired into the live sensor</div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>How the cascade works</h3><span class="muted">a small model on every window, the big one only where it matters</span></div>
+          <div class="t2-flow">
+            <div class="t2-box"><div class="t2-k">1 · Commissioning</div><div class="t2-t">The <b>Inspector</b> (205,546 parameters, graph + attention) learns each host's normal from the site's own traffic, unsupervised. Its alert threshold is the 99th percentile of its own error.</div></div>
+            <div class="t2-arrow">→</div>
+            <div class="t2-box"><div class="t2-k">2 · Distillation</div><div class="t2-t">The <b>Sentry</b> (14,992 parameters, GRU) learns the Inspector's encoder, not its verdict: 13.7× smaller.</div></div>
+            <div class="t2-arrow">→</div>
+            <div class="t2-box"><div class="t2-k">3 · Steady state</div><div class="t2-t">The Sentry alone scores every host-window on CPU, from categories of service (code repositories, messaging APIs, cloud storage …), never payloads.</div></div>
+            <div class="t2-arrow">→</div>
+            <div class="t2-box"><div class="t2-k">4 · Escalation</div><div class="t2-t">The top 5% by Sentry score go back to the Inspector, which re-runs on those host-days only and returns the verdict.</div></div>
+          </div>
+        </div>
+
+        <div class="ov-grid">
+          <div class="panel" id="t2DemoPanel">
+            <div class="panel-head"><h3>Run the cascade</h3><span class="muted">synthetic organisation · every stage runs for real</span></div>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="t2Run" type="button">Run the cascade</button>
+              <label class="check"><input type="checkbox" id="t2Full"> full size (about a minute; fast is about 30 s)</label>
+              <span class="muted" id="t2Msg"></span>
+            </div>
+            <div class="kpis t2-kpis" id="t2Kpis" hidden></div>
+            <pre class="t2-log mono" id="t2Log" hidden></pre>
+            <p class="note">Runs <code>tier2/demo_scenario.py</code> with PyTorch on CPU. The organisation, its compromised hosts and its developer look-alikes are generated, so the attack figure it prints is indicative only; the real-traffic numbers are in the table below.</p>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Escalation budget</h3><span class="muted">tier2/chart_escalation_budget.png</span></div>
+            <img class="t2-fig" id="t2Fig1" alt="Recall of Inspector-flagged windows against the escalation budget for three routers">
+            <div class="t2-figcap" id="t2Fig1Cap"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>Verified numbers</h3><span class="muted">re-derived from tier2/*.json each time this page loads, and checked against the documented value</span></div>
+          <div id="t2Numbers"></div>
+        </div>
+
+        <div class="ov-grid">
+          <div class="panel">
+            <div class="panel-head"><h3>Geometry check</h3><span class="muted">tier2/chart_geometry_diagnostic.png</span></div>
+            <img class="t2-fig" id="t2Fig2" alt="kNN neighbourhood overlap, trustworthiness and score correlation between Sentry and Inspector">
+            <div class="t2-figcap" id="t2Fig2Cap"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>What it does not claim</h3></div>
+            <ul class="t2-limits">
+              <li>It is not wired into the live sensor. The Inspector needs a commissioning window of days on the site's own traffic, which this sensor has not had.</li>
+              <li>96.9% is the share of what the Inspector would have flagged that reaches it at a 5% budget, not a detection rate.</li>
+              <li>On real data (LANL) the Inspector's within-host AUC is 0.557 ± 0.013, near chance: the weakest number, stated here on purpose.</li>
+              <li>A Telegram-API implant that perfectly mimics its host is not caught in a window; the claim is a bound — any real exfiltration rate is caught within a delay its own bandwidth sets.</li>
+              <li>13.7× is a size ratio. The Sentry's speed advantage on CPU was about 8× on one shared machine.</li>
+            </ul>
+            <p class="note">Full register: <code>tier2/AUDIT.md</code>. One command re-derives every figure: <code>python tier2/verify_all.py</code>.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INTEGRITY -->
+    <section class="view" data-view="integrity">
+      <div class="page">
+        <div class="page-main">
+          <h2 class="h2">Ledger</h2>
+          <div class="facts" id="ledgerFacts"></div>
+          <div class="btn-row">
+            <button class="btn" id="flushBtn" type="button">Seal current window</button>
+            <button class="btn" id="sthBtn" type="button">Publish checkpoint</button>
+            <button class="btn btn-quiet" id="ledgerRefresh" type="button">Refresh</button>
+            <span class="muted" id="ledgerMsg"></span>
+          </div>
+          <h2 class="h2">Checkpoints</h2>
+          <table class="table table-static" id="cpTable">
+            <thead><tr><th class="num">Seq</th><th class="num">Tree size</th><th>Root hash</th><th>Time (UTC)</th><th>Signed by</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="table-empty" id="cpEmpty">No checkpoints published yet.</div>
+        </div>
+        <div class="page-side">
+          <h2 class="h2">How alerts are sealed</h2>
+          <ol class="steps">
+            <li><b>Receipt.</b> Each alert gets an in-toto statement recording the evidence digest, feature digest, model digest and decision, signed with the sensor's Ed25519 key (DSSE).</li>
+            <li><b>Window.</b> Receipts are batched into a Merkle tree; the root is appended to a hash-chained ledger.</li>
+            <li><b>Checkpoint.</b> A signed tree head is published and anchored, so later edits to any alert are detectable.</li>
+            <li><b>Verify.</b> Anyone with the receipt can re-check the claims and replay the model to get the same score.</li>
+          </ol>
+          <div class="facts facts-1" id="receiptFacts" style="margin-top:14px"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INGEST -->
+    <section class="view" data-view="ingest">
+      <div class="page">
+        <div class="page-main">
+          <div class="block">
+            <h2 class="h2">Replay a capture</h2>
+            <p class="note">Runs a .pcap or .pcapng through the full pipeline. Alerts appear in the Alerts tab as they are produced.</p>
+            <div class="form-row">
+              <input type="file" id="pcapFile" accept=".pcap,.pcapng,.cap">
+              <button class="btn btn-primary" id="pcapUpload" type="button">Upload and replay</button>
+            </div>
+            <div class="progress" id="pcapProgress" hidden><div class="progress-bar" id="pcapProgressBar"></div></div>
+            <div class="form-row">
+              <input type="text" class="input mono" id="pcapPath" spellcheck="false" placeholder="Or a path on the sensor, e.g. D:\capture\ns_00016.pcap">
+              <button class="btn" id="pcapProcess" type="button">Process file</button>
+            </div>
+            <div class="form-msg" id="pcapMsg"></div>
+          </div>
+
+          <div class="block">
+            <h2 class="h2">Live capture</h2>
+            <p class="note">Passive only: listens on a SPAN port or tap and never sends traffic back. Needs admin rights and Npcap on Windows.</p>
+            <div class="form-row">
+              <input type="text" class="input mono" id="ifaceName" value="Ethernet" spellcheck="false" style="max-width:220px">
+              <button class="btn btn-primary" id="capStart" type="button">Start</button>
+              <button class="btn" id="capStop" type="button">Stop</button>
+            </div>
+            <div class="form-msg" id="capMsg"></div>
+          </div>
+
+          <div class="block">
+            <h2 class="h2">Throughput benchmark</h2>
+            <p class="note">Replays a capture through extraction and every detector as fast as one process can, with its own analyzer (nothing is added to this session's alerts). Use a real capture for the figure you state; the synthetic capture is a repeatable made-up mix that is generated once.</p>
+            <div class="form-row">
+              <select class="select" id="benchSize"><option value="20000">Synthetic, 20,000 packets</option><option value="50000" selected>Synthetic, 50,000 packets</option><option value="100000">Synthetic, 100,000 packets</option></select>
+              <span class="muted">or</span>
+              <input type="text" class="input mono" id="benchPath" spellcheck="false" placeholder="a capture on the sensor, e.g. D:\capture\ns_00016.pcap" style="max-width:340px">
+              <button class="btn btn-primary" id="benchRun" type="button">Run benchmark</button>
+            </div>
+            <div class="progress" id="benchProgress" hidden><div class="progress-bar" id="benchProgressBar"></div></div>
+            <div class="form-msg" id="benchMsg"></div>
+            <div class="facts" id="benchFacts" hidden></div>
+          </div>
+
+          <div class="block">
+            <h2 class="h2">Simulator</h2>
+            <p class="note">Generates <b>synthetic</b> events for testing the pipeline end to end. Not real traffic; every external address is from the RFC 5737 documentation ranges.</p>
+            <div class="form-row form-wrap" id="simButtons">
+              <button class="btn" type="button" data-sim="mixed">Mixed (all six)</button>
+              <button class="btn" type="button" data-sim="ddos">a · DDoS</button>
+              <button class="btn" type="button" data-sim="c2">b · C2 beacon</button>
+              <button class="btn" type="button" data-sim="dga">c · DGA names</button>
+              <button class="btn" type="button" data-sim="nxdomain">c · NXDOMAIN burst</button>
+              <button class="btn" type="button" data-sim="dns_tunnel">c · TXT tunnel</button>
+              <button class="btn" type="button" data-sim="tls">d · TLS implant</button>
+              <button class="btn" type="button" data-sim="port_scan">e · Port scan</button>
+              <button class="btn" type="button" data-sim="sweep">e · Host sweep</button>
+              <button class="btn" type="button" data-sim="exfil">f · DNS exfil</button>
+              <button class="btn" type="button" data-sim="exfil_flow">f · Upload exfil</button>
+              <button class="btn" type="button" data-sim="normal">Normal only</button>
+              <button class="btn" type="button" data-sim="stop">Stop</button>
+            </div>
+            <div class="form-msg" id="simMsg"></div>
+          </div>
+
+          <div class="block">
+            <h2 class="h2">Session</h2>
+            <div class="form-row">
+              <button class="btn" id="resetBtn" type="button">Clear alerts on sensor</button>
+            </div>
+            <div class="form-msg" id="resetMsg"></div>
+          </div>
+        </div>
+        <div class="page-side">
+          <h2 class="h2">Extractor</h2>
+          <div class="facts facts-1" id="extractorFacts"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="statusbar">
+    <span id="sbConn">Not connected</span>
+    <span class="sb-sep"></span>
+    <span id="sbFlows">Flows 0</span>
+    <span id="sbAlerts">Alerts 0</span>
+    <span id="sbReceipts">Receipts 0</span>
+    <span class="sb-sep"></span>
+    <span id="sbRate">— flows/s</span>
+    <span id="sbLat">p95 —</span>
+    <div class="spacer"></div>
+    <span id="sbLast">No events yet</span>
+    <span class="sb-sep"></span>
+    <span>NetSentinel 1.1 · schema v1</span>
+  </footer>
+</div>
+
+<dialog class="dialog" id="settingsDialog">
+  <form method="dialog" class="dialog-body">
+    <h2 class="h2">Settings</h2>
+    <label class="field"><span>Sensor URL</span>
+      <input class="input mono" id="setBackend" type="text" spellcheck="false" placeholder="http://localhost:8000"></label>
+    <label class="field"><span>Theme</span>
+      <select class="select" id="setTheme"><option value="system">Match system</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+    <label class="field"><span>Times</span>
+      <select class="select" id="setTz"><option value="utc">UTC</option><option value="local">Local time</option></select></label>
+    <label class="field"><span>Keep in memory</span>
+      <select class="select" id="setMax"><option value="2000">2,000 alerts</option><option value="5000">5,000 alerts</option><option value="20000">20,000 alerts</option></select></label>
+    <fieldset class="field-set">
+      <legend>Screen recording</legend>
+      <label class="check"><input type="checkbox" id="setMaskIp"> Mask IP addresses</label>
+      <label class="check"><input type="checkbox" id="setMaskDomain"> Mask domain names</label>
+    </fieldset>
+    <div class="dialog-actions">
+      <button class="btn" value="cancel" type="submit">Cancel</button>
+      <button class="btn btn-primary" id="setSave" value="save" type="submit">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="console.js"></script>
+</body>
+</html>

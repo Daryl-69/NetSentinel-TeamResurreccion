@@ -1,75 +1,50 @@
-# ═══════════════════════════════════════════
-# NetSentinel — Root .gitignore
-# ═══════════════════════════════════════════
-
-# ── Obsidian ──
-.obsidian/
-
-# ── Python ──
-**/__pycache__/
+# Python
+__pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
+*.class
+*.egg-info/
+dist/
+build/
+*.egg
 
-# ── Virtual Environments ──
-**/.venv/
-**/venv/
-**/ENV/
-**/env/
+# Virtual environments
+.venv/
+venv/
+ENV/
 
-# ── OS ──
-Thumbs.db
-.DS_Store
-desktop.ini
-*~
+# Node
+node_modules/
+npm-debug.log*
 
-# ── IDE ──
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# ── Large binary data (v2 experiment artifacts) ──
-netsentinel-main/v2/lanl_tensors_*.npz
-netsentinel-main/v2/pretrained_real.pt
-netsentinel-main/v2/data/
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
 
-# ── Graphify cache (contains auto-generated local paths) ──
-netsentinel-main/graphify-out/cache/
+# Binary/large files
+*.npz
+*.pt
+*.pth
+*.h5
+*.pkl
+*.pickle
 
-# ── Frontend build artifacts & deps ──
-**/node_modules/
-netsentinel-main/frontend/dist/
-netsentinel-main/frontend/.vite/
-
-# ── Lock files (can be regenerated) ──
-netsentinel-main/frontend/pnpm-lock.yaml
-
-# ── Python package build ──
-build/
-dist/
-*.egg-info/
-*.egg
-
-# ── Testing ──
+# Caches
 .pytest_cache/
-.coverage
-htmlcov/
-
-# ── Logs ──
+.mypy_cache/
 *.log
 
-# ── Compiled Java ──
+# Obsidian
+.obsidian/
+
+# Figma
+.figma/
+
+# Misc
 *.class
-
-# ── Personal scratch / prompt notes ──
-astra.txt
-astra#!(send claude).txt
-
-# ── Duplicate root-level copies ──
-/netsentinel_deck.html
-/ppt/
-
-# ── AI output scratch ──
-sih26/Claude outputs/

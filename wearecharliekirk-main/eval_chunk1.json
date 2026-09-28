@@ -1,0 +1,88 @@
+{
+ "label": "eval_chunk1.json",
+ "files": 18,
+ "use_cicflowmeter": false,
+ "elapsed_s": 68.2,
+ "totals": {
+  "events": 79202,
+  "flows": 39885,
+  "packets": 2603070,
+  "bytes": 2137125975,
+  "tls_client_hellos": 7298,
+  "probe_stubs": 3203,
+  "span_s": 54112.742000000006
+ },
+ "hours": 15.03,
+ "alerts_total": 222,
+ "severity": {
+  "INFO": 167,
+  "HIGH": 12,
+  "MEDIUM": 22,
+  "CRITICAL": 19,
+  "LOW": 2
+ },
+ "by_detector": [
+  {
+   "class": "Data Exfiltration",
+   "detector": "exfil_vae",
+   "subtype": "DNS tunnelling (anomalous name)",
+   "alerts": 159,
+   "distinct_sources": 1,
+   "distinct_destinations": 1
+  },
+  {
+   "class": "DGA",
+   "detector": "dga_cnn_bilstm_v2",
+   "subtype": "machine-generated name",
+   "alerts": 34,
+   "distinct_sources": 2,
+   "distinct_destinations": 3
+  },
+  {
+   "class": "C2 Beacon",
+   "detector": "c2_combined_score_v2",
+   "subtype": "periodic check-ins",
+   "alerts": 19,
+   "distinct_sources": 2,
+   "distinct_destinations": 11
+  },
+  {
+   "class": "DNS Tunnel",
+   "detector": "dga_cnn_bilstm_v2",
+   "subtype": "tunnel-like name",
+   "alerts": 6,
+   "distinct_sources": 1,
+   "distinct_destinations": 1
+  },
+  {
+   "class": "Port Scan",
+   "detector": "portscan_spsd",
+   "subtype": "block scan",
+   "alerts": 2,
+   "distinct_sources": 1,
+   "distinct_destinations": 1
+  },
+  {
+   "class": "Data Exfiltration",
+   "detector": "exfil_byte_ratio",
+   "subtype": "asymmetric upload (out/in byte ratio)",
+   "alerts": 1,
+   "distinct_sources": 1,
+   "distinct_destinations": 1
+  },
+  {
+   "class": "Port Scan",
+   "detector": "portscan_spsd",
+   "subtype": "host sweep",
+   "alerts": 1,
+   "distinct_sources": 1,
+   "distinct_destinations": 0
+  }
+ ],
+ "analyzer_stats": {
+  "flows_processed": 79202,
+  "total_alerts": 222,
+  "recent_count": 222,
+  "schema_violations": 0
+ }
+}

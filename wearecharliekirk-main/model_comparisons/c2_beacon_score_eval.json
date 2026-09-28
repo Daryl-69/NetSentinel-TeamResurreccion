@@ -1,0 +1,232 @@
+{
+ "what": "Combined beacon score v2 prototype. Weights and the 0.80 alert threshold were fixed before any scoring. Every session other than the labelled beacon is our own unlabelled traffic, treated as benign (so false alarms are an upper bound).",
+ "weights": {
+  "T": 0.3,
+  "F": 0.2,
+  "S": 0.2,
+  "R": 0.15,
+  "C": 0.15
+ },
+ "alert_threshold": 0.8,
+ "captured_hours": 97,
+ "calendar_days": 8,
+ "six_hour_windows": 26,
+ "captured_hours_per_window": [
+  1,
+  1,
+  1,
+  1,
+  2,
+  2,
+  2,
+  2,
+  2,
+  2,
+  3,
+  3,
+  3,
+  4,
+  5,
+  5,
+  5,
+  5,
+  6,
+  6,
+  6,
+  6,
+  6,
+  6,
+  6,
+  6
+ ],
+ "sessions_scored": 359,
+ "benign_sessions": 357,
+ "rule": "one session = one (source, destination) pair in one 6-hour UTC window with >= 20 check-ins spanning >= 30 min; connection starts < 5 s apart merged into one check-in; DNS/NTP/SSDP/mDNS/LLMNR/NetBIOS/DHCP and multicast/link-local dropped",
+ "beacon": {
+  "T": 0.971,
+  "F": 0.335,
+  "P": 2.684,
+  "S": 0.956,
+  "R": 1.0,
+  "C": 0.833,
+  "score": 0.824,
+  "checkins": 231,
+  "median_gap_s": 61.1,
+  "other_beacon_session_score": 0.642,
+  "other_beacon_session_checkins": 25
+ },
+ "ranking": {
+  "combined_score": {
+   "benign_sessions_scoring_at_or_above_beacon_all_days": 42,
+   "beacon_rank_in_its_own_window": [
+    4,
+    15
+   ]
+  },
+  "fft_alone": {
+   "benign_sessions_scoring_at_or_above_beacon_all_days": 104,
+   "beacon_rank_in_its_own_window": [
+    4,
+    15
+   ]
+  },
+  "timing_regularity_alone": {
+   "benign_sessions_scoring_at_or_above_beacon_all_days": 66,
+   "beacon_rank_in_its_own_window": [
+    4,
+    15
+   ]
+  }
+ },
+ "beacon_window_top5": [
+  {
+   "port": 5684,
+   "n": 160,
+   "median_iat": 30.0,
+   "T": 1.0,
+   "F": 0.334,
+   "S": 1.0,
+   "R": 1.0,
+   "C": 1.0,
+   "score": 0.867,
+   "is_beacon": false
+  },
+  {
+   "port": 443,
+   "n": 32,
+   "median_iat": 600.001,
+   "T": 1.0,
+   "F": 0.28,
+   "S": 0.99,
+   "R": 1.0,
+   "C": 1.0,
+   "score": 0.854,
+   "is_beacon": false
+  },
+  {
+   "port": 443,
+   "n": 79,
+   "median_iat": 240.896,
+   "T": 1.0,
+   "F": 0.173,
+   "S": 0.984,
+   "R": 1.0,
+   "C": 1.0,
+   "score": 0.831,
+   "is_beacon": false
+  },
+  {
+   "port": 443,
+   "n": 231,
+   "median_iat": 61.066,
+   "T": 0.971,
+   "F": 0.335,
+   "S": 0.956,
+   "R": 1.0,
+   "C": 0.833,
+   "score": 0.824,
+   "is_beacon": true
+  },
+  {
+   "port": 443,
+   "n": 31,
+   "median_iat": 450.0,
+   "T": 0.667,
+   "F": 0.151,
+   "S": 0.948,
+   "R": 1.0,
+   "C": 1.0,
+   "score": 0.72,
+   "is_beacon": false
+  }
+ ],
+ "alerts_at_threshold": {
+  "beacon_caught": true,
+  "benign_session_alerts": 48,
+  "benign_session_alerts_per_24h_of_capture": 11.9,
+  "distinct_benign_host_pairs": 19,
+  "distinct_benign_services_(dest_network+port)": 12,
+  "new_services_by_capture_day": [
+   2,
+   3,
+   1,
+   1,
+   0,
+   2,
+   3
+  ],
+  "ports": [
+   [
+    443,
+    32
+   ],
+   [
+    5684,
+    16
+   ]
+  ],
+  "services_with_private_lan_destination": 3,
+  "beacon_service_seen_before_its_window": false
+ },
+ "capture_dates_utc": [
+  "2026-09-18",
+  "2026-09-25"
+ ],
+ "sensitivity_other_thresholds": {
+  "0.7": {
+   "beacon_caught": true,
+   "benign_session_alerts": 108,
+   "per_24h": 26.7
+  },
+  "0.75": {
+   "beacon_caught": true,
+   "benign_session_alerts": 65,
+   "per_24h": 16.1
+  },
+  "0.85": {
+   "beacon_caught": false,
+   "benign_session_alerts": 23,
+   "per_24h": 5.7
+  },
+  "0.9": {
+   "beacon_caught": false,
+   "benign_session_alerts": 2,
+   "per_24h": 0.5
+  }
+ },
+ "fft_check": {
+  "clean_simulated_60s_beacon_prominence_median": 3.2,
+  "benign_sessions_prominence_median": 2.26,
+  "real_beacon_prominence": 2.68
+ },
+ "simulated_variants_of_real_beacon": {
+  "jitter_20pct": {
+   "scored": true,
+   "score": 0.815,
+   "caught_at_0.80": true,
+   "benign_sessions_at_or_above": 43
+  },
+  "jitter_50pct": {
+   "scored": true,
+   "score": 0.793,
+   "caught_at_0.80": false,
+   "benign_sessions_at_or_above": 50
+  },
+  "drop_20pct_of_checkins": {
+   "scored": true,
+   "score": 0.834,
+   "caught_at_0.80": true,
+   "benign_sessions_at_or_above": 34
+  },
+  "every_5th_checkin_about_5min": {
+   "scored": true,
+   "score": 0.813,
+   "caught_at_0.80": true,
+   "benign_sessions_at_or_above": 43
+  },
+  "every_15th_checkin_about_15min": {
+   "scored": false,
+   "why": "only 16 check-ins in the window; the rule needs 20"
+  }
+ }
+}

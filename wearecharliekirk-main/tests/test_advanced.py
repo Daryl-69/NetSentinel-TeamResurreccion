@@ -133,8 +133,11 @@ print("-" * 70)
 
 alerts_resp = api_get("/api/alerts?limit=10")
 alerts = alerts_resp["alerts"]
-required = ["id", "timestamp", "source_ip", "dest_ip", "threat_class",
-            "confidence", "severity", "model_name", "mitre", "geo"]
+# Alert schema v1 (netsentinel/pipeline/alert_schema.py). "geo" was dropped:
+# the sensor has no GeoIP data and no longer attaches made-up locations.
+required = ["schema", "id", "timestamp", "event_time", "flow_id", "source_ip", "dest_ip",
+            "threat_class", "confidence", "confidence_kind", "severity", "detector",
+            "evidence", "mitre", "latency_ms"]
 
 if not alerts:
     print("  [FAIL] No alerts to validate")
@@ -149,8 +152,8 @@ else:
             sev = alert["severity"]
             conf = alert["confidence"]
             tc = alert["threat_class"]
-            geo = alert.get("geo", {}).get("src_country", "??")
-            print(f"  Alert {i}: PASS — [{sev:8s}] {tc:15s} conf={conf:.2%} src={geo}")
+            cid = (alert.get("flow_id") or {}).get("community_id") or "-"
+            print(f"  Alert {i}: PASS — [{sev:8s}] {tc:15s} conf={conf:.2%} flow={cid}")
     if all_valid:
         print(f"  [PASS] All alerts have valid schema")
 

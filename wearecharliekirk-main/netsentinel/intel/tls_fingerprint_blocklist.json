@@ -1,0 +1,6 @@
+{
+  "_about": "Exact-match TLS fingerprints the sensor treats as known-bad. This file ships EMPTY on purpose: no fingerprint feed was downloaded for the prototype and none of the entries below were invented. Add entries from your own threat intelligence (for example the JA3 list abuse.ch SSLBL publishes for malware C2 clients). Format: {\"<fingerprint>\": \"<label>\"}. JA3 and JA3S are lowercase md5 hex; JA4 is the full a_b_c string. The sensor reads this file at startup.",
+  "ja3": {},
+  "ja3s": {},
+  "ja4": {}
+}

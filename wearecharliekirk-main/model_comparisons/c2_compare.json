@@ -1,0 +1,141 @@
+{
+ "window_utc": [
+  1789931492.152716,
+  1789945957.4459643
+ ],
+ "checkins_logged": 231,
+ "pairs_total": 347,
+ "pairs_model_can_score": 9,
+ "model_table": [
+  {
+   "port": 443,
+   "n_flows": 378,
+   "n_conn": 232,
+   "bilstm_p": 1.0,
+   "bilstm_fired": false,
+   "fft_prom": 5.7587175369262695,
+   "cv": 0.09994061985605963,
+   "acf": 0.5927899792103084,
+   "is_beacon": true
+  },
+  {
+   "port": 443,
+   "n_flows": 137,
+   "n_conn": 61,
+   "bilstm_p": 1.0,
+   "bilstm_fired": false,
+   "fft_prom": 5.397639274597168,
+   "cv": 0.0002653724483437437,
+   "acf": 0.8161340398614373,
+   "is_beacon": false
+  },
+  {
+   "port": 443,
+   "n_flows": 112,
+   "n_conn": 104,
+   "bilstm_p": 0.9999998807907104,
+   "bilstm_fired": false,
+   "fft_prom": 4.836522102355957,
+   "cv": 0.809151163720862,
+   "acf": 0.1731659849584392,
+   "is_beacon": false
+  },
+  {
+   "port": 53,
+   "n_flows": 1048,
+   "n_conn": 451,
+   "bilstm_p": 0.999998927116394,
+   "bilstm_fired": false,
+   "fft_prom": 4.112060546875,
+   "cv": 0.7779948330470771,
+   "acf": 0.14372305855809317,
+   "is_beacon": false
+  },
+  {
+   "port": 5684,
+   "n_flows": 145,
+   "n_conn": 133,
+   "bilstm_p": 0.9999998807907104,
+   "bilstm_fired": false,
+   "fft_prom": 4.067142009735107,
+   "cv": 1.7609289388211775,
+   "acf": 0.5352996416122058,
+   "is_beacon": false
+  },
+  {
+   "port": 53,
+   "n_flows": 519,
+   "n_conn": 312,
+   "bilstm_p": 0.9999991655349731,
+   "bilstm_fired": false,
+   "fft_prom": 3.4403834342956543,
+   "cv": 0.7797763073065986,
+   "acf": 0.18883481383481404,
+   "is_beacon": false
+  },
+  {
+   "port": 123,
+   "n_flows": 101,
+   "n_conn": 101,
+   "bilstm_p": 0.9999889135360718,
+   "bilstm_fired": false,
+   "fft_prom": 2.959200859069824,
+   "cv": 1.3837374691284055,
+   "acf": 0.7648305779460483,
+   "is_beacon": false
+  },
+  {
+   "port": 123,
+   "n_flows": 140,
+   "n_conn": 140,
+   "bilstm_p": 0.9999935626983643,
+   "bilstm_fired": false,
+   "fft_prom": 2.854640245437622,
+   "cv": 1.224527174553052,
+   "acf": 0.3500312010839731,
+   "is_beacon": false
+  },
+  {
+   "port": 1900,
+   "n_flows": 121,
+   "n_conn": 121,
+   "bilstm_p": 0.999995231628418,
+   "bilstm_fired": true,
+   "fft_prom": 1.8020139932632446,
+   "cv": 3.9119746887969524e-05,
+   "acf": 0.9748414002154951,
+   "is_beacon": false
+  }
+ ],
+ "ranks_on_model_pairs": {
+  "bilstm_prob": [
+   1,
+   9
+  ],
+  "fft_prominence": [
+   1,
+   9
+  ],
+  "regularity_cv": [
+   3,
+   9
+  ],
+  "autocorrelation": [
+   4,
+   9
+  ]
+ },
+ "ranks_on_all_pairs_ge20conns": {
+  "regularity_cv": [
+   5,
+   30
+  ],
+  "autocorrelation": [
+   9,
+   30
+  ]
+ },
+ "bilstm_prob_all_equal_1": false,
+ "shipped_fired_on_beacon": false,
+ "shipped_fired_on_benign_pairs": 1
+}

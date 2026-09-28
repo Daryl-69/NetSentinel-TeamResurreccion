@@ -1,0 +1,87 @@
+{
+ "what": "Defects found by replaying the team's own captures (and, for the last one, the synthetic benchmark capture) through the live-mode pipeline during the PS 26145 update, with alert counts before and after each fix. Same captures and pipeline each time; only the fix differs. The first three before-runs used a scratch copy of the loop in ps26145_live_path_eval.py; fixes 4-6 were measured with that script itself.",
+ "labels": "none -- the team's own traffic, so these are counts of alerts on presumably benign traffic, not rates",
+ "fixes": [
+  {
+   "defect": "Service discovery counted as port scanning",
+   "cause": "Flows to multicast and broadcast addresses (mDNS 5353, SSDP 1900, LLMNR 5355, DHCP) are never answered by the group address, so the network-event scan model saw each one as an unanswered probe of a host that does not exist. Unanswered single-packet flows only reach the scan window since this update (probe records) and live-mode flows only feed it since this update.",
+   "fix": "Flows to multicast, limited-broadcast (255.255.255.255) and unspecified destinations are left out of the port-scan window (detectors/base.py is_group_destination; analyzer). Subnet-directed broadcasts are not recognised. Counted as portscan skipped_group_destinations.",
+   "diagnosis_sample": {
+    "capture": "first 4 files of 24 Sep",
+    "portscan_alerts_before": 228,
+    "with_multicast_destination": 223,
+    "portscan_alerts_after": 0
+   },
+   "part_1": {
+    "capture": "24 Sep, 18 files, 15.03 h",
+    "portscan_alerts_before": 1057,
+    "portscan_alerts_after": 3,
+    "all_alerts_before": 1503,
+    "all_alerts_after": 449
+   },
+   "test": "tests/test_ps26145.py::test_service_discovery_is_not_a_scan"
+  },
+  {
+   "defect": "A flagged DNS name raised a DGA / exfiltration model alert every minute",
+   "cause": "Model alerts were de-duplicated per (source, base domain) for 60 s, so a flagged name queried every minute raised an alert every minute.",
+   "fix": "DNS_MODEL_ALERT_REPEAT_S = 600: one alert per (source, base domain) per 10 minutes; the repeats in between are counted in the next alert's evidence (alerts_suppressed_since_last).",
+   "part_1": {
+    "capture": "24 Sep, 18 files, 15.03 h",
+    "exfil_vae_before": 383,
+    "exfil_vae_after": 159,
+    "dga_before": 37,
+    "dga_after": 34,
+    "all_alerts_before": 449,
+    "all_alerts_after": 222,
+    "note": "counts after the first fix, before and after this one"
+   },
+   "test": "tests/test_ps26145.py::test_dns_model_alert_repeats_are_held"
+  },
+  {
+   "defect": "One client's burst of DNS lookups called a UDP flood",
+   "cause": "One host sent 205 DNS queries, each from a new source port, to one resolver within a second: 205 new UDP flows toward one destination, which met the rate and shape gates with a single source.",
+   "fix": "The DDoS rate/entropy rule needs at least 10 distinct sources in the window (DDOS_VOLUME min_sources).",
+   "part_4": {
+    "capture": "26-27 Sep, 14 files, 7.87 h",
+    "ddos_rule_alerts_before": 1,
+    "ddos_rule_alerts_after": 0
+   },
+   "test": "tests/test_ps26145.py::test_one_client_lookup_burst_is_not_a_ddos"
+  },
+  {
+   "defect": "A browsing burst read as a host sweep",
+   "cause": "The port-scan tree reads each flow as a one-way record, like the CIDDS-001 NetFlow it was trained on: replies are not used (the analyzer's records name them 'Total Backward Packets', the tree's adapter looks for 'Tot Bwd Pkts'), so every distinct target counts as a request without answer, and the tree's learned rule rwa >= 52 calls a client that reaches 52 or more servers in a minute a scan.",
+   "fix": "A client's traffic to internet addresses on the ports the host-sweep backstop already ignores (53, 80, 123, 443, 853, 5353) is left out of the port-scan window (analyzer; counted as portscan skipped_external_service_flows).",
+   "all_parts_40_5_h": {
+    "portscan_alerts_before": 38,
+    "host_sweep_before": 4,
+    "block_scan_before": 34,
+    "portscan_alerts_after": 32,
+    "host_sweep_after": 0,
+    "block_scan_after": 32,
+    "flows_left_out": 88826
+   },
+   "test": "tests/test_ps26145.py::test_browsing_burst_is_not_a_scan"
+  },
+  {
+   "defect": "Any host active long enough became a scanner",
+   "cause": "The tree splits on succession at 2,334.5 and 2,979.5 windows, splits that rest on 6 of its 12,911 training events. Succession grows in every window a source has any 'unanswered' target, which for an active client is every window, so a host making one ordinary connection a minute would be flagged once at its 2,334th active window (probability 0.5) and in every window from its 2,980th (about 50 hours of active minutes) on.",
+   "fix": "Succession is capped at 2,333 (netsentinel/extractor/network_event_builder.py SUCCESSION_CAP).",
+   "measured": "not visible in the 40.5 h replay, whose parts are at most 15 hours; shown by the test",
+   "test": "tests/test_ps26145.py::test_succession_is_capped_below_the_trees_artifact_splits"
+  },
+  {
+   "defect": "One busy window evaluated several times",
+   "cause": "The analyzer also flushes the port-scan buffer every 1,000 flows, so a busy minute reached the tree in several batches: succession advanced once per batch and each batch could raise its own alert.",
+   "fix": "Succession advances once per source and window, and the analyzer raises one alert per source and window.",
+   "synthetic_benchmark_capture": {
+    "portscan_alerts_before": 241,
+    "portscan_alerts_after": 197,
+    "note": "the synthetic mix, 20 s of made-up traffic; its alerts come from the demo topology (neip >= 2)"
+   },
+   "team_traffic": "unchanged (32): at its rate a window rarely reaches 1,000 flows",
+   "test": "tests/test_ps26145.py::test_split_window_counts_once"
+  }
+ ],
+ "after_all_fixes": "model_comparisons/ps26145_live_path_eval.json"
+}

@@ -1,0 +1,143 @@
+{
+ "what": "Throughput benchmark (PS 26145 constraint d) on the synthetic 100,000-packet capture (netsentinel.bench.synthetic_pcap, a repeatable made-up mix of TLS, HTTP, DNS, UDP and a few scan probes), with the final code of the PS 26145 update, via scripts/benchmark_throughput.py --synthetic 100000.",
+ "machine_note": "The development container: 2 vCPUs of an Intel Xeon @ 2.80 GHz. Not the deployment hardware.",
+ "capture_note": "Synthetic: its DNS names repeat a lot, which favours the per-name model cache, and its addresses are made up (alerts it raises say nothing about detection quality).",
+ "run": {
+  "kind": "synthetic",
+  "file": "bench_synthetic_100000.pcap",
+  "measured_at": "2026-09-27T03:07:10.424307+00:00",
+  "packets": 100006,
+  "bytes": 69109936,
+  "avg_packet_bytes": 691.1,
+  "capture_span_s": 20.281,
+  "flows": 7827,
+  "probe_stubs": 409,
+  "dns_events": 3260,
+  "events": 11496,
+  "alerts": 241,
+  "tls_client_hellos": 4616,
+  "elapsed_s": 4.457,
+  "packets_per_s": 22439.3,
+  "mbps": 124.05,
+  "flows_per_s": 1756.2,
+  "events_per_s": 2579.5,
+  "realtime_factor": 4.55,
+  "stage_s": {
+   "read_and_extract": 2.777,
+   "detect": 1.68
+  },
+  "latency_ms": {
+   "event": {
+    "dns": {
+     "n": 1630,
+     "p50": 0.038,
+     "p95": 0.068,
+     "p99": 0.181,
+     "max": 10.279
+    },
+    "dns_response": {
+     "n": 1630,
+     "p50": 0.012,
+     "p95": 0.019,
+     "p99": 0.045,
+     "max": 0.202
+    },
+    "flow": {
+     "n": 7827,
+     "p50": 0.087,
+     "p95": 0.192,
+     "p99": 2.33,
+     "max": 77.979
+    },
+    "stub": {
+     "n": 409,
+     "p50": 0.029,
+     "p95": 0.052,
+     "p99": 0.109,
+     "max": 0.168
+    }
+   },
+   "detector": {
+    "dns_behaviour": {
+     "n": 3260,
+     "p50": 0.011,
+     "p95": 0.02,
+     "p99": 0.042,
+     "max": 1.052
+    },
+    "dga_cnn_bilstm": {
+     "n": 12,
+     "p50": 1.968,
+     "p95": 5.546,
+     "p99": 8.911,
+     "max": 9.752
+    },
+    "exfil_vae": {
+     "n": 12,
+     "p50": 0.349,
+     "p95": 0.463,
+     "p99": 0.536,
+     "max": 0.554
+    },
+    "ddos_window": {
+     "n": 8236,
+     "p50": 0.015,
+     "p95": 0.036,
+     "p99": 0.063,
+     "max": 2.977
+    },
+    "ddos_rule": {
+     "n": 8236,
+     "p50": 0.002,
+     "p95": 0.003,
+     "p99": 0.003,
+     "max": 0.349
+    },
+    "ett_transformer": {
+     "n": 267,
+     "p50": 1.821,
+     "p95": 2.71,
+     "p99": 9.822,
+     "max": 10.215
+    },
+    "c2_combined": {
+     "n": 7827,
+     "p50": 0.013,
+     "p95": 0.022,
+     "p99": 0.046,
+     "max": 2.957
+    },
+    "exfil_ratio": {
+     "n": 7827,
+     "p50": 0.02,
+     "p95": 0.036,
+     "p99": 0.085,
+     "max": 8.143
+    },
+    "tls_sessions": {
+     "n": 4616,
+     "p50": 0.008,
+     "p95": 0.015,
+     "p99": 0.036,
+     "max": 2.969
+    },
+    "portscan_window": {
+     "n": 3,
+     "p50": 58.373,
+     "p95": 70.035,
+     "p99": 71.071,
+     "max": 71.331
+    }
+   }
+  },
+  "machine": {
+   "cpu": "Intel(R) Xeon(R) Processor @ 2.80GHz",
+   "logical_cpus": 2,
+   "python": "3.11.15",
+   "os": "Linux 6.18.44-fc-v37",
+   "processes": 1
+  },
+  "reader": "fast",
+  "notes": "One Python process: packet parsing (struct-level fast reader), flow/DNS/TLS extraction and every detector in line. CICFlowMeter's batch pass is not included."
+ }
+}

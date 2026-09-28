@@ -79,6 +79,20 @@ class FlowState:
     active_periods: list = field(default_factory=list)   # durations in µs
     idle_periods: list = field(default_factory=list)
 
+    # PS 26145 (d): handshake metadata and the packet-size/timing sequence.
+    # splt = first 20 payload-carrying packets as [+size or -size, ms since
+    # flow start] (+ = forward). tls_client / tls_server = ClientHello and
+    # ServerHello summaries (JA3/JA4/JA3S, SNI, ALPN, versions); nothing
+    # beyond the cleartext handshake is read.
+    splt: list = field(default_factory=list)
+    tls_client: Optional[dict] = None
+    tls_server: Optional[dict] = None
+    _tls_buf: dict = field(default_factory=dict)          # direction -> bytearray
+    _tls_state: dict = field(default_factory=dict)        # direction -> "done"
+    _tls_pkts: dict = field(default_factory=dict)         # direction -> packets fed
+    _quic: Optional[object] = None
+    _quic_state: int = 0                                  # 0 pending, 1 done
+
 
 class FlowExtractor:
     """Reconstructs bidirectional network flows from packets.
@@ -96,16 +110,38 @@ class FlowExtractor:
             analyzer.analyze_flow(event)
     """
 
-    def __init__(self, idle_timeout: float = 120.0, active_timeout: float = 300.0):
+    def __init__(self, idle_timeout: float = 120.0, active_timeout: float = 300.0,
+                 emit_stubs: bool = True, probe_timeout: float = 5.0,
+                 tls_fingerprinting: bool = True, quic_initial_parse: bool = False):
         """
         Args:
             idle_timeout: Seconds of inactivity before a flow is flushed.
             active_timeout: Max seconds a flow can stay open regardless.
+            emit_stubs: Emit single-packet flows (an unanswered SYN, a lone
+                UDP probe) as minimal "stub" events instead of dropping them.
+                Stubs feed only the scan and flood counters, never a model.
+            probe_timeout: A single-packet flow idle this long is emitted as a
+                stub without waiting for the full idle timeout.
+            tls_fingerprinting: Parse cleartext TLS ClientHello/ServerHello.
+            quic_initial_parse: Open QUIC Initial packets to read the
+                ClientHello (public keys, RFC 9001). Off by default: see
+                config.QUIC_INITIAL_PARSE.
         """
         self.active_flows: dict[tuple, FlowState] = {}
         self.idle_timeout = idle_timeout
         self.active_timeout = active_timeout
+        self.emit_stubs = emit_stubs
+        self.probe_timeout = probe_timeout
+        self.tls_fingerprinting = tls_fingerprinting
+        self.quic_initial_parse = quic_initial_parse
         self._completed_count = 0
+        self._stub_count = 0
+        self._tls_hellos = 0
+        self._quic_hellos = 0
+        # Recently closed connections (both directions) -> linger-until time
+        self._closed: dict[tuple, float] = {}
+        self.close_linger = 10.0
+        self._absorbed = 0
 
     # ------------------------------------------------------------------
     # Public API
@@ -114,53 +150,87 @@ class FlowExtractor:
     def process_packet(self, packet) -> Optional[dict]:
         """Process a single Scapy packet. Returns completed flow event or None.
 
-        Args:
-            packet: A Scapy packet object (must have IP layer).
-
-        Returns:
-            Flow event dict (type="flow") if the flow completed, else None.
+        Reads the header fields off the Scapy packet and hands them to
+        process_fields(), which the fast capture reader (fastpath.py) calls
+        directly with the same fields.
         """
         try:
             from scapy.layers.inet import IP, TCP, UDP
+            from scapy.layers.inet6 import IPv6
         except ImportError:
             logger.error("Scapy not installed — cannot extract flows")
             return None
 
-        if not packet.haslayer(IP):
+        # IPv6 FIX (2026-09-21): this used to be `if not packet.haslayer(IP):
+        # return None`, which silently discarded EVERY IPv6 packet. On the
+        # capture network IPv6 is 32-64% of IP traffic, so between a third and
+        # two thirds of all packets never reached any detector -- including a
+        # 4-hour labelled C2 beacon whose 206 IPv6 check-ins were sitting in
+        # the pcap, ignored. See PIPELINE_TEST_PART4.md.
+        if packet.haslayer(IP):
+            ip = packet[IP]
+        elif packet.haslayer(IPv6):
+            ip = packet[IPv6]
+        else:
             return None
 
-        ip = packet[IP]
-        proto = ip.proto
-
-        # Only handle TCP (6) and UDP (17)
-        if proto == 6 and packet.haslayer(TCP):
+        # Derive the protocol from the transport layer that is actually
+        # present, not from the IP header field (IPv6 extension headers).
+        if packet.haslayer(TCP):
             transport = packet[TCP]
-            src_port = transport.sport
-            dst_port = transport.dport
+            proto = 6
             flags = int(transport.flags)
             window = transport.window
             header_size = transport.dataofs * 4 if transport.dataofs else 20
-        elif proto == 17 and packet.haslayer(UDP):
+        elif packet.haslayer(UDP):
             transport = packet[UDP]
-            src_port = transport.sport
-            dst_port = transport.dport
+            proto = 17
             flags = 0
             window = 0
             header_size = 8
         else:
             return None
 
-        src_ip = ip.src
-        dst_ip = ip.dst
-        ts = float(packet.time)
-        # Get payload size (transport layer payload, not including IP header)
-        payload_size = len(ip.payload) if hasattr(ip, 'payload') else (ip.len - (ip.ihl * 4))
+        # len(ip.payload) is correct for both families (and, like the fast
+        # reader, includes any Ethernet padding).
+        payload_size = len(ip.payload) if hasattr(ip, 'payload') else 0
+        # Transport payload length from the headers (a padded 60-byte frame
+        # must not look like 6 bytes of data).
+        try:
+            if proto == 6:
+                if hasattr(ip, "ihl"):
+                    ip_payload_len = ip.len - ip.ihl * 4
+                else:
+                    ip_payload_len = ip.plen
+                    if ip.nh != 6:        # IPv6 extension headers before TCP
+                        ip_payload_len -= len(ip.payload) - len(transport)
+                l4_len = max(0, int(ip_payload_len) - header_size)
+            else:
+                l4_len = max(0, int(transport.len) - 8)
+        except (TypeError, AttributeError):
+            l4_len = max(0, payload_size - header_size)
 
+        def payload_fn():
+            return bytes(transport.payload)[:l4_len]
+
+        return self.process_fields(float(packet.time), ip.src, ip.dst, proto,
+                                   int(transport.sport), int(transport.dport), flags, window,
+                                   header_size, payload_size, l4_len, payload_fn)
+
+    def process_fields(self, ts: float, src_ip: str, dst_ip: str, proto: int,
+                       src_port: int, dst_port: int, flags: int, window: int,
+                       header_size: int, payload_size: int, l4_len: int,
+                       payload_fn=None) -> Optional[dict]:
+        """Add one packet (as header fields) to its flow.
+
+        payload_fn() returns the transport payload bytes; it is only called
+        for the first packets of a flow that may carry a TLS/QUIC hello.
+        Returns the completed flow event, or None.
+        """
         # Build 5-tuple keys (forward and reverse)
         fwd_key = (src_ip, dst_ip, src_port, dst_port, proto)
         bwd_key = (dst_ip, src_ip, dst_port, src_port, proto)
 
-        # Determine if this is a forward or backward packet
         pkt_info = PacketInfo(
             timestamp=ts,
             size=max(payload_size, 0),
@@ -176,6 +246,18 @@ class FlowExtractor:
             if flow is not None:
                 is_forward = False
             else:
+                # TCP teardown: a flow ends on its first FIN/RST, so the
+                # peer's FIN-ACK and the last ACK used to open a new one- or
+                # two-packet "flow" per connection -- noise for every
+                # detector, and a busy server's FIN-ACKs to many clients'
+                # ephemeral ports looked like a port scan. Packets of a
+                # connection closed in the last few seconds are absorbed
+                # unless they open a new connection (a bare SYN).
+                until = self._closed.get(fwd_key)
+                if (until is not None and ts <= until
+                        and not (proto == 6 and flags & FLAG_SYN and not flags & FLAG_ACK)):
+                    self._absorbed += 1
+                    return None
                 # New flow — create it
                 flow = FlowState(
                     key=fwd_key,
@@ -193,6 +275,19 @@ class FlowExtractor:
 
         # Update active/idle periods
         self._update_activity(flow, ts)
+
+        if l4_len > 0:
+            if len(flow.splt) < 20:
+                flow.splt.append([l4_len if is_forward else -l4_len,
+                                  round((ts - flow.start_time) * 1000.0, 1)])
+            if payload_fn is not None:
+                if proto == 6 and self.tls_fingerprinting:
+                    d = "c" if is_forward else "s"
+                    if d not in flow._tls_state:
+                        self._tls_feed(flow, d, payload_fn)
+                elif (proto == 17 and self.quic_initial_parse and is_forward
+                        and flow._quic_state == 0):
+                    self._quic_feed(flow, payload_fn)
 
         # Add packet to appropriate direction
         if is_forward:
@@ -219,6 +314,9 @@ class FlowExtractor:
 
         # Complete flow if TCP FIN/RST or active timeout exceeded
         if flow.fin_seen or flow.rst_seen:
+            until = ts + self.close_linger
+            self._closed[flow.key] = until
+            self._closed[(flow.dst_ip, flow.src_ip, flow.dst_port, flow.src_port, flow.protocol)] = until
             return self._complete_flow(flow)
         if (ts - flow.start_time) > self.active_timeout:
             return self._complete_flow(flow)
@@ -235,9 +333,19 @@ class FlowExtractor:
 
         expired = []
         to_remove = []
+        if self._closed:
+            if len(self._closed) > 400000:
+                self._closed.clear()
+            else:
+                for k in [k for k, until in self._closed.items() if until < current_time]:
+                    del self._closed[k]
         for key, flow in self.active_flows.items():
-            if (current_time - flow.last_seen) > self.idle_timeout:
+            idle = current_time - flow.last_seen
+            if idle > self.idle_timeout:
                 to_remove.append(key)
+            elif (self.emit_stubs and idle > self.probe_timeout
+                    and len(flow.fwd_packets) + len(flow.bwd_packets) == 1):
+                to_remove.append(key)   # unanswered probe: report it now
 
         for key in to_remove:
             flow = self.active_flows.pop(key)
@@ -262,7 +370,72 @@ class FlowExtractor:
         return {
             "active_flows": len(self.active_flows),
             "completed_flows": self._completed_count,
+            "probe_stubs": self._stub_count,
+            "teardown_packets_absorbed": self._absorbed,
+            "tls_client_hellos": self._tls_hellos,
+            "quic_client_hellos": self._quic_hellos,
+            "quic_initial_parse": self.quic_initial_parse,
         }
+
+    # ------------------------------------------------------------------
+    # Internal — TLS / QUIC handshake metadata (no decryption of payload)
+    # ------------------------------------------------------------------
+
+    def _tls_feed(self, flow: FlowState, d: str, payload_fn) -> None:
+        from netsentinel.extractor import tls_parse as T
+        try:
+            data = payload_fn()
+        except Exception:
+            flow._tls_state[d] = "done"
+            return
+        buf = flow._tls_buf.get(d)
+        if buf is None:
+            if not data or data[0] != T.TLS_HANDSHAKE:
+                flow._tls_state[d] = "done"       # not TLS in this direction
+                return
+            buf = flow._tls_buf[d] = bytearray()
+        buf += data
+        flow._tls_pkts[d] = flow._tls_pkts.get(d, 0) + 1
+        want = T.HS_CLIENT_HELLO if d == "c" else T.HS_SERVER_HELLO
+        status, body = T.extract_handshake(bytes(buf), want)
+        if status == "need_more" and flow._tls_pkts[d] < 8:
+            return
+        flow._tls_state[d] = "done"
+        flow._tls_buf.pop(d, None)
+        if status != "ok":
+            return
+        if d == "c":
+            ch = T.parse_client_hello(body)
+            if ch is not None:
+                flow.tls_client = T.client_summary(ch, "t")
+                self._tls_hellos += 1
+        else:
+            sh = T.parse_server_hello(body)
+            if sh is not None:
+                flow.tls_server = T.server_summary(sh)
+
+    def _quic_feed(self, flow: FlowState, payload_fn) -> None:
+        from netsentinel.extractor import quic_initial as Q
+        from netsentinel.extractor import tls_parse as T
+        try:
+            data = payload_fn()
+        except Exception:
+            flow._quic_state = 1
+            return
+        if flow._quic is None:
+            if not Q.is_client_initial(data):
+                flow._quic_state = 1
+                return
+            flow._quic = Q.QuicHelloAssembler()
+        body = flow._quic.feed(data)
+        if body is not None:
+            ch = T.parse_client_hello(body)
+            if ch is not None:
+                flow.tls_client = T.client_summary(ch, "q")
+                self._quic_hellos += 1
+        if body is not None or flow._quic.done:
+            flow._quic_state = 1
+            flow._quic = None
 
     # ------------------------------------------------------------------
     # Internal — Flow completion
@@ -275,10 +448,15 @@ class FlowExtractor:
 
     def _build_event(self, flow: FlowState) -> Optional[dict]:
         """Build the event dict with all features from a completed flow."""
-        # Skip flows with too few packets (noise)
+        # Single-packet flows are not modelled (too little to compute
+        # features from) but they are exactly what an unanswered scan probe
+        # or a spoofed-source SYN looks like, so they go out as stubs that
+        # only the scan and flood counters read.
         total_pkts = len(flow.fwd_packets) + len(flow.bwd_packets)
         if total_pkts < 2:
-            return None
+            if not self.emit_stubs or total_pkts == 0:
+                return None
+            return self._stub_event(flow)
 
         self._completed_count += 1
 
@@ -296,7 +474,49 @@ class FlowExtractor:
             "source_port": flow.src_port,
             "dest_port": flow.dst_port,
             "protocol": flow.protocol,
+            # TIMESTAMP FIX (2026-09-21): the flow event carried NO timestamp
+            # at all, so every downstream `event.get("timestamp", 0)` saw 0.
+            # SessionBuilder therefore fell back to time.time() -- wall clock
+            # at the moment of processing -- which on pcap replay turns every
+            # inter-arrival time into a replay-speed artifact and destroys the
+            # beacon periodicity the C2 model exists to find. It also broke the
+            # port-scan buffer's 60s flush window and the analyzer's alert
+            # dedup on replayed captures.
+            # start_time is the flow's FIRST packet: for a beacon that is the
+            # moment of the check-in, which is what IATs must be measured on.
+            "timestamp": flow.start_time,
+            "last_seen": flow.last_seen,
             "features": features,
+            "splt": flow.splt,
+            **({"tls": {**(flow.tls_client or {}), **(flow.tls_server or {})}}
+               if (flow.tls_client or flow.tls_server) else {}),
+        }
+
+    def _stub_event(self, flow: FlowState) -> dict:
+        self._stub_count += 1
+        p = (flow.fwd_packets or flow.bwd_packets)[0]
+        fwd = bool(flow.fwd_packets)
+        return {
+            "type": "flow",
+            "stub": True,
+            "source_ip": flow.src_ip,
+            "dest_ip": flow.dst_ip,
+            "source_port": flow.src_port,
+            "dest_port": flow.dst_port,
+            "protocol": flow.protocol,
+            "timestamp": flow.start_time,
+            "last_seen": flow.last_seen,
+            "features": {
+                "Protocol": flow.protocol,
+                "Total Fwd Packets": 1 if fwd else 0,
+                "Total Backward Packets": 0 if fwd else 1,
+                "Fwd Packets Length Total": p.size if fwd else 0,
+                "Bwd Packets Length Total": 0 if fwd else p.size,
+                "SYN Flag Count": 1 if p.flags & FLAG_SYN else 0,
+                "ACK Flag Count": 1 if p.flags & FLAG_ACK else 0,
+                "RST Flag Count": 1 if p.flags & FLAG_RST else 0,
+                "FIN Flag Count": 1 if p.flags & FLAG_FIN else 0,
+            },
         }
 
     # ------------------------------------------------------------------

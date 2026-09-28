@@ -100,6 +100,38 @@ _META_COLS = {
 }
 
 
+def _parse_cic_timestamp(value):
+    """Flow start time from a CICFlowMeter CSV row, as epoch seconds.
+
+    python-cicflowmeter writes the start as a naive local-time string
+    ("2026-09-21 14:03:11"); other builds write epoch seconds or the CIC-IDS
+    "21/09/2026 02:03:11 PM" form. Naive strings are read as local time,
+    which inverts what the tool wrote on the same machine. Returns None if
+    the value cannot be read (the flow then carries no time, as before).
+    """
+    if value is None:
+        return None
+    try:
+        f = float(value)
+        if f != f:
+            return None
+        return f / 1000.0 if f > 1e11 else f      # ms epochs -> s
+    except (TypeError, ValueError):
+        pass
+    from datetime import datetime
+    text = str(value).strip()
+    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S", "%d/%m/%Y %I:%M:%S %p",
+                "%d/%m/%Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            return datetime.strptime(text, fmt).timestamp()
+        except ValueError:
+            continue
+    try:
+        return datetime.fromisoformat(text).timestamp()
+    except ValueError:
+        return None
+
+
 class CICFlowMeterExtractor:
     """Extracts CIC-IDS flow features using the reference CICFlowMeter Python API.
 
@@ -284,6 +316,12 @@ class CICFlowMeterExtractor:
                             mapped_name = CIC_NAME_MAP.get(col, col)
                             features[mapped_name] = val
 
+                        # FIX: the flow's start time was dropped with the
+                        # other metadata columns, so every CIC event reached the
+                        # analyzer with no timestamp: port-scan windows, the
+                        # DDoS rate window and alert times all saw 0.
+                        start = _parse_cic_timestamp(row.get("timestamp"))
+                        dur_us = features.get("Flow Duration", 0.0) or 0.0
                         events.append({
                             "type": "flow",
                             "source_ip": src_ip,
@@ -291,6 +329,8 @@ class CICFlowMeterExtractor:
                             "source_port": src_port,
                             "dest_port": dst_port,
                             "protocol": protocol,
+                            "timestamp": start,
+                            "last_seen": (start + dur_us / 1e6) if start is not None else None,
                             "features": features,
                             "extractor": "cicflowmeter",
                         })

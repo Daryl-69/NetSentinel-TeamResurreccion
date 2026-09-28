@@ -1,0 +1,57 @@
+{
+ "what": "Combined beacon score (C2 v2 prototype) \u2014 evaluation on every capture.\n\nScore per (source, destination) pair per 6-hour window, from connection starts:\n  T  timing regularity   1 - min(1, MAD(interval)/median(interval))\n  F  FFT periodicity     min(1, peak_prominence/8)  (same formula as the shipped model)\n  S  size regularity     1 - min(1, MAD(bytes)/median(bytes))\n  R  destination rarity  1 / number of machines talking to that destination\n  C  persistence         share of captured hours in the window with a check-in\n  score = 0.30 T + 0.20 F + 0.20 S + 0.15 R + 0.15 C      (weights fixed before any scoring)\nKnown periodic services (DNS, NTP, SSDP, mDNS, LLMNR, NetBIOS, DHCP) and multicast /\nlink-local / broadcast destinations are dropped first. A pair needs >= 20 check-ins\n(connection starts merged when < 5 s apart) spanning >= 30 minutes.",
+ "threshold": 0.8,
+ "beacon_window_20_sep": {
+  "hours": 4.02,
+  "sessions_scored": 12,
+  "combined_score": {
+   "benign_alerts": 5,
+   "benign_alert_ports": [
+    [
+     443,
+     4
+    ],
+    [
+     5684,
+     1
+    ]
+   ],
+   "beacon_score": 0.849,
+   "beacon_caught": true,
+   "beacon_rank": [
+    3,
+    12
+   ]
+  },
+  "shipped_bilstm_fft": {
+   "beacon_caught": false,
+   "benign_alerts": 1,
+   "sessions_it_can_score": 9,
+   "note": "benign alert was SSDP, port 1900"
+  }
+ },
+ "benign_22_sep": {
+  "hours": 7.36,
+  "sessions_scored": 20,
+  "combined_score": {
+   "benign_alerts": 2,
+   "benign_alert_ports": [
+    [
+     5684,
+     1
+    ],
+    [
+     443,
+     1
+    ]
+   ]
+  },
+  "shipped_bilstm_fft": {
+   "benign_alerts": 1,
+   "sessions_it_can_score": 13,
+   "alert_ports": [
+    1900
+   ]
+  }
+ }
+}

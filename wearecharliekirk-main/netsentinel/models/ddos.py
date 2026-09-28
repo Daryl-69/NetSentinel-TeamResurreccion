@@ -33,6 +33,9 @@ class DDoSDetector:
         self.n_features = len(self.feature_names)
         
         print(f"  [OK] DDoS Detector loaded ({self.n_features} features)")
+        # Load the 18-class model now (if present) so the first alert does
+        # not pay for it.
+        self.multiclass_label({"Protocol": 6})
     
     def predict(self, features: dict) -> dict:
         """
@@ -91,26 +94,60 @@ class DDoSDetector:
         # Standard ML practice for production deployment to balance TPR/FPR
         is_attack = predicted_label == 0 and ddos_confidence > 0.98
         
+        # FIX: label_mapping.json is the 18-class map of the MULTI-class
+        # model (0 = "Benign"). Looking the binary model's label up in it
+        # turned every DDoS alert's subtype and attack_type into "Benign".
+        # The binary model has no subtype; the analyzer names the attack
+        # family from the destination's traffic window instead.
         result = {
             "threat": "DDoS" if is_attack else "Benign",
             "confidence": float(ddos_confidence) if is_attack else float(1 - ddos_confidence),
             "is_attack": is_attack,
-            "subtype": self.label_map.get(str(predicted_label), "Unknown") if is_attack else "Benign",
+            "subtype": "",
             "model": "ddos_binary_xgboost",
         }
-        
+
         # Add evidence for frontend specialty panel
         if is_attack:
-            # Use flow rate features as evidence (entropy would need connection tracker)
             pps = features.get("Flow Packets/s", 0)
             bps = features.get("Flow Bytes/s", 0)
-            
             # Put evidence at root level - alert_manager copies to evidence{}
             result["pps"] = round(float(pps), 2)
             result["bps"] = round(float(bps), 2)
-            result["attack_type"] = self.label_map.get(str(predicted_label), "Unknown")
-        
+
         return result
+
+    def multiclass_label(self, features: dict):
+        """Supporting evidence only: the 18-class CIC-DDoS2019 model's label.
+
+        That model reports weighted F1 0.94 but macro F1 0.55 over its 18
+        classes (models/Ddos_detection/ddos_metrics.json), so its label is
+        shown as a hint next to the rule-based attack family, never used
+        to decide anything. Returns None when the model file is absent.
+        """
+        if not features:
+            return None
+        if not hasattr(self, "_multi"):
+            self._multi = None
+            try:
+                import os
+                path = DDOS_MODEL_PATH.replace("ddos_binary_xgboost.onnx", "ddos_multi_xgboost.onnx")
+                if os.path.exists(path):
+                    self._multi = ort.InferenceSession(path, providers=['CPUExecutionProvider'])
+            except Exception:
+                self._multi = None
+        if self._multi is None:
+            return None
+        vec = np.array([features.get(n, 0.0) for n in self.feature_names], dtype=np.float32).reshape(1, -1)
+        try:
+            out = self._multi.run(None, {self._multi.get_inputs()[0].name: vec})
+            probs = np.asarray(out[1], dtype=np.float64).reshape(-1)
+            idx = int(np.argmax(probs))
+            return {"label": self.label_map.get(str(idx), str(idx)),
+                    "probability": round(float(probs[idx]), 4),
+                    "note": "18-class model, macro F1 0.55: a hint, not the decision"}
+        except Exception:
+            return None
     
     def predict_batch(self, features_list: list) -> list:
         """Run on multiple flows at once."""

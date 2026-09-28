@@ -1,0 +1,22 @@
+[
+ {
+  "name": "alert_volume_real_traffic.png",
+  "source": "model_comparisons/ps26145_live_path_eval.json",
+  "caption": "Alerts per 24 h on 40.5 hours of the team's own traffic, by detector (upper bound: the traffic is unlabelled)"
+ },
+ {
+  "name": "throughput.png",
+  "source": "model_comparisons/ps26145_benchmark_real.json, ps26145_benchmark_synthetic.json",
+  "caption": "Throughput of one Python process through extraction and every detector: three 200 MB team captures and the synthetic mix"
+ },
+ {
+  "name": "c2_threshold_tradeoff.png",
+  "source": "model_comparisons/c2_beacon_score_eval.json",
+  "caption": "C2 combined score: other sessions alerted per 24 h at each threshold, and whether the one labelled beacon is still caught"
+ },
+ {
+  "name": "detector_latency.png",
+  "source": "model_comparisons/ps26145_benchmark_synthetic.json",
+  "caption": "Time per detector call (p50 and p95) while streaming the synthetic capture"
+ }
+]

@@ -148,6 +148,17 @@ class ReceiptBuilder:
         feature_schema_digest = canonical_digest(provenance.feature_names)
 
         now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        # Capture window = when the evidence happened on the wire (alert
+        # schema v1 event_window); falls back to the sealing time for alerts
+        # that carry no window.
+        win_start = win_end = now
+        ew = alert.get("event_window") or {}
+        try:
+            if ew.get("start") and ew.get("end"):
+                win_start = datetime.fromisoformat(ew["start"]).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                win_end = datetime.fromisoformat(ew["end"]).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        except (TypeError, ValueError):
+            win_start = win_end = now
 
         statement = {
             "_type": STATEMENT_TYPE,
@@ -169,8 +180,8 @@ class ReceiptBuilder:
                     "id": sensor_ctx.sensor_id,
                     "event_sequence": seq,
                     "capture_window": {
-                        "start": now,
-                        "end": now,
+                        "start": win_start,
+                        "end": win_end,
                     },
                 },
                 "evidence": {

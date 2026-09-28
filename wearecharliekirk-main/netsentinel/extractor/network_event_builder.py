@@ -32,6 +32,14 @@ from netsentinel.netinfo.network_info import NetworkInfo
 # to a UDP port scan: 1 (host unreachable), 2 (protocol unreachable),
 # 3 (port unreachable), 9/10 (admin prohibited), 13 (communication
 # administratively prohibited).
+# The shipped SPSD tree (netsentinel/models/weights/portscan_spsd_decisiontree.pkl)
+# splits on succession at 2,334.5 and 2,979.5 windows. Those splits rest on 6
+# of its 12,911 training events and would flag any host that has been active
+# in about 2,334 windows (roughly 39 hours of minutes), since every active
+# window counts. Succession is capped below them, so the tree decides on
+# neip / netcp / rwa as it does for all but those 6 training events.
+SUCCESSION_CAP = 2333
+
 ICMP_UNREACHABLE_TYPE = 3
 ICMP_UNREACHABLE_CODES = {0, 1, 2, 3, 9, 10, 13}
 
@@ -181,11 +189,16 @@ class NetworkEventBuilder:
         # src_ip -> running succession count, carried across build() calls
         # so that live/streaming batches accumulate correctly.
         self._succession: Dict[str, int] = {}
+        # src_ip -> (window_start, count before that window, flagged in it):
+        # the live analyzer also flushes every 1,000 flows, so one window can
+        # arrive in several batches; it must still count once.
+        self._succ_window: Dict[str, Tuple[float, int, bool]] = {}
 
     def reset(self) -> None:
         """Clear cross-window succession state (e.g. between test cases or
         PCAP replays that should be treated independently)."""
         self._succession.clear()
+        self._succ_window.clear()
 
     # ------------------------------------------------------------------
     def build(self, flows: Iterable[Flow]) -> List[NetworkEvent]:
@@ -285,13 +298,14 @@ class NetworkEventBuilder:
 
         # 6. succession_count: cross-window state machine (slow-scan signal).
         alpha = icmp_error_count + rst_count + rwa_count + neip_count + netcp_count
-        prev = self._succession.get(src_ip, 0)
-        if alpha == 0:
-            succession_count = 0
-            self._succession[src_ip] = 0
+        seen = self._succ_window.get(src_ip)
+        if seen is not None and seen[0] == window_start:
+            base, flagged = seen[1], seen[2] or alpha > 0     # another batch of the same window
         else:
-            succession_count = prev + 1
-            self._succession[src_ip] = succession_count
+            base, flagged = self._succession.get(src_ip, 0), alpha > 0
+        succession_count = min(base + 1, SUCCESSION_CAP) if flagged else 0
+        self._succession[src_ip] = succession_count
+        self._succ_window[src_ip] = (window_start, base, flagged)
 
         # Auxiliary fields for fan-out backstop / scan_type / evidence.
         distinct_dst_ports = len({f.dst_port for f in outgoing})

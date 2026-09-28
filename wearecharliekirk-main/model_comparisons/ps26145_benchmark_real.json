@@ -1,0 +1,463 @@
+{
+ "what": "Throughput benchmark (PS 26145 constraint d) on three 200 MB capture files from the team's sensor, the first full-size file of 24, 25 and 26 Sep 2026, with the final code of the PS 26145 update. Each file is replayed through the struct-level reader, flow/DNS/TLS extraction and every detector, as fast as one Python process can (netsentinel.bench.run_benchmark, the same code as scripts/benchmark_throughput.py).",
+ "machine_note": "A Linux VM on the team's laptop: 2 vCPUs of an AMD Ryzen 5 5600H, 3 GB RAM. Not the deployment hardware. Repeated runs on this VM varied by about 10%.",
+ "capture_note": "Single-host captures taken on the laptop itself. Two of the three have average packet sizes above the 1,514-byte Ethernet maximum (1,610 and 4,202 bytes): the capture holds segments coalesced by the network card, so their Mbps is higher than wire-size packets would give. Packets/s and flows/s are the figures to compare. Flow counts are low because one host's traffic has few flows; the synthetic benchmark is the flow-heavy case.",
+ "runs": [
+  {
+   "kind": "pcap",
+   "file": "team sensor capture, 2026-09-24 09:01 IST",
+   "measured_at": "2026-09-27T03:14:41.667764+00:00",
+   "packets": 121722,
+   "bytes": 195954252,
+   "avg_packet_bytes": 1609.9,
+   "capture_span_s": 552.936,
+   "flows": 836,
+   "probe_stubs": 55,
+   "dns_events": 722,
+   "events": 1616,
+   "alerts": 4,
+   "tls_client_hellos": 199,
+   "elapsed_s": 3.384,
+   "packets_per_s": 35972.2,
+   "mbps": 463.28,
+   "flows_per_s": 247.1,
+   "events_per_s": 477.6,
+   "realtime_factor": 163.41,
+   "stage_s": {
+    "read_and_extract": 2.719,
+    "detect": 0.665
+   },
+   "latency_ms": {
+    "event": {
+     "stub": {
+      "n": 55,
+      "p50": 0.128,
+      "p95": 1.83,
+      "p99": 2.713,
+      "max": 3.293
+     },
+     "dns": {
+      "n": 343,
+      "p50": 0.033,
+      "p95": 1.936,
+      "p99": 3.055,
+      "max": 3.911
+     },
+     "dns_response": {
+      "n": 379,
+      "p50": 0.012,
+      "p95": 0.031,
+      "p99": 0.067,
+      "max": 0.548
+     },
+     "flow": {
+      "n": 836,
+      "p50": 0.137,
+      "p95": 2.513,
+      "p99": 4.154,
+      "max": 5.307
+     },
+     "session": {
+      "n": 3,
+      "p50": 1.305,
+      "p95": 2.032,
+      "p99": 2.096,
+      "max": 2.112
+     }
+    },
+    "detector": {
+     "ddos_window": {
+      "n": 891,
+      "p50": 0.029,
+      "p95": 0.112,
+      "p99": 0.177,
+      "max": 0.318
+     },
+     "ddos_rule": {
+      "n": 891,
+      "p50": 0.002,
+      "p95": 0.006,
+      "p99": 0.01,
+      "max": 0.076
+     },
+     "dns_behaviour": {
+      "n": 722,
+      "p50": 0.008,
+      "p95": 0.04,
+      "p99": 0.08,
+      "max": 0.149
+     },
+     "exfil_vae": {
+      "n": 53,
+      "p50": 0.454,
+      "p95": 0.657,
+      "p99": 0.909,
+      "max": 0.946
+     },
+     "ett_transformer": {
+      "n": 212,
+      "p50": 1.667,
+      "p95": 3.76,
+      "p99": 4.035,
+      "max": 4.183
+     },
+     "c2_combined": {
+      "n": 836,
+      "p50": 0.015,
+      "p95": 0.051,
+      "p99": 0.084,
+      "max": 0.761
+     },
+     "exfil_ratio": {
+      "n": 836,
+      "p50": 0.019,
+      "p95": 0.047,
+      "p99": 0.069,
+      "max": 2.024
+     },
+     "dga_cnn_bilstm": {
+      "n": 19,
+      "p50": 1.766,
+      "p95": 3.053,
+      "p99": 3.286,
+      "max": 3.345
+     },
+     "tls_sessions": {
+      "n": 199,
+      "p50": 0.021,
+      "p95": 0.302,
+      "p99": 0.397,
+      "max": 0.459
+     },
+     "portscan_window": {
+      "n": 7,
+      "p50": 2.108,
+      "p95": 3.678,
+      "p99": 3.927,
+      "max": 3.989
+     },
+     "c2_bilstm": {
+      "n": 3,
+      "p50": 1.287,
+      "p95": 2.002,
+      "p99": 2.066,
+      "max": 2.082
+     }
+    }
+   },
+   "machine": {
+    "cpu": "AMD Ryzen 5 5600H with Radeon Graphics",
+    "logical_cpus": 2,
+    "python": "3.10.12",
+    "os": "Linux 6.8.0-138-generic",
+    "processes": 1
+   },
+   "reader": "fast",
+   "notes": "One Python process: packet parsing (struct-level fast reader), flow/DNS/TLS extraction and every detector in line. CICFlowMeter's batch pass is not included."
+  },
+  {
+   "kind": "pcap",
+   "file": "team sensor capture, 2026-09-25 07:03 IST",
+   "measured_at": "2026-09-27T03:14:43.649112+00:00",
+   "packets": 47215,
+   "bytes": 198403433,
+   "avg_packet_bytes": 4202.1,
+   "capture_span_s": 1271.746,
+   "flows": 939,
+   "probe_stubs": 21,
+   "dns_events": 1250,
+   "events": 2215,
+   "alerts": 9,
+   "tls_client_hellos": 133,
+   "elapsed_s": 1.945,
+   "packets_per_s": 24274.0,
+   "mbps": 816.02,
+   "flows_per_s": 482.8,
+   "events_per_s": 1138.8,
+   "realtime_factor": 653.83,
+   "stage_s": {
+    "read_and_extract": 1.459,
+    "detect": 0.486
+   },
+   "latency_ms": {
+    "event": {
+     "dns": {
+      "n": 692,
+      "p50": 0.028,
+      "p95": 0.754,
+      "p99": 2.804,
+      "max": 4.223
+     },
+     "dns_response": {
+      "n": 558,
+      "p50": 0.012,
+      "p95": 0.021,
+      "p99": 0.04,
+      "max": 0.166
+     },
+     "flow": {
+      "n": 939,
+      "p50": 0.082,
+      "p95": 1.949,
+      "p99": 3.487,
+      "max": 4.672
+     },
+     "stub": {
+      "n": 21,
+      "p50": 0.136,
+      "p95": 1.603,
+      "p99": 1.846,
+      "max": 1.907
+     },
+     "session": {
+      "n": 5,
+      "p50": 1.442,
+      "p95": 1.665,
+      "p99": 1.688,
+      "max": 1.693
+     }
+    },
+    "detector": {
+     "dns_behaviour": {
+      "n": 1250,
+      "p50": 0.009,
+      "p95": 0.032,
+      "p99": 0.079,
+      "max": 0.984
+     },
+     "dga_cnn_bilstm": {
+      "n": 26,
+      "p50": 1.866,
+      "p95": 3.207,
+      "p99": 3.596,
+      "max": 3.65
+     },
+     "exfil_vae": {
+      "n": 69,
+      "p50": 0.403,
+      "p95": 0.695,
+      "p99": 1.138,
+      "max": 1.474
+     },
+     "ddos_window": {
+      "n": 960,
+      "p50": 0.02,
+      "p95": 0.086,
+      "p99": 0.132,
+      "max": 0.289
+     },
+     "ddos_rule": {
+      "n": 960,
+      "p50": 0.002,
+      "p95": 0.004,
+      "p99": 0.006,
+      "max": 0.083
+     },
+     "ett_transformer": {
+      "n": 146,
+      "p50": 1.394,
+      "p95": 3.371,
+      "p99": 3.866,
+      "max": 4.254
+     },
+     "c2_combined": {
+      "n": 939,
+      "p50": 0.003,
+      "p95": 0.038,
+      "p99": 0.06,
+      "max": 0.116
+     },
+     "exfil_ratio": {
+      "n": 939,
+      "p50": 0.017,
+      "p95": 0.04,
+      "p99": 0.057,
+      "max": 0.205
+     },
+     "tls_sessions": {
+      "n": 133,
+      "p50": 0.016,
+      "p95": 0.22,
+      "p99": 0.383,
+      "max": 0.88
+     },
+     "c2_bilstm": {
+      "n": 5,
+      "p50": 1.409,
+      "p95": 1.632,
+      "p99": 1.654,
+      "max": 1.659
+     },
+     "portscan_window": {
+      "n": 12,
+      "p50": 1.239,
+      "p95": 1.694,
+      "p99": 1.706,
+      "max": 1.709
+     }
+    }
+   },
+   "machine": {
+    "cpu": "AMD Ryzen 5 5600H with Radeon Graphics",
+    "logical_cpus": 2,
+    "python": "3.10.12",
+    "os": "Linux 6.8.0-138-generic",
+    "processes": 1
+   },
+   "reader": "fast",
+   "notes": "One Python process: packet parsing (struct-level fast reader), flow/DNS/TLS extraction and every detector in line. CICFlowMeter's batch pass is not included."
+  },
+  {
+   "kind": "pcap",
+   "file": "team sensor capture, 2026-09-26 00:45 IST",
+   "measured_at": "2026-09-27T03:14:50.149234+00:00",
+   "packets": 270309,
+   "bytes": 191052881,
+   "avg_packet_bytes": 706.8,
+   "capture_span_s": 2999.547,
+   "flows": 2350,
+   "probe_stubs": 121,
+   "dns_events": 1943,
+   "events": 4425,
+   "alerts": 19,
+   "tls_client_hellos": 749,
+   "elapsed_s": 6.466,
+   "packets_per_s": 41806.6,
+   "mbps": 236.39,
+   "flows_per_s": 363.5,
+   "events_per_s": 684.4,
+   "realtime_factor": 463.92,
+   "stage_s": {
+    "read_and_extract": 5.056,
+    "detect": 1.41
+   },
+   "latency_ms": {
+    "event": {
+     "flow": {
+      "n": 2350,
+      "p50": 0.143,
+      "p95": 2.269,
+      "p99": 3.894,
+      "max": 7.283
+     },
+     "dns": {
+      "n": 1078,
+      "p50": 0.029,
+      "p95": 0.247,
+      "p99": 2.453,
+      "max": 10.681
+     },
+     "dns_response": {
+      "n": 865,
+      "p50": 0.011,
+      "p95": 0.024,
+      "p99": 0.049,
+      "max": 0.171
+     },
+     "stub": {
+      "n": 121,
+      "p50": 0.094,
+      "p95": 1.557,
+      "p99": 2.136,
+      "max": 2.696
+     },
+     "session": {
+      "n": 11,
+      "p50": 1.263,
+      "p95": 1.797,
+      "p99": 1.873,
+      "max": 1.891
+     }
+    },
+    "detector": {
+     "ddos_window": {
+      "n": 2471,
+      "p50": 0.043,
+      "p95": 0.108,
+      "p99": 0.187,
+      "max": 2.178
+     },
+     "ddos_rule": {
+      "n": 2471,
+      "p50": 0.002,
+      "p95": 0.005,
+      "p99": 0.008,
+      "max": 0.053
+     },
+     "ett_transformer": {
+      "n": 372,
+      "p50": 1.545,
+      "p95": 3.62,
+      "p99": 5.966,
+      "max": 6.977
+     },
+     "c2_combined": {
+      "n": 2350,
+      "p50": 0.02,
+      "p95": 0.063,
+      "p99": 0.513,
+      "max": 1.012
+     },
+     "exfil_ratio": {
+      "n": 2350,
+      "p50": 0.017,
+      "p95": 0.036,
+      "p99": 0.053,
+      "max": 0.179
+     },
+     "tls_sessions": {
+      "n": 749,
+      "p50": 0.252,
+      "p95": 0.459,
+      "p99": 0.621,
+      "max": 1.278
+     },
+     "dns_behaviour": {
+      "n": 1943,
+      "p50": 0.008,
+      "p95": 0.042,
+      "p99": 0.084,
+      "max": 0.262
+     },
+     "exfil_vae": {
+      "n": 53,
+      "p50": 0.424,
+      "p95": 0.77,
+      "p99": 2.907,
+      "max": 4.534
+     },
+     "dga_cnn_bilstm": {
+      "n": 19,
+      "p50": 1.932,
+      "p95": 5.882,
+      "p99": 5.917,
+      "max": 5.926
+     },
+     "portscan_window": {
+      "n": 27,
+      "p50": 1.232,
+      "p95": 1.892,
+      "p99": 2.366,
+      "max": 2.531
+     },
+     "c2_bilstm": {
+      "n": 16,
+      "p50": 1.356,
+      "p95": 1.723,
+      "p99": 1.826,
+      "max": 1.852
+     }
+    }
+   },
+   "machine": {
+    "cpu": "AMD Ryzen 5 5600H with Radeon Graphics",
+    "logical_cpus": 2,
+    "python": "3.10.12",
+    "os": "Linux 6.8.0-138-generic",
+    "processes": 1
+   },
+   "reader": "fast",
+   "notes": "One Python process: packet parsing (struct-level fast reader), flow/DNS/TLS extraction and every detector in line. CICFlowMeter's batch pass is not included."
+  }
+ ]
+}

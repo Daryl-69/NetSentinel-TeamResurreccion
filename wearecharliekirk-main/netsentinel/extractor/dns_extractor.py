@@ -1,10 +1,23 @@
 """DNS Extractor — Extracts DNS query/response metadata from packets.
 
-Parses DNS packets using Scapy's DNS/DNSQR/DNSRR layers to produce
-event dicts that the DGA/DNS Tunnel detector expects.
+Parses DNS packets using Scapy's DNS/DNSQR layers to produce event dicts for
+the DGA / DNS-tunnel models and for the DNS behaviour tracker.
 
-Also tracks NXDOMAIN responses per source IP — a high NXDOMAIN rate
-is a strong DGA indicator (bots querying many non-existent domains).
+Queries -> {"type": "dns", "domain", "source_ip", "dest_ip", "query_type",
+            "query_bytes", "timestamp", "lexical"}
+Replies -> {"type": "dns_response", "domain", "source_ip" (the client the
+            reply went to), "dest_ip" (the resolver), "rcode", "answers",
+            "response_bytes", "timestamp"}
+
+PS 26145 (c) "record-type anomalies": every query type is kept. The earlier
+version dropped anything that was not A/AAAA/CNAME/MX/TXT/SRV, which threw
+away exactly the NULL, ANY and private-type queries tunnel tools use.
+Names under .arpa/.local and similar are still passed on (they count toward
+a host's record-type mix) but are marked lexical=False so the name models do
+not score reverse lookups as if they were generated domains.
+
+Also tracks NXDOMAIN responses per source IP — a high NXDOMAIN rate is a
+strong DGA indicator (bots querying many non-existent domains).
 """
 import time
 import logging
@@ -13,10 +26,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-# DNS query types we care about
-INTERESTING_QTYPES = {1, 28, 5, 15, 16, 33}  # A, AAAA, CNAME, MX, TXT, SRV
-
-# Domains to skip (internal/infrastructure)
+# Names the character-level models should not judge (infrastructure lookups)
 SKIP_SUFFIXES = (
     ".arpa", ".local", ".localhost", ".internal",
     ".lan", ".home", ".corp", ".intranet",
@@ -27,13 +37,34 @@ RCODE_NOERROR = 0
 RCODE_NXDOMAIN = 3
 
 
+def _qname(q) -> str:
+    name = getattr(q, "qname", b"")
+    if isinstance(name, bytes):
+        return name.decode("utf-8", errors="ignore").rstrip(".")
+    return str(name).rstrip(".")
+
+
+def _dns_message_len(packet) -> int:
+    """Length of the DNS message itself (UDP payload, or TCP payload minus
+    the 2-byte length prefix)."""
+    try:
+        from scapy.layers.inet import UDP, TCP
+        if packet.haslayer(UDP):
+            u = packet[UDP]
+            if u.len:
+                return max(0, int(u.len) - 8)
+            return len(bytes(u.payload))
+        if packet.haslayer(TCP):
+            return max(0, len(bytes(packet[TCP].payload)) - 2)
+    except Exception:
+        pass
+    return 0
+
+
 class DNSExtractor:
     """Extracts DNS query domains and response metadata from packets.
 
-    For each DNS query packet, emits:
-        {"type": "dns", "domain": "example.com", "source_ip": "..."}
-
-    Also maintains NXDOMAIN counters per source IP to detect DGA behavior.
+    Maintains NXDOMAIN counters per source IP to detect DGA behavior.
     """
 
     def __init__(self, nxdomain_window: int = 300, nxdomain_threshold: int = 20):
@@ -49,14 +80,12 @@ class DNSExtractor:
         # Per-IP NXDOMAIN tracking: {ip: [(timestamp, domain), ...]}
         self._nxdomain_history: dict[str, list] = defaultdict(list)
         self._total_queries = 0
+        self._total_responses = 0
         self._total_nxdomains = 0
+        self._qtypes: dict[int, int] = defaultdict(int)
 
     def process_packet(self, packet) -> Optional[dict]:
-        """Process a single packet. Returns DNS event dict or None.
-
-        Handles both queries (QR=0) and responses (QR=1).
-        Only emits events for queries — responses update NXDOMAIN stats.
-        """
+        """Process a single Scapy packet. Returns a dns or dns_response event, or None."""
         try:
             from scapy.layers.dns import DNS, DNSQR
             from scapy.layers.inet import IP
@@ -68,116 +97,96 @@ class DNSExtractor:
 
         dns = packet[DNS]
 
-        # Get source IP (from IP layer)
-        src_ip = packet[IP].src if packet.haslayer(IP) else "unknown"
-        dst_ip = packet[IP].dst if packet.haslayer(IP) else "unknown"
-        ts = float(packet.time)
+        # IPv6 FIX (2026-09-21): IPv6 DNS queries reported src/dst as "unknown",
+        # so every IPv6 resolver lookup lost its attribution.
+        try:
+            from scapy.layers.inet6 import IPv6
+        except ImportError:
+            IPv6 = None
+        if packet.haslayer(IP):
+            src_ip, dst_ip = packet[IP].src, packet[IP].dst
+        elif IPv6 is not None and packet.haslayer(IPv6):
+            src_ip, dst_ip = packet[IPv6].src, packet[IPv6].dst
+        else:
+            src_ip = dst_ip = "unknown"
+        q = packet[DNSQR] if packet.haslayer(DNSQR) else None
+        return self.process_fields(
+            float(packet.time), src_ip, dst_ip, int(dns.qr or 0),
+            _qname(q) if q is not None else None,
+            int(getattr(q, "qtype", 1) or 1) if q is not None else None,
+            int(getattr(dns, "rcode", 0) or 0), int(getattr(dns, "ancount", 0) or 0),
+            _dns_message_len(packet))
 
-        # --- Handle DNS Response (QR=1) → update NXDOMAIN stats ---
-        if dns.qr == 1:
-            self._handle_response(dns, dst_ip, ts)
-            return None
-
-        # --- Handle DNS Query (QR=0) → emit event ---
-        if dns.qr == 0 and dns.qdcount > 0 and packet.haslayer(DNSQR):
-            return self._handle_query(packet, dns, src_ip, ts, dst_ip)
-
+    def process_fields(self, ts: float, src_ip: str, dst_ip: str, qr: int, qname,
+                       qtype, rcode: int, ancount: int, msg_len: int) -> Optional[dict]:
+        """One DNS message as parsed fields (also called by the fast reader)."""
+        if qr == 1:
+            return self._handle_response(qname or "", qtype, rcode, ancount, msg_len,
+                                         client_ip=dst_ip, resolver_ip=src_ip, ts=ts)
+        if qname:
+            return self._handle_query(qname, qtype or 1, msg_len, src_ip, ts, dst_ip)
         return None
 
-    def _handle_query(self, packet, dns, src_ip: str, ts: float,
+    def _handle_query(self, domain: str, qtype: int, msg_len: int, src_ip: str, ts: float,
                       dst_ip: str = None) -> Optional[dict]:
-        """Extract domain from a DNS query and build event dict."""
-        from scapy.layers.dns import DNSQR
-
-        qr = packet[DNSQR]
-        qname = qr.qname
-        qtype = qr.qtype
-
-        # Decode qname (Scapy returns bytes)
-        if isinstance(qname, bytes):
-            domain = qname.decode("utf-8", errors="ignore").rstrip(".")
-        else:
-            domain = str(qname).rstrip(".")
-
-        # Skip uninteresting queries
         if not domain:
             return None
-        if any(domain.endswith(s) for s in SKIP_SUFFIXES):
-            return None
-        if qtype not in INTERESTING_QTYPES:
-            return None
-        # Skip very short domains (likely not real)
-        if len(domain) < 4:
-            return None
-
+        qtype = int(qtype or 1)
         self._total_queries += 1
+        self._qtypes[qtype] += 1
+        lexical = len(domain) >= 4 and not any(domain.lower().endswith(s) for s in SKIP_SUFFIXES)
 
-        # Check if this source has high NXDOMAIN rate (DGA indicator)
         nxdomain_rate = self._get_nxdomain_rate(src_ip, ts)
-
         event = {
             "type": "dns",
             "domain": domain,
             "source_ip": src_ip,
-            # The resolver this query went to. It was already computed in
-            # process_packet but discarded, which left every DNS-path alert
-            # (DGA, DNS-tunnel exfil) with no destination -- and an
-            # exfiltration alert that cannot say where the data went is not
-            # actionable, whatever its confidence.
+            # The resolver this query went to: the actionable destination of a
+            # DNS-path alert (an exfiltration alert that cannot say where the
+            # data went is not actionable).
             "dest_ip": dst_ip,
             "query_type": qtype,
+            "query_bytes": int(msg_len or 0),
             "timestamp": ts,
+            "lexical": lexical,
         }
-
-        # Attach DGA risk indicator if NXDOMAIN rate is high
         if nxdomain_rate > self.nxdomain_threshold:
             event["nxdomain_flag"] = True
             event["nxdomain_count"] = nxdomain_rate
-
         return event
 
-    def _handle_response(self, dns, client_ip: str, ts: float):
-        """Track NXDOMAIN responses for DGA detection heuristic."""
-        from scapy.layers.dns import DNSQR
-
-        if dns.rcode == RCODE_NXDOMAIN:
+    def _handle_response(self, domain: str, qtype, rcode: int, ancount: int, msg_len: int,
+                         client_ip: str, resolver_ip: str, ts: float) -> dict:
+        self._total_responses += 1
+        if rcode == RCODE_NXDOMAIN:
             self._total_nxdomains += 1
-
-            # Extract the queried domain from the response
-            domain = ""
-            if dns.qdcount > 0:
-                try:
-                    qname = dns.qd.qname
-                    if isinstance(qname, bytes):
-                        domain = qname.decode("utf-8", errors="ignore").rstrip(".")
-                    else:
-                        domain = str(qname).rstrip(".")
-                except Exception:
-                    pass
-
             self._nxdomain_history[client_ip].append((ts, domain))
+        return {
+            "type": "dns_response",
+            "domain": domain,
+            "source_ip": client_ip,
+            "dest_ip": resolver_ip,
+            "query_type": int(qtype or 0),
+            "rcode": int(rcode),
+            "answers": int(ancount),
+            "response_bytes": int(msg_len or 0),
+            "timestamp": ts,
+        }
 
     def _get_nxdomain_rate(self, ip: str, current_time: float) -> int:
         """Get the number of NXDOMAINs from this IP in the tracking window."""
         history = self._nxdomain_history.get(ip, [])
         if not history:
             return 0
-
-        # Prune old entries
         cutoff = current_time - self.nxdomain_window
         fresh = [(t, d) for t, d in history if t > cutoff]
         self._nxdomain_history[ip] = fresh
-
         return len(fresh)
 
     def get_nxdomain_suspects(self, current_time: float = None) -> list[dict]:
-        """Get IPs with high NXDOMAIN rates (likely DGA-infected hosts).
-
-        Useful for the dashboard to highlight suspicious hosts.
-        """
+        """IPs with high NXDOMAIN rates (likely DGA-infected hosts)."""
         if current_time is None:
             current_time = time.time()
-
         suspects = []
         for ip, history in self._nxdomain_history.items():
             cutoff = current_time - self.nxdomain_window
@@ -194,6 +203,8 @@ class DNSExtractor:
     def stats(self) -> dict:
         return {
             "total_dns_queries": self._total_queries,
+            "total_dns_responses": self._total_responses,
             "total_nxdomains": self._total_nxdomains,
             "tracked_ips": len(self._nxdomain_history),
+            "query_types": {str(k): v for k, v in sorted(self._qtypes.items(), key=lambda kv: -kv[1])[:12]},
         }

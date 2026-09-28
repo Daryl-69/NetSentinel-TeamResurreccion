@@ -1,0 +1,71 @@
+{
+ "label": "eval_chunk3.json",
+ "files": 25,
+ "use_cicflowmeter": false,
+ "elapsed_s": 79.2,
+ "totals": {
+  "events": 33017,
+  "flows": 16467,
+  "packets": 3915802,
+  "bytes": 4283107710,
+  "tls_client_hellos": 3743,
+  "probe_stubs": 1208,
+  "span_s": 23653.995
+ },
+ "hours": 6.57,
+ "alerts_total": 150,
+ "severity": {
+  "INFO": 114,
+  "HIGH": 9,
+  "CRITICAL": 15,
+  "MEDIUM": 12
+ },
+ "by_detector": [
+  {
+   "class": "Data Exfiltration",
+   "detector": "exfil_vae",
+   "subtype": "DNS tunnelling (anomalous name)",
+   "alerts": 116,
+   "distinct_sources": 1,
+   "distinct_destinations": 1
+  },
+  {
+   "class": "C2 Beacon",
+   "detector": "c2_combined_score_v2",
+   "subtype": "periodic check-ins",
+   "alerts": 16,
+   "distinct_sources": 2,
+   "distinct_destinations": 11
+  },
+  {
+   "class": "DGA",
+   "detector": "dga_cnn_bilstm_v2",
+   "subtype": "machine-generated name",
+   "alerts": 10,
+   "distinct_sources": 1,
+   "distinct_destinations": 1
+  },
+  {
+   "class": "Port Scan",
+   "detector": "portscan_spsd",
+   "subtype": "block scan",
+   "alerts": 7,
+   "distinct_sources": 1,
+   "distinct_destinations": 1
+  },
+  {
+   "class": "Data Exfiltration",
+   "detector": "exfil_byte_ratio",
+   "subtype": "asymmetric upload (out/in byte ratio)",
+   "alerts": 1,
+   "distinct_sources": 1,
+   "distinct_destinations": 1
+  }
+ ],
+ "analyzer_stats": {
+  "flows_processed": 33017,
+  "total_alerts": 150,
+  "recent_count": 150,
+  "schema_violations": 0
+ }
+}

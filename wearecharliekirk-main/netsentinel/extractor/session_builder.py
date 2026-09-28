@@ -34,7 +34,14 @@ class SessionBuilder:
     def __init__(
         self,
         min_flows: int = 100,
-        window_seconds: float = 3600.0,
+        # WINDOW FIX (2026-09-21): was 3600.0, which is arithmetically
+        # incompatible with min_flows=100. Fitting 100 flows into a 1-hour
+        # window requires a check-in at least every 36s, so ANY beacon slower
+        # than that could never emit a session -- a 60s beacon tops out at 60
+        # flows/hour and was silently dropped forever. 6h admits intervals up
+        # to ~216s. This was masked until flow timestamps were fixed, because
+        # processing-time timestamps made every stored flow look recent.
+        window_seconds: float = 21600.0,
         max_pairs: int = 10000,
     ):
         """
@@ -70,8 +77,16 @@ class SessionBuilder:
 
         pair = (src_ip, dst_ip)
 
-        # Build the flow record the C2 model expects
-        ts = time.time()
+        # Build the flow record the C2 model expects.
+        # TIMESTAMP FIX (2026-09-21): this was unconditionally `time.time()`,
+        # i.e. when the flow happened to be PROCESSED, not when it occurred on
+        # the wire. Replaying a capture then produced inter-arrival times that
+        # measured replay speed (0.0s, 0.1s, 6.6s ...) instead of the real
+        # spacing, so a 60s beacon looked like sub-second noise and the C2
+        # model could never see periodicity. Fall back to wall clock only when
+        # the event carries no timestamp (live capture from a source that does
+        # not set one).
+        ts = flow_event.get("timestamp") or time.time()
         record = {
             "timestamp": ts,
             "packet_size": features.get(
@@ -153,9 +168,12 @@ class SessionBuilder:
     def _prune_pair(self, pair: tuple, current_time: float):
         """Remove flows older than the window for a specific pair."""
         cutoff = current_time - self.window_seconds
-        self._sessions[pair] = [
-            f for f in self._sessions[pair] if f["timestamp"] > cutoff
-        ]
+        kept = [f for f in self._sessions[pair] if f["timestamp"] > cutoff]
+        # Cap per-pair storage: a 6h window on a busy pair would otherwise grow
+        # without bound. Only the most recent min_flows are ever emitted, so
+        # keeping 2x that is ample and keeps memory flat.
+        cap = max(self.min_flows * 2, 200)
+        self._sessions[pair] = kept[-cap:]
 
     def _evict_oldest(self):
         """Remove the pair with the oldest last-seen timestamp."""

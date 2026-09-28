@@ -31,6 +31,14 @@ class ModelRegistry:
         self._load_times = {}
         self._model_digests: dict[str, str] = {}   # attr_name → "sha256:..."
         self._model_paths: dict[str, str] = {}     # attr_name → file path
+        # Rule-based / statistical detectors (registered by the analyzer):
+        # key -> detector with .digest, .version, .replay(inputs)
+        self.rule_detectors: dict = {}
+
+    def register_rules(self, rules: dict) -> None:
+        """Make the analyzer's rule detectors visible to the integrity layer
+        (their parameter digests stand in for a model file digest)."""
+        self.rule_detectors = dict(rules)
     
     def load_all(self):
         """Load all models. Call once on server startup."""
@@ -116,4 +124,9 @@ class ModelRegistry:
             },
             "load_times": self._load_times,
             "model_digests": dict(self._model_digests),
+            "rule_detectors": {
+                k: {"name": getattr(d, "name", k), "version": getattr(d, "version", ""),
+                    "digest": d.digest}
+                for k, d in self.rule_detectors.items()
+            },
         }

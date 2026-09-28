@@ -50,7 +50,7 @@ import logging
 from typing import Dict, List, Optional
 
 from netsentinel.netinfo.network_info import NetworkInfo, load_network_info
-from netsentinel.extractor.network_event_builder import Flow
+from netsentinel.extractor.network_event_builder import Flow, SUCCESSION_CAP
 from netsentinel.models.portscan_detector import (
     PortScanAlert,
     PortScanConfig,
@@ -119,11 +119,85 @@ class PortScanRouter:
                         "legacy per-flow port-scan model scoring failed; "
                         "continuing without ml_flow_score"
                     )
-            out.append(_alert_to_dict(alert))
+            out.append(_alert_to_dict(alert, self.model_name))
         return out
 
+    @property
+    def model_name(self) -> str:
+        d = self.detector
+        if d.spsd is not None and d.spsd.is_available:
+            return "portscan_spsd"
+        if d.upsd is not None:
+            return "portscan_upsd"
+        return "portscan_fanout"
 
-def _alert_to_dict(alert: PortScanAlert) -> Dict:
+
+class PortScanRule:
+    """Receipt/replay adapter for the port-scan detector.
+
+    Gives port-scan alerts the same integrity treatment as the other
+    detectors: a digest of the decision parameters (mode, backstop
+    thresholds, and the SPSD tree file's sha256), and a replay that re-runs
+    the decision on the committed window indicators. UPSD keeps a running
+    likelihood ratio per source, which one window's numbers cannot
+    reproduce, so UPSD alerts replay as unverifiable.
+    """
+    key = "port_scan"
+    name = "portscan_network_events"
+    version = "2"
+    confidence_kind = "model_probability"
+
+    def __init__(self, router: "PortScanRouter"):
+        import hashlib
+        from pathlib import Path
+        self.router = router
+        det = router.detector
+        model_sha = None
+        path = Path(det.cfg.model_path)
+        if det.spsd is not None and det.spsd.is_available and path.exists():
+            model_sha = hashlib.sha256(path.read_bytes()).hexdigest()
+        self.params = {
+            "mode": det.mode, "fanout_threshold": det.fanout_threshold,
+            "sweep_threshold": det.sweep_threshold,
+            "sweep_external_exempt_ports": sorted(det.sweep_exempt),
+            "window_s": det.builder.window, "spsd_model_sha256": model_sha,
+            "skip_group_destinations": True,
+            "skip_external_service_ports": True,
+            "succession_cap": SUCCESSION_CAP,
+        }
+        self.runs = self.alerts = self.suppressed = self.skipped_group = 0
+        self.skipped_external_service = 0
+
+    @property
+    def digest(self) -> str:
+        from netsentinel.detectors.base import params_digest
+        return params_digest(self.name, self.version, self.params)
+
+    def describe(self) -> dict:
+        return {"key": self.key, "name": self.name, "version": self.version,
+                "digest": self.digest, "params": self.params,
+                "confidence_kind": self.confidence_kind, "model": self.router.model_name,
+                "runs": self.runs, "alerts": self.alerts, "suppressed": self.suppressed,
+                "skipped_group_destinations": self.skipped_group,
+                "skipped_external_service_flows": self.skipped_external_service}
+
+    def replay(self, inputs: dict):
+        from netsentinel.extractor.network_event_builder import NetworkEvent
+        det = self.router.detector
+        if det.spsd is None or not det.spsd.is_available:
+            return None
+        ev = NetworkEvent(
+            src_ip="replay", window_start=0.0,
+            icmp_error_count=int(inputs.get("icmp_error", 0)), rst_count=int(inputs.get("rst", 0)),
+            rwa_count=int(inputs.get("rwa", 0)), neip_count=int(inputs.get("neip", 0)),
+            netcp_count=int(inputs.get("netcp", 0)), succession_count=int(inputs.get("succession", 0)),
+        )
+        fired, conf, _ = det._decide(ev, int(inputs.get("fanout", 0)), inputs.get("sweep_port"),
+                                     int(inputs.get("sweep_hosts", 0)))
+        return {"threat": "Port Scan" if fired else "Benign", "confidence": round(float(conf), 4)}
+
+
+def _alert_to_dict(alert: PortScanAlert, model_name: str = "portscan_spsd") -> Dict:
     return {
         # AlertManager.create_alert() reads model_result["threat"] -- that is
         # the contract every other model wrapper follows (ddos.py, dga.py,
@@ -141,9 +215,12 @@ def _alert_to_dict(alert: PortScanAlert) -> Dict:
         "mitre": alert.mitre,
         "evidence": alert.evidence,
         "scan_type": alert.scan_type,
+        "subtype": {"horizontal": "host sweep", "vertical": "port scan",
+                    "block": "block scan"}.get(alert.scan_type, alert.scan_type),
         "window_start": alert.window_start,
         "reason": alert.reason,
         "ml_flow_score": alert.ml_flow_score,
+        "model": model_name,
     }
 
 

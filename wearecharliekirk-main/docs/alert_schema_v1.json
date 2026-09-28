@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://netsentinel.local/schemas/alert/v1.json",
+  "title": "NetSentinel alert (v1)",
+  "type": "object",
+  "required": [
+    "schema",
+    "id",
+    "timestamp",
+    "event_time",
+    "flow_id",
+    "source_ip",
+    "dest_ip",
+    "threat_class",
+    "confidence",
+    "confidence_kind",
+    "severity",
+    "detector",
+    "evidence",
+    "mitre",
+    "latency_ms"
+  ],
+  "properties": {
+    "schema": {
+      "const": "netsentinel.alert/v1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the sensor raised the alert (UTC)."
+    },
+    "detected_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Same instant as timestamp; explicit name."
+    },
+    "event_time": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "Wire time of the last packet or event in the evidence (UTC). Null only when the source carried no time at all."
+    },
+    "event_window": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "duration_s": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "duration_s"
+      ]
+    },
+    "flow_id": {
+      "type": "object",
+      "required": [
+        "scope",
+        "src_ip",
+        "dst_ip",
+        "src_port",
+        "dst_port",
+        "protocol",
+        "community_id"
+      ],
+      "properties": {
+        "scope": {
+          "enum": [
+            "flow",
+            "host_pair",
+            "source",
+            "destination",
+            "dns_query"
+          ]
+        },
+        "src_ip": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dst_ip": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "src_port": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "dst_port": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "protocol": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "community_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^1:[A-Za-z0-9+/=]{28}$"
+        }
+      }
+    },
+    "source_ip": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "dest_ip": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "flow": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Legacy 5-tuple kept for older consoles."
+    },
+    "threat_class": {
+      "type": "string",
+      "minLength": 1
+    },
+    "threat_subtype": {
+      "type": "string"
+    },
+    "ps_category": {
+      "enum": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        null
+      ]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "confidence_kind": {
+      "enum": [
+        "model_probability",
+        "anomaly_score",
+        "rule_score",
+        "weighted_score"
+      ]
+    },
+    "severity": {
+      "enum": [
+        "CRITICAL",
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+        "INFO"
+      ]
+    },
+    "detector": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model_name": {
+      "type": "string"
+    },
+    "evidence": {
+      "type": "object"
+    },
+    "mitre": {
+      "type": "object",
+      "required": [
+        "tactic",
+        "technique",
+        "name"
+      ],
+      "properties": {
+        "tactic": {
+          "type": "string"
+        },
+        "technique": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "latency_ms": {
+      "type": "object",
+      "required": [
+        "pipeline"
+      ],
+      "properties": {
+        "pipeline": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Analyzer entry to alert creation, wall clock."
+        },
+        "ingest_to_alert": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Extractor emitted the event to alert creation, wall clock."
+        }
+      }
+    },
+    "sensor_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "receipt_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

@@ -1,0 +1,107 @@
+{
+ "what": "83 capture files from the team's sensor, 24-27 Sep 2026 (IST), replayed through the live-mode pipeline with the final code of the PS 26145 update; 4 parts: 24 Sep, 25 Sep (first 26 files), 25 Sep (remaining 25), 26-27 Sep",
+ "pipeline": "live-mode path: the sensor's own extractor and every detector; CICFlowMeter not run",
+ "labels": "none -- the team's own traffic; every alert is an upper bound on false alarms",
+ "parts": 4,
+ "captured_hours": 40.47,
+ "captured_hours_per_part": [
+  15.03,
+  11.0,
+  6.57,
+  7.87
+ ],
+ "state": "detector state (C2/TLS windows, baselines) starts fresh in each part",
+ "totals": {
+  "files": 83,
+  "packets": 11298735,
+  "bytes": 10980178553,
+  "flows": 101874,
+  "probe_records": 8856,
+  "dns_queries": 51918,
+  "tls_client_hellos": 21138,
+  "events": 204024
+ },
+ "processing_s": 292.8,
+ "alerts_total": 780,
+ "alerts_per_24h_of_capture": 462.5,
+ "alerts_by_class": {
+  "Data Exfiltration": 564,
+  "DGA": 98,
+  "C2 Beacon": 69,
+  "Port Scan": 32,
+  "DNS Tunnel": 17
+ },
+ "severity": {
+  "INFO": 554,
+  "HIGH": 57,
+  "MEDIUM": 70,
+  "CRITICAL": 99
+ },
+ "by_detector": [
+  {
+   "class": "Data Exfiltration",
+   "detector": "exfil_vae",
+   "subtype": "DNS tunnelling (anomalous name)",
+   "alerts": 560,
+   "per_24h_of_capture": 332.1,
+   "distinct_sources": 6,
+   "distinct_destinations": 3,
+   "repeats_held": 5811
+  },
+  {
+   "class": "DGA",
+   "detector": "dga_cnn_bilstm_v2",
+   "subtype": "machine-generated name",
+   "alerts": 98,
+   "per_24h_of_capture": 58.1,
+   "distinct_sources": 5,
+   "distinct_destinations": 4,
+   "repeats_held": 386
+  },
+  {
+   "class": "C2 Beacon",
+   "detector": "c2_combined_score_v2",
+   "subtype": "periodic check-ins",
+   "alerts": 69,
+   "per_24h_of_capture": 40.9,
+   "distinct_sources": 8,
+   "distinct_destinations": 29,
+   "repeats_held": 0
+  },
+  {
+   "class": "Port Scan",
+   "detector": "portscan_spsd",
+   "subtype": "block scan",
+   "alerts": 32,
+   "per_24h_of_capture": 19.0,
+   "distinct_sources": 2,
+   "distinct_destinations": 3,
+   "repeats_held": 0
+  },
+  {
+   "class": "DNS Tunnel",
+   "detector": "dga_cnn_bilstm_v2",
+   "subtype": "tunnel-like name",
+   "alerts": 17,
+   "per_24h_of_capture": 10.1,
+   "distinct_sources": 3,
+   "distinct_destinations": 2,
+   "repeats_held": 29
+  },
+  {
+   "class": "Data Exfiltration",
+   "detector": "exfil_byte_ratio",
+   "subtype": "asymmetric upload (out/in byte ratio)",
+   "alerts": 4,
+   "per_24h_of_capture": 2.4,
+   "distinct_sources": 2,
+   "distinct_destinations": 4,
+   "repeats_held": 0
+  }
+ ],
+ "portscan_group_destination_flows_left_out": 6258,
+ "portscan_external_service_flows_left_out": 88826,
+ "portscan_decided_by": {
+  "tree: neip >= 2 (unlisted internal hosts)": 32
+ }
+}

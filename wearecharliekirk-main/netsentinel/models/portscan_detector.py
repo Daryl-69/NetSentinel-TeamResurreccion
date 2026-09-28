@@ -75,6 +75,9 @@ class PortScanConfig:
     fanout_threshold: int = 100
     upsd_params: UPSDParams = field(default_factory=UPSDParams)
     confidence_threshold: float = 0.5
+    # Host-sweep backstop (PS 26145 e: "fan-out across ports OR HOSTS").
+    sweep_threshold: int = 32
+    sweep_external_exempt_ports: Tuple[int, ...] = (53, 80, 123, 443, 853, 5353)
 
 
 # ----------------------------------------------------------------------
@@ -237,6 +240,8 @@ class PortScanDetector:
             self.upsd = UPSDDetector(**_upsd_kwargs(self.cfg.upsd_params))
 
         self.fanout_threshold = self.cfg.fanout_threshold
+        self.sweep_threshold = self.cfg.sweep_threshold
+        self.sweep_exempt = set(self.cfg.sweep_external_exempt_ports)
 
     @classmethod
     def from_config(cls, cfg, network_info: NetworkInfo) -> "PortScanDetector":
@@ -253,6 +258,9 @@ class PortScanDetector:
             ),
             fanout_threshold=getattr(pc, "fanout_threshold", 100),
             upsd_params=UPSDParams(**upsd_params) if upsd_params else UPSDParams(),
+            sweep_threshold=getattr(pc, "sweep_threshold", 32),
+            sweep_external_exempt_ports=tuple(
+                getattr(pc, "sweep_external_exempt_ports", PortScanConfig.sweep_external_exempt_ports)),
         )
         return cls(network_info=network_info, cfg=psc)
 
@@ -264,15 +272,17 @@ class PortScanDetector:
 
         fanout_by_key = self._fanout_by_src_window(flows)
         scan_type_by_key = self._scan_type_by_src_window(flows)
+        sweep_by_key = self._sweep_by_src_window(flows)
 
         alerts: List[PortScanAlert] = []
         for ev in events:
             key = (ev.src_ip, ev.window_start)
             fanout = fanout_by_key.get(key, ev.distinct_dst_ports)
-            fired, confidence, reason = self._decide(ev, fanout)
+            sweep_port, sweep_hosts = sweep_by_key.get(key, (None, 0))
+            fired, confidence, reason = self._decide(ev, fanout, sweep_port, sweep_hosts)
             if not fired:
                 continue
-            severity = self._severity(confidence, fanout)
+            severity = self._severity(confidence, max(fanout, sweep_hosts))
             alerts.append(
                 PortScanAlert(
                     threat_type="Port Scan",
@@ -290,8 +300,12 @@ class PortScanDetector:
                         "succession": ev.succession_count,
                         "distinct_ports": fanout,
                         "distinct_dst_ips": ev.distinct_dst_ips,
+                        "sweep_port": sweep_port,
+                        "sweep_hosts": sweep_hosts,
                     },
-                    scan_type=scan_type_by_key.get(key, "vertical"),
+                    scan_type=("horizontal" if sweep_hosts >= self.sweep_threshold
+                               and fanout < self.fanout_threshold
+                               else scan_type_by_key.get(key, "vertical")),
                     window_start=ev.window_start,
                     reason=reason,
                 )
@@ -299,7 +313,8 @@ class PortScanDetector:
         return alerts
 
     # ------------------------------------------------------------------
-    def _decide(self, ev: NetworkEvent, fanout: int) -> Tuple[bool, float, str]:
+    def _decide(self, ev: NetworkEvent, fanout: int, sweep_port: Optional[int] = None,
+                sweep_hosts: int = 0) -> Tuple[bool, float, str]:
         fired = False
         confidence = 0.0
         reasons: List[str] = []
@@ -326,6 +341,12 @@ class PortScanDetector:
             confidence = max(confidence, 0.9)
             reasons.append(f"high fan-out ({fanout} distinct ports)")
 
+        # Host-sweep backstop: one port probed on many hosts.
+        if sweep_hosts >= self.sweep_threshold:
+            fired = True
+            confidence = max(confidence, 0.9)
+            reasons.append(f"host sweep ({sweep_hosts} hosts on port {sweep_port})")
+
         reason = "; ".join(reasons) if reasons else "no indicators"
         return fired, confidence, reason
 
@@ -340,6 +361,31 @@ class PortScanDetector:
                 per_src.setdefault(f.src_ip, set()).add(f.dst_port)
             for src_ip, ports in per_src.items():
                 result[(src_ip, window_start)] = len(ports)
+        return result
+
+    def _sweep_by_src_window(
+        self, flows: List[Flow]
+    ) -> Dict[Tuple[str, float], Tuple[Optional[int], int]]:
+        """(src, window) -> (port, hosts) for the port reaching most hosts.
+
+        Ports a normal client fans out on toward the internet (DNS, web,
+        NTP, DoT, mDNS) only count internal targets, so browsing is not a
+        sweep; an internal host touching many internal hosts on one port
+        (445, 3389, 22 across a subnet) is.
+        """
+        from netsentinel.detectors.base import is_internal
+        buckets = self.builder._bucket_by_window(flows)
+        result: Dict[Tuple[str, float], Tuple[Optional[int], int]] = {}
+        for window_start, window_flows in buckets.items():
+            per: Dict[Tuple[str, int], set] = {}
+            for f in window_flows:
+                if f.dst_port in self.sweep_exempt and not is_internal(f.dst_ip):
+                    continue
+                per.setdefault((f.src_ip, f.dst_port), set()).add(f.dst_ip)
+            for (src_ip, port), hosts in per.items():
+                key = (src_ip, window_start)
+                if len(hosts) > result.get(key, (None, 0))[1]:
+                    result[key] = (port, len(hosts))
         return result
 
     def _scan_type_by_src_window(

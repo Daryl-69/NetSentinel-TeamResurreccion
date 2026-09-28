@@ -1,0 +1,79 @@
+{
+ "label": "eval_chunk4.json",
+ "files": 14,
+ "use_cicflowmeter": false,
+ "elapsed_s": 41.7,
+ "totals": {
+  "events": 41644,
+  "flows": 19295,
+  "packets": 1895403,
+  "bytes": 1544000240,
+  "tls_client_hellos": 5319,
+  "probe_stubs": 2584,
+  "span_s": 28332.331000000002
+ },
+ "hours": 7.87,
+ "alerts_total": 229,
+ "severity": {
+  "INFO": 159,
+  "HIGH": 21,
+  "MEDIUM": 20,
+  "CRITICAL": 29
+ },
+ "by_detector": [
+  {
+   "class": "Data Exfiltration",
+   "detector": "exfil_vae",
+   "subtype": "DNS tunnelling (anomalous name)",
+   "alerts": 160,
+   "distinct_sources": 4,
+   "distinct_destinations": 3
+  },
+  {
+   "class": "DGA",
+   "detector": "dga_cnn_bilstm_v2",
+   "subtype": "machine-generated name",
+   "alerts": 34,
+   "distinct_sources": 3,
+   "distinct_destinations": 2
+  },
+  {
+   "class": "C2 Beacon",
+   "detector": "c2_combined_score_v2",
+   "subtype": "periodic check-ins",
+   "alerts": 19,
+   "distinct_sources": 5,
+   "distinct_destinations": 14
+  },
+  {
+   "class": "Port Scan",
+   "detector": "portscan_spsd",
+   "subtype": "block scan",
+   "alerts": 8,
+   "distinct_sources": 2,
+   "distinct_destinations": 3
+  },
+  {
+   "class": "DNS Tunnel",
+   "detector": "dga_cnn_bilstm_v2",
+   "subtype": "tunnel-like name",
+   "alerts": 7,
+   "distinct_sources": 2,
+   "distinct_destinations": 2
+  },
+  {
+   "class": "DDoS",
+   "detector": "ddos_rate_entropy",
+   "subtype": "UDP flood",
+   "alerts": 1,
+   "distinct_sources": 0,
+   "distinct_destinations": 1
+  }
+ ],
+ "analyzer_stats": {
+  "flows_processed": 41644,
+  "total_alerts": 229,
+  "recent_count": 229,
+  "schema_violations": 0
+ }
+}

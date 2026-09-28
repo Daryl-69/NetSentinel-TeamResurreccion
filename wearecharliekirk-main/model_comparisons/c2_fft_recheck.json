@@ -1,0 +1,84 @@
+{
+ "sessions": [
+  {
+   "is_beacon": true,
+   "flows": 378,
+   "share_of_gaps_under_5s": 0.39,
+   "windows_scored": 12,
+   "prominence_max": 5.76,
+   "prominence_median": 4.01
+  },
+  {
+   "is_beacon": false,
+   "flows": 137,
+   "share_of_gaps_under_5s": 0.56,
+   "windows_scored": 2,
+   "prominence_max": 5.4,
+   "prominence_median": 5.3
+  },
+  {
+   "is_beacon": false,
+   "flows": 112,
+   "share_of_gaps_under_5s": 0.07,
+   "windows_scored": 1,
+   "prominence_max": 4.84,
+   "prominence_median": 4.84
+  },
+  {
+   "is_beacon": false,
+   "flows": 1048,
+   "share_of_gaps_under_5s": 0.58,
+   "windows_scored": 38,
+   "prominence_max": 4.11,
+   "prominence_median": 2.92
+  },
+  {
+   "is_beacon": false,
+   "flows": 145,
+   "share_of_gaps_under_5s": 0.08,
+   "windows_scored": 2,
+   "prominence_max": 4.07,
+   "prominence_median": 3.38
+  },
+  {
+   "is_beacon": false,
+   "flows": 519,
+   "share_of_gaps_under_5s": 0.41,
+   "windows_scored": 17,
+   "prominence_max": 3.44,
+   "prominence_median": 2.8
+  },
+  {
+   "is_beacon": false,
+   "flows": 101,
+   "share_of_gaps_under_5s": 0.0,
+   "windows_scored": 1,
+   "prominence_max": 2.96,
+   "prominence_median": 2.96
+  },
+  {
+   "is_beacon": false,
+   "flows": 140,
+   "share_of_gaps_under_5s": 0.0,
+   "windows_scored": 2,
+   "prominence_max": 2.85,
+   "prominence_median": 2.83
+  },
+  {
+   "is_beacon": false,
+   "flows": 121,
+   "share_of_gaps_under_5s": 0.0,
+   "windows_scored": 1,
+   "prominence_max": 1.8,
+   "prominence_median": 1.8
+  }
+ ],
+ "beacon_rank_by_max_over_windows": [
+  1,
+  9
+ ],
+ "beacon_rank_by_median_over_windows": [
+  3,
+  9
+ ]
+}

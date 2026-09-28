@@ -1,11 +1,14 @@
 """NetSentinel — Main FastAPI Application.
 
 This is the entry point. It:
-1. Loads all 6 ONNX models on startup
-2. Initializes the extraction layer (PCAP → features)
-3. Starts a background traffic simulation loop
-4. Serves WebSocket for real-time alerts to the React dashboard
-5. Provides REST endpoints for health, alerts, stats, PCAP upload, live capture
+1. Loads the ONNX models and the rule-based detectors on startup
+2. Initializes the extraction layer (PCAP / live capture → events)
+3. Starts a background loop for the SYNTHETIC traffic simulator
+4. Serves the operator console at /console/ and a WebSocket at /ws
+   (alerts in the v1 schema, pipeline stats, throughput/latency metrics)
+5. Provides REST endpoints for health, alerts, metrics, the alert schema,
+   PS 26145 status, PCAP replay, live capture, the throughput benchmark
+   and the integrity layer
 """
 import asyncio
 import time
@@ -20,6 +23,7 @@ from netsentinel.api.websocket import WebSocketHub
 from netsentinel.api.routes import create_routes, router
 from netsentinel.simulator.traffic_gen import generate_event
 from netsentinel.extractor import PacketProcessor
+from netsentinel.pipeline.metrics import METRICS
 from netsentinel.config import (
     MAX_ALERTS_STORED, FLOW_IDLE_TIMEOUT, FLOW_ACTIVE_TIMEOUT, SESSION_MIN_FLOWS,
 )
@@ -30,7 +34,7 @@ from netsentinel.config import (
 app = FastAPI(
     title="NetSentinel",
     description="AI-Powered Network Threat Detection Pipeline",
-    version="1.0.0",
+    version="1.1.0",
 )
 
 # CORS — allow React dashboard (any origin for dev)
@@ -41,6 +45,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Operator console: plain static files in ../console, served at /console/
+from pathlib import Path as _Path
+from fastapi.staticfiles import StaticFiles as _StaticFiles
+_CONSOLE_DIR = _Path(__file__).resolve().parent.parent / "console"
+if _CONSOLE_DIR.is_dir():
+    app.mount("/console", _StaticFiles(directory=str(_CONSOLE_DIR), html=True), name="console")
+# Inspector-Sentry view: ../sentinel, served at /sentinel/
+_SENTINEL_DIR = _Path(__file__).resolve().parent.parent / "sentinel"
+if _SENTINEL_DIR.is_dir():
+    app.mount("/sentinel", _StaticFiles(directory=str(_SENTINEL_DIR), html=True), name="sentinel")
 
 # Shared state
 registry = ModelRegistry()
@@ -199,14 +214,18 @@ async def startup():
     create_routes(analyzer, alert_manager, ws_hub, simulator_control, packet_processor)
     app.include_router(router)
     
-    # Start background simulation loop
+    # Start background simulation loop and the metrics feed
     asyncio.create_task(simulation_loop())
+    asyncio.create_task(metrics_loop())
     
     print("\n[>] Server ready!")
     print(f"   REST API:      http://localhost:8000/api/health")
     print(f"   WebSocket:     ws://localhost:8000/ws")
     print(f"   PCAP Upload:   POST http://localhost:8000/api/pcap/upload")
     print(f"   Live Capture:  POST http://localhost:8000/api/capture/start")
+    print(f"   Console:       http://localhost:8000/console/")
+    print(f"   Sentinel:      http://localhost:8000/sentinel/")
+    print(f"   PS 26145:      GET  http://localhost:8000/api/ps26145")
     print(f"   Docs:          http://localhost:8000/docs")
     if getattr(app.state, 'integrity', None):
         print(f"   Verify Alert:  GET http://localhost:8000/api/integrity/verify/{{alert_id}}")
@@ -244,71 +263,41 @@ async def websocket_endpoint(websocket: WebSocket):
 # ============================================================
 async def simulation_loop():
     """
-    Background task that continuously generates traffic events,
-    runs them through the AI pipeline, and broadcasts alerts.
+    Background task that generates SYNTHETIC events while the simulator is
+    on, runs them through the pipeline and broadcasts the alerts.
     """
     print("  [~] Simulation loop started (send POST /api/simulate/mixed to begin)")
-    
+
     stats_interval = 2.0  # Send stats every 2 seconds
     last_stats_time = time.time()
-    port_scan_burst_counter = 0  # Track when to inject port scan bursts
-    
+    last_tick = time.time()
+
     while True:
         if not simulator_control["running"]:
             await asyncio.sleep(0.5)
-            port_scan_burst_counter = 0  # Reset when not running
             continue
-        
+
         mode = simulator_control["mode"]
         rate = simulator_control.get("rate", 10)
-        
+        METRICS.set_source("sim", mode)
+
         try:
-            # Inject port scan burst every ~15 events in mixed mode (increased frequency)
-            if mode == "mixed" and port_scan_burst_counter >= 15:
-                from netsentinel.simulator.traffic_gen import generate_port_scan_burst
-                print("\n" + "="*60)
-                print("[🔍] Injecting port scan burst...")
-                burst = generate_port_scan_burst()
-                print(f"[🔍] Burst size: {len(burst)} flows from {burst[0]['source_ip'] if burst else 'N/A'}")
-                
-                # Process all flows in burst
-                alerts_generated = 0
-                for idx, event in enumerate(burst):
-                    alert = analyzer.analyze_flow(event)
-                    if alert:
-                        alerts_generated += 1
-                        await ws_hub.broadcast_alert(alert)
-                        if alert.get("threat_class") == "Port Scan":
-                            fan_out = alert.get("evidence", {}).get("fan_out", {})
-                            print(f"[✓] Port Scan ALERT generated!")
-                            print(f"    Source: {alert.get('source_ip')}")
-                            print(f"    Ports scanned: {fan_out.get('total_ports', 0)}")
-                            print(f"    Confidence: {alert.get('confidence', 0):.3f}")
-                
-                port_scan_burst_counter = 0
-                print(f"[✓] Port scan burst complete: {alerts_generated}/{len(burst)} flows generated alerts")
-                print("="*60 + "\n")
-            else:
-                # Generate single event
-                event = generate_event(mode)
-                
-                # Run through pipeline
-                alert = analyzer.analyze_flow(event)
-                
-                # If threat detected, broadcast to dashboard
-                if alert:
+            produced = generate_event(mode)
+            events = produced if isinstance(produced, list) else [produced]
+            for i, event in enumerate(events):
+                for alert in analyzer.analyze(event):
                     await ws_hub.broadcast_alert(alert)
-                    # Debug: log port scan detections
-                    if alert.get("threat_class") == "Port Scan":
-                        fan_out = alert.get("evidence", {}).get("fan_out", {})
-                        print(f"[SCAN-ALERT] {alert.get('source_ip')} → {fan_out.get('total_ports', 0)} ports")
-                
-                port_scan_burst_counter += 1
+                if i and i % 100 == 0:
+                    await asyncio.sleep(0)
+            now = time.time()
+            if now - last_tick >= 2.0:
+                last_tick = now
+                for alert in analyzer.tick(now):
+                    await ws_hub.broadcast_alert(alert)
         except Exception as e:
             # Log but don't crash — one bad event shouldn't kill the loop
             print(f"[!] Simulator error: {e}")
-            pass
-        
+
         # Periodically send stats update
         now = time.time()
         if now - last_stats_time >= stats_interval:
@@ -316,9 +305,23 @@ async def simulation_loop():
             stats["simulation_mode"] = mode
             await ws_hub.broadcast_stats(stats)
             last_stats_time = now
-        
+
         # Rate control
         await asyncio.sleep(1.0 / rate)
+
+
+async def metrics_loop():
+    """Once a second: throughput, latency and totals to every console."""
+    while True:
+        await asyncio.sleep(1.0)
+        if ws_hub.client_count:
+            try:
+                snap = METRICS.snapshot()
+                snap["c2_watchlist"] = analyzer.c2_watchlist(5)
+                snap["tls_fingerprints"] = analyzer.tls_detector.top_fingerprints(8)
+                await ws_hub.broadcast_metrics(snap)
+            except Exception as e:
+                print(f"[!] Metrics broadcast error: {e}")
 
 
 # ============================================================

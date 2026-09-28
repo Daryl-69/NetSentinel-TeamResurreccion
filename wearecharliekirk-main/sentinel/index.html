@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetSentinel — Inspector · Sentry</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23ff7a1a'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%231a0d02' stroke-width='3' stroke-dasharray='30 10'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sentinel.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div class="logo" aria-hidden="true"><span></span></div>
+    <div class="brand-txt">
+      <div class="brand-name">NET<span>SENTINEL</span></div>
+      <div class="brand-sub">Inspector · Sentry &nbsp;—&nbsp; behavioural threat detection for one-way networks</div>
+    </div>
+  </div>
+  <div class="top-right">
+    <div class="ps-chip">SIH&nbsp;2026 · PS&nbsp;26145</div>
+    <div class="stat"><span class="stat-k">events / s</span><span class="stat-v" id="tpNow">0</span></div>
+    <div class="stat"><span class="stat-k">events</span><span class="stat-v" id="evNow">0</span></div>
+    <div class="stat"><span class="stat-k">alerts</span><span class="stat-v hot" id="alertNow">0</span></div>
+    <div class="conn" id="conn"><span class="dot"></span><span id="connText">connecting</span></div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<main class="grid">
+
+  <div class="leftcol">
+    <!-- the cascade -->
+    <section class="panel cascade">
+      <div class="phead">
+        <h2>The cascade</h2>
+        <span class="hint">a small model watches every host · the big model is spent only where it matters</span>
+        <div class="phase-track" id="phaseTrack">
+          <span class="ph" data-ph="1">1 · Commission</span>
+          <span class="ph" data-ph="2">2 · Distil</span>
+          <span class="ph" data-ph="3">3 · Watch &amp; escalate</span>
+        </div>
+      </div>
+
+      <div class="cascade-body" id="cascadeBody">
+        <svg id="flowSvg" class="flow-svg"></svg>
+
+        <div class="lane lane-sentry">
+          <div class="lane-head">
+            <div class="lane-title">SENTRY <span class="pbadge" id="sentryParams">14,992 params</span></div>
+            <div class="lane-sub">at the edge · scores every host, every hour · CPU</div>
+          </div>
+          <div class="hostgrid" id="hostGrid"></div>
+          <div class="boot" id="boot">
+            <div class="boot-t" id="bootTitle">Starting the cascade…</div>
+            <div class="boot-log" id="bootLog"></div>
+          </div>
+          <div class="legend">
+            <span><i class="lg lg-cool"></i>normal</span>
+            <span><i class="lg lg-warm"></i>Sentry score rising</span>
+            <span><i class="lg lg-esc"></i>sent to Inspector</span>
+            <span><i class="lg lg-flag"></i>Inspector flagged</span>
+            <span class="lg-live"><b id="liveHosts">—</b> hosts active this hour</span>
+          </div>
+        </div>
+
+        <div class="flow" id="flow">
+          <div class="flow-lbl">top</div>
+          <div class="flow-big" id="budgetPct">5%</div>
+          <div class="flow-lbl">of host-hours<br>escalated</div>
+          <div class="flow-arrow">⟶</div>
+        </div>
+
+        <div class="lane lane-inspector">
+          <div class="lane-head">
+            <div class="lane-title">INSPECTOR <span class="pbadge amber" id="inspParams">205,546 params</span></div>
+            <div class="lane-sub">central · re-checks only what the Sentry escalates</div>
+          </div>
+          <div class="inspector-core" id="inspectorCore">
+            <div class="core-ring"></div><div class="core-ring r2"></div>
+            <div class="core-body">
+              <div class="core-n" id="escN">0</div>
+              <div class="core-l">host-hours<br>re-checked now</div>
+            </div>
+          </div>
+          <div class="vhead">Inspector verdicts <span class="dim">error vs its own 99th-percentile threshold</span></div>
+          <div class="verdicts" id="verdicts"></div>
+        </div>
+      </div>
+
+      <div class="clockline">
+        <div class="clockline-l">WATCHED DAY <b id="dayN">—</b> &nbsp;·&nbsp; <b id="hourClock">--:--</b></div>
+        <div class="totline" id="totline"></div>
+      </div>
+    </section>
+
+    <!-- charts -->
+    <section class="panel charts">
+      <div class="chartbox">
+        <div class="chart-h">Detections per second <span class="dim">last 90 s, live feed</span></div>
+        <svg id="sparkAlerts" class="spark"></svg>
+      </div>
+      <div class="chartbox">
+        <div class="chart-h">Watched host · Sentry score by hour <span class="dim" id="scoreHost"></span></div>
+        <svg id="scoreChart" class="spark"></svg>
+      </div>
+      <div class="chartbox">
+        <div class="chart-h">Cost this hour <span class="dim">ms on this machine</span></div>
+        <div class="latbars" id="latBars"></div>
+        <div class="compression"><span id="compA">205,546</span> → <span id="compB">14,992</span> params · <b id="compX">13.7×</b> smaller</div>
+      </div>
+    </section>
+  </div>
+
+  <div class="rightcol">
+    <!-- the chain -->
+    <section class="panel chain">
+      <div class="phead"><h2>Living off trusted services</h2><span class="hint">one host walks legitimate services the way an intruder would</span></div>
+      <div class="chain-host" id="chainHost">No host running the chain</div>
+      <div class="chain-steps" id="chainSteps"></div>
+      <div class="chain-note">Every step alone is normal traffic. What the models score is the <b>combination and shape</b> of services one host reaches in an hour — no payload is read.</div>
+    </section>
+
+    <!-- C2 -->
+    <section class="panel c2">
+      <div class="phead"><h2>C2 beaconing</h2><span class="hint">how a check-in on a timer gives itself away</span></div>
+      <div class="c2-wrap">
+        <div class="c2-plot">
+          <svg id="c2Timeline" class="c2-svg"></svg>
+          <svg id="c2Gaps" class="c2-svg gaps"></svg>
+        </div>
+        <div class="c2-side" id="c2Side">
+          <div class="c2-wait">Waiting for a host that calls home on a timer…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- live detections -->
+    <section class="panel detect">
+      <div class="phead"><h2>Live detections</h2><span class="hint">every PS 26145 family, scored as it arrives</span></div>
+      <div class="fam" id="famTiles"></div>
+      <div class="ticker" id="ticker"></div>
+    </section>
+  </div>
+</main>
+
+<footer class="criteria" id="criteria"></footer>
+<div class="banner" id="banner" hidden></div>
+
+<script src="sentinel.js"></script>
+</body>
+</html>

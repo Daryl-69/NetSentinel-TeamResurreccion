@@ -91,6 +91,12 @@ class ReplayEngine:
         Returns:
             ReplayResult with status PASS, FAIL, or UNVERIFIABLE.
         """
+        # Rule-based / statistical detectors commit their decision inputs
+        # and a digest of their parameters instead of an ONNX file digest.
+        if feature_blob.get("rule_key"):
+            return self._replay_rule(feature_blob, committed_class,
+                                     committed_score_ppm, model_digest)
+
         # Determine which model class to replay
         model_key = self._class_to_model_key(committed_class)
         if model_key is None:
@@ -195,6 +201,49 @@ class ReplayEngine:
             model_digest_match=True,
             detail=detail,
         )
+
+    def _replay_rule(self, feature_blob: dict, committed_class: str,
+                     committed_score_ppm: int, model_digest: str) -> ReplayResult:
+        key = feature_blob.get("rule_key")
+        rules = getattr(self.registry, "rule_detectors", {}) or {}
+        det = rules.get(key)
+
+        def unverifiable(detail, digest_match=None):
+            return ReplayResult(status="UNVERIFIABLE", class_match=None, score_match=None,
+                                replayed_class="", replayed_score_ppm=0,
+                                committed_class=committed_class,
+                                committed_score_ppm=committed_score_ppm,
+                                model_digest_match=digest_match, detail=detail)
+
+        if det is None:
+            return unverifiable(f"Rule detector '{key}' is not running on this sensor")
+        if det.digest != model_digest:
+            return ReplayResult(
+                status="FAIL", class_match=None, score_match=None, replayed_class="",
+                replayed_score_ppm=0, committed_class=committed_class,
+                committed_score_ppm=committed_score_ppm, model_digest_match=False,
+                detail=(f"Detector parameters changed since the alert: "
+                        f"receipt={model_digest}, running={det.digest}"))
+        try:
+            inputs = json.loads((feature_blob.get("values") or ["{}"])[0])
+            out = det.replay(inputs)
+        except Exception as e:
+            return unverifiable(f"Replay execution error: {e}", True)
+        if out is None:
+            return unverifiable("This detector's decision depends on running state "
+                                "that one alert's inputs cannot reproduce", True)
+        replayed_class = out.get("threat", "Benign")
+        replayed_ppm = confidence_to_ppm(round(float(out.get("confidence", 0.0)), 4))
+        class_match = replayed_class == committed_class
+        score_match = replayed_ppm == committed_score_ppm
+        ok = class_match and score_match
+        return ReplayResult(
+            status="PASS" if ok else "FAIL", class_match=class_match, score_match=score_match,
+            replayed_class=replayed_class, replayed_score_ppm=replayed_ppm,
+            committed_class=committed_class, committed_score_ppm=committed_score_ppm,
+            model_digest_match=True,
+            detail=("Decision recomputed from the committed inputs"
+                    if ok else "Recomputed decision differs from the receipt"))
 
     # -- Per-model replay adapters ------------------------------------
 

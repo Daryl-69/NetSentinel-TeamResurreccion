@@ -1,0 +1,57 @@
+{
+ "what": "5 public malware-sandbox captures (CAPE Sandbox x3, Zenbox, Dr.Web vxCube; 13-66 KB each, about 8 minutes in total), kept outside the repo in PCAPS/; replayed through the live-mode pipeline with the final code of the PS 26145 update",
+ "pipeline": "live-mode path: the sensor's own extractor and every detector; CICFlowMeter not run",
+ "labels": "malicious by source (sandbox runs of malware samples); no per-flow labels",
+ "parts": 1,
+ "captured_hours": 0.13,
+ "captured_hours_per_part": [
+  0.13
+ ],
+ "state": "detector state (C2/TLS windows, baselines) starts fresh in each part",
+ "totals": {
+  "files": 5,
+  "packets": 357,
+  "bytes": 141507,
+  "flows": 54,
+  "probe_records": 10,
+  "dns_queries": 67,
+  "tls_client_hellos": 5,
+  "events": 193
+ },
+ "processing_s": 0.2,
+ "alerts_total": 7,
+ "alerts_per_24h_of_capture": null,
+ "alerts_by_class": {
+  "Data Exfiltration": 4,
+  "DGA": 3
+ },
+ "severity": {
+  "HIGH": 3,
+  "INFO": 4
+ },
+ "by_detector": [
+  {
+   "class": "Data Exfiltration",
+   "detector": "exfil_vae",
+   "subtype": "DNS tunnelling (anomalous name)",
+   "alerts": 4,
+   "per_24h_of_capture": null,
+   "distinct_sources": 4,
+   "distinct_destinations": 2,
+   "repeats_held": 0
+  },
+  {
+   "class": "DGA",
+   "detector": "dga_cnn_bilstm_v2",
+   "subtype": "machine-generated name",
+   "alerts": 3,
+   "per_24h_of_capture": null,
+   "distinct_sources": 3,
+   "distinct_destinations": 2,
+   "repeats_held": 0
+  }
+ ],
+ "portscan_group_destination_flows_left_out": 0,
+ "portscan_external_service_flows_left_out": 61,
+ "portscan_decided_by": {}
+}
