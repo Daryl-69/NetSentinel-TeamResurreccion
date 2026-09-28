@@ -8,6 +8,97 @@ NetSentinel is an AI-powered **Network Detection & Response (NDR)** system that 
 
 ---
 
+## ⚡ Quick Start — Download and Run
+
+> **Prerequisites:** Python 3.10+ and Node.js 18+ installed. Internet for first run (models auto-download from HuggingFace).
+
+### 1️⃣ Backend + AI Pipeline (detects 6 threat families)
+
+```bash
+git clone https://github.com/Daryl-69/NetSentinel-TeamResurreccion.git
+cd NetSentinel-TeamResurreccion/netsentinel-main
+
+# Create virtual environment & install
+python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+# Linux/Mac:
+# source .venv/bin/activate
+
+pip install -r requirements.txt
+
+# Start the server (models auto-download on first run)
+python run.py
+```
+
+✅ Server starts at **http://localhost:8000** — API docs at **http://localhost:8000/docs**
+
+```bash
+# Test it — trigger a DDoS attack simulation:
+curl -X POST http://localhost:8000/api/simulate/mixed
+
+# See the alerts:
+curl http://localhost:8000/api/alerts
+```
+
+### 2️⃣ React Dashboard (real-time 3D threat visualization)
+
+```bash
+# In a NEW terminal:
+cd NetSentinel-TeamResurreccion/netsentinel-main/frontend
+npm install
+npm run dev
+```
+
+✅ Dashboard opens at **http://localhost:5173** — connects to backend via WebSocket, shows live 3D threat graph, alert feed, MITRE heatmap, model confidence charts
+
+### 3️⃣ Extended System + Inspector–Sentry Dashboard
+
+```bash
+# In a NEW terminal:
+cd NetSentinel-TeamResurreccion/wearecharliekirk-main
+
+python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+
+pip install -r requirements.txt
+python run.py
+
+# In ANOTHER terminal — push threat traffic into the engine:
+cd NetSentinel-TeamResurreccion/wearecharliekirk-main
+python traffic_feed.py
+```
+
+✅ Open **http://localhost:8000/sentinel/** — Inspector–Sentry live ops dashboard  
+✅ Open **http://localhost:8000/console/** — Operator console  
+✅ Open **http://localhost:8000/docs** — Full API documentation
+
+### 4️⃣ V2 Research Harness (Inspector–Sentry experiments)
+
+```bash
+cd NetSentinel-TeamResurreccion/netsentinel-main/v2
+
+# Install PyTorch CPU (avoids pulling the 2.5GB CUDA build)
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements.txt
+
+# Run the full experiment (~2 min/seed, CPU only)
+python run_experiment.py --seeds 3 --hosts 300 --days 24
+
+# Distribution-shift stress test
+python shift_test.py --seeds 3 --hosts 300 --days 24
+
+# Generate result charts
+python make_charts.py results.json
+```
+
+✅ Produces router comparison, escalation budget curves, and distribution-shift analysis
+
+> **Note:** Steps 1 & 2 are the core demo (backend + dashboard). Step 3 is the extended version. Step 4 is the research harness. Each step is independent — you can run any combination.
+
+---
+
 ## 🎯 What It Detects
 
 | Threat Family | Model Architecture | MITRE ATT&CK |
