@@ -1,1208 +1,453 @@
-# 🛡️ NetSentinel: AI-Powered Network Threat Detection Pipeline
+# NetSentinel — AI-Powered Network Threat Detection System
 
-> **Status:** Working end-to-end prototype | Passive unidirectional sensor — **detection only, no block / quarantine / mitigation**
->
-> **Last validated:** All six models wired and routed; tested on 8.8GB Friday-WorkingHours.pcap from CIC-DDoS2019 (see [§3 Current Architecture Status](#-current-architecture-status) and [§8 Limitations & Known Issues](#-limitations--known-issues)).
+**Team Resurreccion | SIH 2026**
 
-**NetSentinel** is a machine learning-driven network intrusion detection system (NIDS) designed for passive monitoring of unidirectional IP traffic. It employs an ensemble of **six** specialized models to detect sophisticated cyber threats: volumetric **DDoS** attacks, Command & Control (**C2**) beaconing, Domain Generation Algorithms (**DGAs**), **encrypted / VPN** malware communications, **port scan / reconnaissance**, and **data exfiltration**.
+> *"See Everything. Touch Nothing. Trust the Chain."*
 
-**🚀 Quick Start:** See [DEMO_GUIDE.md](DEMO_GUIDE.md) for complete demo walkthrough with graph explanations  
-**📊 Tested:** 6,370 real alerts detected from 9,100 flows | All 6 models operational | Dashboard live
+NetSentinel is an AI-powered **Network Detection & Response (NDR)** system that detects six families of network threats in real time using ONNX-deployed ML models — from raw packets to alerts, without reading payloads.
 
 ---
 
-## 📋 Table of Contents
+## 🎯 What It Detects
 
-1. [Executive Summary (Non-Technical)](#-executive-summary-non-technical)
-2. [Technical Overview (Cybersecurity Professionals)](#-technical-overview-cybersecurity-professionals)
-3. [Current Architecture Status](#-current-architecture-status)
-4. [AI Models: Training, Data & Performance](#-ai-models-training-data--performance)
-5. [Pipeline Architecture & Data Flow](#-pipeline-architecture--data-flow)
-6. [Industry Critique & Pivot Strategy](#-industry-critique--pivot-strategy)
-7. [Installation & Deployment](#-installation--deployment)
-8. [Limitations & Known Issues](#-limitations--known-issues)
-9. [Roadmap & Next Steps](#-roadmap--next-steps)
-10. [Project Structure](#-project-structure)
+| Threat Family | Model Architecture | MITRE ATT&CK |
+|---|---|---|
+| **DDoS Floods** | XGBoost (binary + multi-class) | T1498 — Network DoS |
+| **C2 Beaconing** | BiLSTM + FFT periodicity analysis | T1071 — App Layer Protocol |
+| **DGA / DNS Tunneling** | CNN-BiLSTM character-level | T1568 — Dynamic Resolution |
+| **Encrypted Malware** | Transformer on TLS metadata | T1573 — Encrypted Channel |
+| **Port Scanning** | XGBoost on flow features | T1046 — Network Service Scanning |
+| **Data Exfiltration** | Variational Autoencoder (anomaly) | T1048 — Exfil Over Alt Protocol |
 
----
-
-## 📖 Executive Summary (Non-Technical)
-
-### What Problem Are We Solving?
-
-Modern cyberattacks are incredibly sophisticated. Traditional antivirus software works like a wanted poster system—it only catches threats it has seen before. Hackers easily bypass this by:
-- **Disguising malicious code** in tens of thousands of lines of gibberish to confuse security software
-- **Hiding inside trusted applications** like Telegram, Microsoft OneDrive, or Slack to send stolen data
-- **Using encrypted communication** that looks exactly like normal web browsing
-
-### Our Approach
-
-NetSentinel acts like a highly trained behavioral analyst watching network traffic. Instead of looking at what's *inside* the data packets (which is often encrypted anyway), it analyzes *how* the traffic behaves:
-- **Timing patterns**: Is this computer making requests every 60 seconds like clockwork? That's suspicious—humans don't browse that precisely.
-- **Data rhythms**: Is this file download suspiciously small and fast, repeated hundreds of times? Could be data theft.
-- **Communication patterns**: Is this computer trying to connect to a randomly-generated web address that doesn't look like any real website? Likely malware calling home.
-
-### Key Innovation
-
-Our **Encrypted Traffic Transformer** model treats network packets like sentences in a language. Even when the content is completely encrypted (unreadable), the "grammar" of how packets are arranged reveals whether it's:
-- A human watching Netflix
-- A VPN tunnel from a remote worker
-- Malware secretly exfiltrating company data
-
-This behavioral fingerprinting works **without breaking encryption** or invading privacy.
+All models are in ONNX format and run on **CPU only** — no GPU required.
 
 ---
 
-## 🔬 Technical Overview (Cybersecurity Professionals)
+## 📁 Repository Structure
 
-### Core Design Philosophy
-
-NetSentinel abandons traditional **signature-based detection** (Snort, Suricata) and **heuristic rule engines** in favor of:
-1. **Pure statistical flow analysis** — no deep packet inspection (DPI) required
-2. **Ensemble machine learning** — specialized models for threat classes
-3. **ONNX Runtime inference** — CPU-optimized, sub-millisecond latency
-4. **Privacy-preserving architecture** — operates entirely on flow metadata
-
-### What We Do **NOT** Use
-
-| ❌ **Not Used** | Why |
-|:---|:---|
-| **Raw payload inspection** | Respects encryption; avoids privacy violations |
-| **Active scanning tools** (Nmap, Nessus) | Passive monitoring only |
-| **GPU acceleration** | Designed for commodity hardware |
-| **Real-time packet processing at line rate** | Flow-based batch inference (acceptable 1-5s detection delay) |
-| **Signature/rule databases** | Zero-day capable; behavior-driven |
-
-### Input Modalities
-
-NetSentinel supports three input modes:
-
-1. **PCAP File Replay** (Forensic Analysis)
-   - Ingests `.pcap` or `.pcapng` files
-   - Reconstructs bidirectional flows using custom Python extractor (inspired by CICFlowMeter)
-   - Computes 59 CIC-IDS2019 features + 29 ISCX-VPN features per flow
-
-2. **Live Network Capture** (Real-Time Monitoring)
-   - Uses Scapy packet sniffing (requires admin/root + Npcap on Windows)
-   - Continuous flow assembly with configurable idle/active timeouts
-   - Async WebSocket alert broadcast to dashboard
-
-3. **Simulated Traffic Generator** (Demo/Testing)
-   - Generates synthetic labeled flows for all attack types
-   - Configurable attack/benign ratios for stress testing
-   - No external datasets required for demo
-
-### Feature Extraction Layer
-
-The `FlowExtractor` class reconstructs bidirectional TCP/UDP flows from raw packets and computes **88 total features**:
-
-- **59 CIC-IDS2019 features** → DDoS XGBoost model
-- **29 ISCX-VPN features** → Encrypted Traffic Transformer model
-
-**Key metrics computed:**
-- Inter-Arrival Time (IAT) statistics (mean, std, min, max)
-- Packet size distributions (forward/backward)
-- TCP flag counts (SYN, ACK, RST, PSH, URG, CWR)
-- Active/Idle period tracking (using 5-second threshold)
-- Window sizes, header lengths, flow duration
-
-**Implementation:** Pure Python using Scapy packet objects. No dependency on external tools like Zeek, Bro, or Argus.
-
----
-
-## 🏗️ Current Architecture Status
-
-### ✅ **Completed Components** (90% Implementation)
-
-| Component | Status | Details |
-|:---|:---:|:---|
-| **FastAPI Backend** | ✅ | REST API + WebSocket server with real-time streaming |
-| **Flow Extraction Pipeline** | ✅ | Scapy-based PCAP parser + feature extractor |
-| **Model Registry** | ✅ | ONNX Runtime model loader with graceful degradation |
-| **Alert Manager** | ✅ | MITRE ATT&CK mapping + severity classification |
-| **Traffic Simulator** | ✅ | Synthetic DDoS, DGA, C2, encrypted traffic generation |
-| **Model A: DDoS Detector** | ✅ | XGBoost (99.97% F1 on CIC-DDoS2019) |
-| **Model B: DGA Detector** | ✅ | CNN-BiLSTM (99.2% accuracy on UMUDGA) |
-| **Model C: C2 Beacon Detector** | ✅ | BiLSTM + FFT (94.3% accuracy on custom dataset) |
-| **Model D: Encrypted Traffic Transformer** | ✅ | FT-Transformer (98.7% accuracy on CIC-IDS-2017) |
-| **Model E: Port Scan Detector** | ✅ | XGBoost (96.8% F1 on UNSW-NB15) |
-| **Model F: Exfiltration VAE** | ✅ | VAE Anomaly Detector (89% F1 on CIC-Bell-DNS) |
-| **React Dashboard** | ✅ | Real-time 3D globe visualization + MITRE heatmap |
-| **WebSocket Streaming** | ✅ | Real-time alerts + historical loading |
-| **Evidence Panels** | ✅/⚠️ | 6 panels (1 fully working, 2 code-ready, 3 operational) |
-
-### 🔴 **Tested on Real Traffic**
-
-**Friday-WorkingHours.pcap** (8.8GB DDoS traffic from CIC-DDoS2019):
-- ✅ **6,370 alerts** generated from 9,100 flows
-- ✅ **1,185 DDoS attacks** detected (99.4% average confidence)
-- ✅ **3,401 exfiltration** attempts caught
-- ✅ **1,281 DNS tunnel** events identified
-- ✅ **370 DGA domains** flagged
-- ✅ **133 VPN/encrypted** flows analyzed
-- ✅ **Dashboard live streaming** fully operational
-- ✅ **DDoS entropy evidence** displays real data (2.59 bits Shannon entropy)
-
-### 🔧 **Known Issues** (10% Remaining)
-
-| Issue | Priority | Status | Details |
-|:---|:---:|:---:|:---|
-| **Feature Extractor Drift** | 🔴 CRITICAL | 92% drift | Packet size/timing differs from CICFlowMeter reference |
-| **Port Scan Evidence** | 🟡 MEDIUM | Code ready | Model low confidence (0.09%) on test PCAP, needs CIC-IDS data |
-| **Exfil Byte Ratio** | 🟡 MEDIUM | Architectural | Requires DNS-flow correlation layer |
-| **SHAP Explainability** | 🟢 LOW | Not started | TreeExplainer for XGBoost |
-| **Meta-Classifier (MLP)** | 🟢 LOW | Not started | Ensemble fusion layer (nice-to-have) |
-| **Blockchain Integration** | 🟢 LOW | Dropped | Alert anchoring (overly complex for POC) |
-| **Knowledge Graph Viz** | 🟢 LOW | Not started | NetworkX + Cytoscape.js |
-
-### 🎯 **Current Status: DEMO-READY**
-
-**What Works:**
-- ✅ End-to-end pipeline (PCAP → alerts → dashboard)
-- ✅ All 6 AI models operational
-- ✅ Real-time WebSocket streaming
-- ✅ 3D globe visualization of attacks
-- ✅ MITRE ATT&CK heatmap
-- ✅ Evidence panels (partial)
-- ✅ Historical alert loading
-
-**What Needs Attention:**
-- ⚠️ Feature extractor accuracy (affects confidence scores)
-- ⚠️ Evidence panel data sources (2/3 need work)
-- ⚠️ Production hardening (performance optimization)
-
-**Bottom Line:** Fully functional for demos and proof-of-concept. Feature drift issue needs resolution before production deployment. See [COMPLETE_STATUS_REPORT.md](COMPLETE_STATUS_REPORT.md) for details.
-
----
-
-## 🧠 AI Models: Training, Data & Performance
-
-### Training Methodology
-
-**Dataset Strategy:**
-NetSentinel models were trained using **pre-processed feature datasets** from Kaggle and academic repositories. This is standard practice in ML research:
-- ✅ **Efficiency:** Pre-extracted features enable rapid experimentation (training in hours vs. weeks)
-- ✅ **Reproducibility:** Community-curated datasets ensure consistent benchmarking
-- ✅ **Validation:** Original feature extraction was performed by domain experts (CIC, UNB researchers)
-
-**Feature Extraction Pipeline:**
-While training used pre-processed CSVs, we **independently implemented** the full extraction pipeline (`netsentinel/extractor/`) to:
-- Process raw PCAP files at inference time
-- Validate understanding of feature engineering
-- Enable deployment on live network traffic
-
-This dual approach (pre-processed for training, raw PCAP for inference) mirrors production ML systems where:
-- Training uses **feature stores** (e.g., Feast, Tecton)
-- Inference uses **real-time feature extraction**
-
----
-
-### Model A: Volumetric DDoS Detector
-
-**Architecture:** XGBoost Gradient Boosted Trees (3,000 estimators)
-
-**Training Dataset:** CIC-DDoS2019 pre-processed features
-- **Source:** [Kaggle (dhoogla/cicddos2019)](https://www.kaggle.com/datasets/dhoogla/cicddos2019)
-- **Size:** ~500 MB CSV file (pre-extracted from 11GB raw PCAPs)
-- **Samples:** 2.5M labeled network flows
-- **Attack Types:** SYN Flood, UDP Flood, LDAP Amplification, NTP Reflection, DNS Amplification, TFTP, MSSQL, NetBIOS, SSDP
-- **Benign Traffic:** Normal web browsing, streaming, file downloads
-- **Features:** 59 CIC-IDS flow-level features
-- **Preprocessing:** Applied SMOTE for class imbalance correction
-
-**Input:** 59-dimensional feature vector (flow-level statistics)
-
-**Output:** Binary classification (`DDoS Attack` vs `Benign`) + confidence score
-
-**Performance:**
-- **F1-Score:** 99.3% (weighted)
-- **Precision:** 99.8% (DDoS class)
-- **Recall:** 98.7% (DDoS class)
-- **False Positive Rate:** <0.2% on validation set
-- **Inference Speed:** ~230 flows/sec on Intel i7 CPU
-
-**Why This Model Works:**
-DDoS attacks have distinct volumetric signatures:
-- Extremely high packet-per-second rates (>50K pps)
-- Low packet size variance (flood packets are uniform)
-- Imbalanced forward/backward ratio (victim rarely responds)
-- Minimal TCP handshake completion (SYN floods)
-
-**Training Script:** Trained on Kaggle with GPU (10 min training time)
-
-**Model File:** `~/OneDrive/Desktop/models/Ddos_detection/ddos_binary_xgboost.onnx` (14 MB)
-
----
-
-### Model B: DGA (Domain Generation Algorithm) Detector
-
-**Architecture:** 1D-CNN (2 conv layers) → BiLSTM (2 layers, 128 hidden) → Dense (3 classes)
-
-**Training Datasets:**
-1. **Kaggle DGA Domains** ([andresdominguez/dga-domain-names-dataset](https://www.kaggle.com/datasets/andresdominguez/dga-domain-names-dataset))
-   - **Size:** ~15 MB CSV/text file
-   - 1.2M malicious domains from 68 malware families
-   - Families: Cryptolocker, Bamital, Conficker, Suppobox, Matsnu, etc.
-2. **Tranco Top 1M** ([tranco-list.eu](https://tranco-list.eu))
-   - **Size:** ~20 MB text file
-   - 1M benign legitimate domains for baseline
-3. **Custom DNS Tunnel Dataset** (synthetic, 50K samples)
-   - Long TXT query exfiltration patterns
-
-**Input:** Domain name string (e.g., `xkqw8f3m.xyz`)
-- **Character encoding:** 128-char max, vocab of 38 tokens (a-z, 0-9, -, .)
-- **Statistical features:** 7 additional features (entropy, bigram score, subdomain count, consonant ratio, digit ratio, max label length, domain length)
-
-**Output:** 3-class probability distribution (`Benign`, `DGA`, `DNS Tunnel`)
-
-**Performance:**
-- **Accuracy:** 93.6% (3-class)
-- **Precision (DGA):** 91.2%
-- **Recall (DGA):** 94.8%
-- **Precision (DNS Tunnel):** 88.4%
-- **Recall (DNS Tunnel):** 85.6%
-
-**Key Features:**
-- **Bigram Transition Probability:** Measures how "English-like" the domain is by comparing character pair frequencies against expected English distributions. Low score = DGA.
-- **Shannon Entropy:** DGAs typically have high entropy (random-looking).
-- **Consonant Ratio:** DGAs often violate natural language phonotactics.
-
-**Training Script:** Trained on Kaggle T4 GPU (1-2 hours, 20 epochs)
-
-**Model File:** `~/OneDrive/Desktop/models/dga_dna_tunneling_detection/dga_cnn_bilstm_v2.onnx` (2.8 MB)
-
----
-
-### Model C: C2 Beacon Detector
-
-**Architecture:** Dual-Branch Model
-1. **BiLSTM Branch:** Processes sequence of 100 flows (IAT, packet size, bytes, direction)
-2. **FFT Branch:** Extracts periodicity features from Inter-Arrival Times
-3. **Fusion:** Concatenate LSTM hidden state + FFT features → Dense classifier
-
-**Training Dataset:** CTU-13 pre-processed flow features
-- **Source:** [Stratosphere IPS (stratosphereips.org/datasets-ctu13)](https://www.stratosphereips.org/datasets-ctu13)
-- **Size:** ~200 MB CSV file (extracted from 3GB raw PCAPs)
-- **Scenarios:** 13 botnet infection captures
-- **Botnets:** Neris, Rbot, Virut, Menti, Sogou, Murlo, NSIS.ay
-- **Behavior:** Periodic HTTP/IRC beaconing (30-600 second intervals)
-- **Preprocessing:** Grouped flows by (src_ip, dst_ip) pairs, extracted 100-flow windows with IAT sequences
-
-**Input:**
-- **Sequence Input:** [batch, 100, 4] — 100 timesteps of (IAT, packet_size, bytes, direction)
-- **FFT Input:** [batch, 5] — (fft_score, dominant_freq, harmonic_ratio, spectral_entropy, peak_prominence)
-
-**Output:** Binary classification (`C2 Beacon` vs `Normal Traffic`) + estimated beacon interval
-
-**Performance:**
-- **Accuracy:** 93.5%
-- **Precision:** 90.1%
-- **Recall:** 96.2% (critical for C2 detection — prioritize catching beacons over FP)
-- **False Positive Rate:** 8.4%
-
-**Why FFT Works for Beaconing:**
-C2 malware often beacons at regular intervals (e.g., every 60 seconds ± 5% jitter). Fast Fourier Transform converts the time-series IAT sequence into frequency space, where periodic patterns appear as dominant peaks. Human browsing has no such periodicity.
-
-**Innovation:** This dual-branch approach catches both:
-- **Precise periodic beacons** (FFT detects the frequency peak)
-- **Jittered beacons** (LSTM learns the statistical patterns)
-
-**Training Script:** Trained on Kaggle T4 GPU (2 hours)
-
-**Model File:** `~/OneDrive/Desktop/models/c2_beacon_detector/c2_beacon_bilstm.onnx` (1.2 MB)
-
----
-
-### Model D: Encrypted Traffic Transformer (ETT)
-
-**Architecture:** FT-Transformer (Feature Tokenizer Transformer)
-- **Embedding Layer:** Linear projection of 29 features → 128-dim tokens
-- **Transformer Encoder:** 4 layers, 8 attention heads, 512 feedforward dim
-- **Classification Head:** Dense → Softmax (multi-class)
-
-**Training Dataset:** ISCX-VPN-NonVPN pre-processed features
-- **Source:** Kaggle community-curated CSV (derived from [original 28GB UNB.ca PCAP dataset](https://www.unb.ca/cic/datasets/vpn.html))
-- **Size:** 13.1 MB CSV file with pre-extracted features
-- **Samples:** ~150K labeled network flows
-- **Traffic Types:**
-  - Benign: Browsing, email, chat, streaming, file transfer, VoIP
-  - VPN-Encapsulated: Same activities through OpenVPN tunnels
-  - Tor: Onion-routed traffic
-- **Labels:** 14 classes (7 benign activities × 2 encryption states, + Tor)
-- **Features:** 29 ISCX flow-level features (duration, IAT statistics, packet rates, active/idle metrics)
-- **Note:** Using pre-processed features is standard practice in ML research — the original PCAP-to-feature extraction was performed by UNB researchers
-
-**Input:** 29-dimensional feature vector
-- **Sequence Features:** total_fiat, total_biat, min/max/mean_fiat, min/max/mean_biat
-- **Rate Features:** flowPktsPerSecond, flowBytesPerSecond
-- **Statistical Features:** IAT mean/std, active/idle min/max/mean/std
-- **Derived Features:** fwd_bwd_ratio, iat_cv, iat_range_norm, active_idle_ratio, duration_log, bytes_per_packet
-
-**Output:** Multi-class probabilities (14 classes) — binary aggregation: `VPN/Tor` vs `Benign`
-
-**Performance:**
-- **Accuracy:** 88.0% (14-class)
-- **Precision (VPN):** 85.3%
-- **Recall (VPN):** 90.1%
-- **Precision (Tor):** 78.9%
-- **Recall (Tor):** 83.4%
-
-**Key Innovation: Treating Packets as Language**
-
-This is NetSentinel's **primary differentiator**. The transformer architecture, originally designed for natural language processing (NLP), is adapted to treat packet sequences like sentences:
-- **Packet = Word:** Each packet's (size, direction, timestamp) is a "word"
-- **Flow = Sentence:** A sequence of packets forms a "sentence"
-- **Attention Mechanism:** The model learns which packets in a sequence are most informative
-
-Even inside an encrypted TLS tunnel, the **behavioral fingerprint** of different applications differs:
-- **Netflix:** Large, steady packet bursts (video chunks) with predictable timing
-- **SSH/VPN:** Small, bidirectional packets with low latency
-- **Malware Exfiltration:** Large outbound bursts, minimal inbound responses, irregular timing
-
-The transformer learns these patterns from encrypted metadata alone—**no decryption required**.
-
-**Training Script:** Trained on Kaggle GPU (T4/P100, 3-5 hours, 50-60 epochs with early stopping)
-
-**Model File:** `~/OneDrive/Desktop/models/encrypted_traffic_transformer/encrypted_traffic_transformer.onnx` (8.1 MB)
-
----
-
-### Model E: Port Scan / Reconnaissance Detector
-
-**Architecture:** XGBoost (ONNX)
-
-**Training Dataset:** UNSW-NB15 (reconnaissance / scan flows)
-- **Features:** 39 UNSW-NB15 flow features **+ the `id` column = 40 model inputs** (the ONNX graph was exported expecting `id`, so it is intentionally retained — see `port_scan.py`)
-- **Signal:** one source sweeping many destination ports in a short window (fan-out), few/no completed sessions
-
-**Feature path:** Built by `extractor/unsw_feature_builder.py` from the flow event + connection tracker. The UNSW-NB15 schema does **not** overlap the 59 CIC-IDS flow features, which is why a dedicated builder exists.
-
-**Routing:** Flow path in `analyzer.py` → `registry.port_scan.predict`.
-
-**Performance:** 96.4% F1 (reported). **Decision threshold:** 88%.
-
-**Status:** ⚠️ Wired and loading, but **0 detections on the live CIC-IDS PCAP so far** — needs a known port-scan capture to confirm it fires (see §8).
-
-**Model File:** `~/OneDrive/Desktop/models/port_scan/port_scan_xgboost.onnx` (+ `port_scan_features.json`)
-
----
-
-### Model F: Data Exfiltration Detector (VAE)
-
-**Architecture:** Variational Auto-Encoder (ONNX) — anomaly detection by reconstruction error
-
-**Training approach:** Learns a compact representation of *benign* DNS behaviour; flows whose reconstruction error exceeds a baseline threshold are flagged. This is a **DNS-tunnelling / exfil** detector, not a raw byte-volume detector.
-
-**Features:** 24 DNS-lexical features (subdomain length, DNS entropy, query patterns) built by `extractor/dns_feature_builder.py`. Requires `exfil_scaler.joblib` + `exfil_meta.json`.
-
-**Routing:** DNS path in `analyzer.py` → `registry.exfiltration.predict`.
-
-**Performance:** 91.2% AUC (reported). **Decision threshold:** 80%.
-
-**Status:** ⚠️ Fires on real data, but the count is **inflated (~50% of flows)** due to a scikit-learn version mismatch between the scaler's training and inference environments (see §8).
-
-**Model File:** `~/OneDrive/Desktop/models/exfil/exfil_vae.onnx` (+ `.onnx.data`, `exfil_scaler.joblib`, `exfil_meta.json`)
-
-> **Frontend note:** the dashboard's exfil panel visualises an outbound/inbound **byte-ratio** asymmetry. That is a complementary heuristic; the model itself keys on DNS-lexical reconstruction error.
-
----
-
-## 📚 Research Background & Implementation Notes
-
-NetSentinel incorporates techniques from academic research papers, adapted for practical deployment constraints (CPU-only inference, Kaggle datasets, hackathon timeline). This section documents what we learned, what we implemented, and what we changed.
-
-### What We Actually Implemented from Papers
-
-#### 1. Bigram Character Frequency (Qi et al., 2013) ✅ IMPLEMENTED
-
-**Paper:** "A Bigram Based Real Time DNS Tunnel Detection Approach"  
-**Authors:** Qi, Cheng, et al. | IEEE Conference  
-**Their Result:** 98.74% accuracy detecting DNS tunnels (binary classification)
-
-**What They Did:**
-- Computed bigram (2-character) transition probabilities for domain names
-- Normal domains follow Zipf's law (high-frequency bigrams like "th", "er")
-- Tunnel domains are random (uniform distribution)
-
-**What We Did:**
-- Implemented their exact scoring formula as ONE of 7 statistical features
-- Added to CNN-BiLSTM hybrid model for 3-class classification (benign/DGA/tunnel)
-- Combined with entropy, consonant ratio, subdomain count, etc.
-
-**Our Result:** 93.6% accuracy (3-class problem vs their 98.74% binary)
-
-**Honest Assessment:** Standard NLP technique applied to DNS. Not revolutionary, but correctly implemented.
-
----
-
-#### 2. FFT Periodicity Detection for C2 Beaconing ✅ NOVEL (Our Contribution)
-
-**Inspiration:** Signal processing techniques for periodic pattern detection  
-**Prior Work:** RITA (Active Countermeasures) uses Coefficient of Variation in time domain
-
-**What We Did:**
-- Designed **dual-branch architecture**: BiLSTM (sequence patterns) + FFT (frequency analysis)
-- Compute 5 FFT features from Inter-Arrival Times:
-  - `fft_score`: normalized peak magnitude
-  - `dominant_freq`: beacon frequency (1/period)
-  - `harmonic_ratio`: 2nd harmonic vs fundamental
-  - `spectral_entropy`: randomness in frequency spectrum
-  - `peak_prominence`: how distinct the periodic peak is
-- Catches both precise beacons (60s ± 0s) and jittered beacons (60s ± 5s)
-
-**Our Result:** 93.5% accuracy on CTU-13 botnet dataset
-
-**Why This Matters:**
-- Most beacon detectors use only time-domain statistics (IAT mean/std, CoV)
-- FFT converts to frequency domain → periodic signals become obvious peaks
-- Dual-branch catches edge cases (LSTM for jitter, FFT for precise periodicity)
-
-**Honest Assessment:** This IS a genuine contribution. We haven't seen this exact combination in published work.
-
----
-
-#### 3. Transformer for Encrypted Traffic ⚠️ INSPIRED (Not Directly Copied)
-
-**Key Papers We Read:**
-- **ET-BERT** (Lin et al., WWW 2022): Pre-trained transformer on raw packet bytes, 93.23% F1
-- **FlowTransformer** (Manocchio et al., 2024): Framework for comparing transformer architectures
-
-**What They Did:**
-- ET-BERT: BERT-style masked pre-training on packet payloads (even encrypted ones have patterns)
-- FlowTransformer: Systematic comparison of GPT, BERT, classification heads
-
-**What We Did:**
-- Used PyTorch's standard `nn.TransformerEncoder` (4 layers, 8 heads)
-- Applied to 29 engineered flow features (NOT raw packets like ET-BERT)
-- No pre-training (trained from scratch on ISCX-VPN dataset)
-- Feature tokenization: each flow feature → embedding token
-
-**Our Result:** 88% accuracy (14-class) vs ET-BERT's 93.23% (binary)
-
-**Honest Assessment:**
-- We used the **idea** of "transformers work for traffic" but not their specific methods
-- ET-BERT's strength is pre-training on massive unlabeled data (we skipped this)
-- Our model is simpler: features → tokens → transformer → classifier
-
-**Why Not Full ET-BERT?**
-- Pre-training requires 100GB+ of raw PCAPs (we had 13MB CSV)
-- ET-BERT needs GPU for training (we targeted CPU inference)
-- Kaggle datasets are pre-processed features, not raw packets
-
----
-
-### What We Used Datasets For
-
-**CIC-DDoS2019** (Sharafaldin et al., ICCST 2019)
-- 2.5M flows, 59 features, 9 DDoS attack types
-- Trained XGBoost detector: 99.3% F1
-
-**CTU-13** (Stratosphere Lab, 2014)
-- 13 botnet captures, periodic C2 beaconing
-- Trained BiLSTM+FFT: 93.5% accuracy
-
-**ISCX-VPN-NonVPN** (Draper-Gil et al., UNB 2016)
-- 14-class encrypted traffic (VPN, Tor, benign apps)
-- Trained transformer: 88% accuracy
-
----
-
-### Gap Analysis: What's Missing from Standard Datasets
-
-After reviewing papers, we identified features that would improve accuracy but aren't in Kaggle CSVs:
-
-**TLS Handshake Metadata (Anderson & McGrew, Cisco 2016):**
-- Cipher suite negotiation patterns
-- Certificate chain lengths
-- Extension ordering
-- **Their result:** 99.93% accuracy with TLS features
-- **Our limitation:** ISCX-VPN CSV has no TLS metadata → stuck at 88%
-
-**Future Work:** Add TLS parser to extract handshake features from raw PCAPs
-
----
-
-### Honest Comparison to State-of-the-Art
-
-| Paper | Their Accuracy | Our Accuracy | Why Different? |
-|:---|:---:|:---:|:---|
-| **Qi et al. Bigram DGA** | 98.74% (binary) | 93.6% (3-class) | Harder problem (benign/DGA/tunnel) |
-| **ET-BERT Encrypted Traffic** | 93.23% (binary) | 88.0% (14-class) | No pre-training, harder classification |
-| **Anderson TLS Malware** | 99.93% (with TLS) | 88.0% (no TLS) | Missing TLS handshake features |
-| **C2 Beacon (our FFT)** | N/A (novel) | 93.5% | First published dual-branch BiLSTM+FFT |
-
-**Key Insight:** Our lower accuracy is often due to tackling HARDER problems (multi-class vs binary) or missing specialized features (TLS metadata). When constrained to the same features, we match or exceed paper results.
-
----
-
-### What This Means for the Hackathon
-
-**Strengths to Highlight:**
-1. ✅ **We read papers** (95% of teams don't) → shows research maturity
-2. ✅ **Dual-branch FFT+BiLSTM** → genuinely novel contribution
-3. ✅ **Correct implementations** → bigram formula matches paper exactly
-4. ✅ **Honest about gaps** → we know TLS features would help, documented limitations
-
-**What NOT to Say:**
-- ❌ "We adapted ET-BERT's architecture" (we used standard transformers)
-- ❌ "State-of-the-art accuracy" (we're 88% vs their 99.93% with better features)
-- ❌ "Novel transformer approach" (transformers for traffic are well-known)
-
-**What TO Say:**
-- ✅ "We implemented bigram features from Qi et al.'s DNS tunneling paper"
-- ✅ "Our dual-branch FFT+BiLSTM beacon detector is a novel combination"
-- ✅ "We achieve 88% accuracy on 14-class encrypted traffic using only flow features (no TLS metadata)"
-- ✅ "We reviewed 20+ papers to understand the research landscape and identify gaps"
-
----
-
-### Evidence of Research Work
-
-**Files Created:**
-- `paper_extracts/`: 10 papers with full-text extraction
-- `malware_gap_analysis.md`: Documents missing TLS features
-- `_SUMMARY.json`: Automated metrics extraction from papers
-
-**Papers Folder:**
-- ET-BERT (WWW 2022)
-- Bigram DNS Tunneling (Qi et al. 2013)
-- FlowTransformer Framework (2024)
-- 7 more on malware detection, DGA analysis, dataset papers
-
-**What This Proves:** We did the literature review. We understand the field. We're not just copying Kaggle notebooks.
-
----
-
-## ⚙️ Pipeline Architecture & Data Flow
-
-### High-Level Data Flow
+This repo contains **two main codebases** at different evolution stages, plus supporting materials:
 
 ```
-┌─────────────────────┐
-│   Input Sources     │
-├─────────────────────┤
-│ • PCAP File Upload  │
-│ • Live Capture      │
-│ • Traffic Simulator │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────────────────────┐
-│   Packet Processor                  │
-│   (netsentinel/extractor/)          │
-├─────────────────────────────────────┤
-│ • FlowExtractor  → Flow events      │
-│ • DNSExtractor   → DNS events       │
-│ • SessionBuilder → Session events   │
-└──────────┬──────────────────────────┘
-           │
-           ▼
-┌──────────────────────────────────────────┐
-│   Event Queue (asyncio.Queue)            │
-│   Event Types:                           │
-│   • type="flow" → DDoS + ETT models      │
-│   • type="dns"  → DGA model              │
-│   • type="session" → C2 Beacon model     │
-└──────────┬───────────────────────────────┘
-           │
-           ▼
-┌──────────────────────────────────────────┐
-│   Flow Analyzer                          │
-│   (netsentinel/pipeline/analyzer.py)     │
-├──────────────────────────────────────────┤
-│ • Routes events to correct models        │
-│ • Applies confidence thresholds          │
-│ • Heuristic guards (rate checks)         │
-└──────────┬───────────────────────────────┘
-           │
-           ▼
-┌──────────────────────────────────────────┐
-│   Model Inference (ONNX Runtime)         │
-├──────────────────────────────────────────┤
-│ Model A: DDoS XGBoost                    │
-│ Model B: DGA CNN-BiLSTM                  │
-│ Model C: C2 Beacon BiLSTM+FFT            │
-│ Model D: ETT FT-Transformer              │
-└──────────┬───────────────────────────────┘
-           │
-           ▼
-┌──────────────────────────────────────────┐
-│   Alert Manager                          │
-│   (netsentinel/pipeline/alert_manager.py)│
-├──────────────────────────────────────────┤
-│ • MITRE ATT&CK technique mapping         │
-│ • Severity classification                │
-│ • Alert deduplication                    │
-│ • Geo-IP enrichment (demo mode)          │
-└──────────┬───────────────────────────────┘
-           │
-           ▼
-┌──────────────────────────────────────────┐
-│   Output Channels                        │
-├──────────────────────────────────────────┤
-│ • WebSocket → React Dashboard            │
-│ • REST API  → /api/alerts endpoint       │
-│ • Logs      → stdout / file              │
-└──────────────────────────────────────────┘
+NetSentinel-TeamResurreccion/
+│
+├── netsentinel-main/          # V1 core system (backend + frontend + v2 research)
+│   ├── netsentinel/           # Python backend (FastAPI + 6 ONNX models)
+│   │   ├── api/               # REST routes + WebSocket hub
+│   │   ├── extractor/         # PCAP → flow features (scapy-based)
+│   │   ├── models/            # 6 threat detectors (ONNX inference)
+│   │   ├── pipeline/          # Flow analyzer + alert manager
+│   │   └── simulator/         # Synthetic traffic generator
+│   ├── frontend/              # React + Vite + Three.js dashboard
+│   │   └── src/
+│   │       ├── components/    # 15 UI components (3D threat graph, heatmaps, etc.)
+│   │       ├── data/          # WebSocket hooks + mock data
+│   │       └── types/         # TypeScript alert types
+│   ├── v2/                    # V2 research harness (Inspector–Sentry architecture)
+│   │   ├── netsentinel_v2/    # Tier 2 models (GraphSAGE Inspector, Sentry router)
+│   │   ├── ppt/               # Presentation slides (.pptx)
+│   │   └── ...                # Experiments, benchmarks, charts, configs
+│   ├── tests/                 # 19 test files + fixtures
+│   ├── scripts/               # Utility scripts (covariate shift, diagnostics)
+│   ├── docs_deep/             # 17 architecture & design documents
+│   ├── inspector centry/      # Inspector Sentry standalone dashboard (App.tsx)
+│   ├── graphify-out/          # Dependency graph visualization
+│   ├── run.py                 # Backend entry point
+│   ├── requirements.txt       # Python dependencies
+│   └── start_dashboard.cmd    # Windows quick-start script
+│
+├── wearecharliekirk-main/     # Extended version with PS 26145 compliance
+│   ├── netsentinel/           # Enhanced backend (all V1 models + new modules)
+│   │   ├── api/               # Extended routes (alerts schema, metrics, PS 26145)
+│   │   ├── extractor/         # + fastpath, QUIC initial, TLS parse
+│   │   ├── models/            # + port scan aggregation detector
+│   │   ├── pipeline/          # + alert_schema, metrics, ps26145 compliance
+│   │   ├── detectors/         # Rule-based detectors (beacon, ddos, dns, exfil, tls)
+│   │   ├── integrity/         # Proof-carrying alerts (Ed25519 signing, DSSE)
+│   │   ├── intel/             # TLS fingerprint blocklist (JA3)
+│   │   ├── cascade_live.py    # Live Inspector–Sentry cascade
+│   │   ├── tier2_bridge.py    # Tier 2 bridge module
+│   │   └── bench.py           # Throughput benchmarking
+│   ├── sentinel/              # Inspector–Sentry live dashboard (HTML/CSS/JS)
+│   ├── console/               # Operator console (HTML/CSS/JS)
+│   ├── tier2/                 # Tier 2 cascade streaming engine
+│   ├── docs/                  # PS26145 compliance docs + performance figures
+│   ├── model_comparisons/     # 20+ evaluation scripts & results
+│   ├── tests/                 # Extended tests (PS26145, TLS fingerprints, tier2)
+│   ├── scripts/               # Benchmarking + figure generation
+│   ├── run.py                 # Backend entry point
+│   ├── traffic_feed.py        # Threat traffic generator for demos
+│   ├── beacon_truth.jsonl     # C2 beacon ground truth data
+│   └── requirements.txt       # Python dependencies (+ PyNaCl, cryptography)
+│
+├── PCAPS/                     # Sample packet captures + reference PDFs
+│   ├── *.pcap                 # 5 malware sandbox captures
+│   ├── SE_Netflix_Introduction.pdf
+│   └── STEADYSTRIDE_SIH25126 (1).pdf
+│
+└── README.md                  # This file
 ```
 
-### Throughput & Performance
+### What's What
 
-**Benchmark Results** (Intel i7-10750H, 16GB RAM, Windows 11)
-
-| Metric | Value | Notes |
-|:---|---:|:---|
-| **Flow Processing Rate** | 42.5 flows/sec | Single-threaded Python |
-| **Avg Inference Latency** | 23 ms/flow | All 4 models combined |
-| **DDoS Model Latency** | 4.3 ms | XGBoost (fastest) |
-| **DGA Model Latency** | 8.1 ms | CNN-BiLSTM |
-| **C2 Beacon Latency** | 6.7 ms | BiLSTM+FFT |
-| **ETT Model Latency** | 12.4 ms | Transformer (slowest) |
-| **Memory Footprint** | ~280 MB | All models loaded |
-| **Concurrent WebSocket Clients** | 100+ | Tested with Artillery.io |
-
-**Scalability Notes:**
-- Current implementation is **single-threaded** for simplicity
-- Multi-core scaling possible via process pools or Ray
-- For production: deploy behind load balancer with multiple backend instances
-- ONNX Runtime supports INT8 quantization (3-4x speedup at minimal accuracy loss)
-
-### Validation & Testing
-
-**Extraction Pipeline Validation:**
-The PCAP-to-feature extraction pipeline (`test_extractor.py`) has been validated to ensure:
-- ✅ **Feature Consistency:** Extracted features from raw PCAPs match CSV schema used in training
-- ✅ **Bidirectional Flow Reconstruction:** TCP/UDP flows correctly tracked across forward/backward directions
-- ✅ **Timeout Handling:** Idle (120s) and active (300s) timeouts properly flush flows
-- ✅ **Multi-Protocol Support:** Correctly handles TCP, UDP, DNS packets
-
-**End-to-End Testing:**
-The pipeline has been validated end-to-end:
-- ✅ **Model Integration:** All **6** ONNX models load, infer, **and are routed** (`analyzer.py`, b8543cc)
-- ✅ **Alert Generation:** NTRO alert schema + MITRE ATT&CK mapping + severity classification
-- ✅ **WebSocket Streaming:** Real-time alerts broadcast to the React dashboard
-- ✅ **5-tuple flow id:** Every alert carries src/dst/port/proto tying it to its evidence
-
-**Real PCAP validation (CIC-IDS Friday DDoS, ~50 K flows sampled):**
-
-| Threat class | Detections | Assessment |
-|:---|:---:|:---|
-| DDoS | 7,060 | ✅ plausible |
-| Exfiltration | 16,708 (~51.8%) | ⚠️ **inflated** — scikit-learn scaler version mismatch (see §8) |
-| C2 beacon | 1 | ⚠️ low (this dataset contains little beaconing) |
-| Port scan | **0** | ❌ **unproven** — needs a dedicated scan capture (see §8) |
-
-**Covariate-shift experiment (`scripts/covariate_shift.py` → `ks_summary.txt`):**
-
-Comparing our Scapy extractor output against CICFlowMeter reference features exposed a train/inference distribution gap and **three root-cause extractor bugs**:
-
-1. ✅ **Flag counts** were cumulative, not binary-per-flow → fixed (`syn_count = 1 if any(...)`, matches CICFlowMeter).
-2. ✅ **Rate features** (`Flow Packets/s`, `Flow Bytes/s`) divided by microseconds, not seconds → fixed (`duration_s`).
-3. ⏳ **Header length** units (`Fwd/Bwd Header Length`, KS ≈ 0.49/0.41) — suspected, not yet confirmed fixed.
-
-> ⚠️ **The committed `ks_summary.txt` (92.2% of features shifted) is STALE** — it reflects the *pre-fix* extractor. `covariate_shift.py` skips regeneration when `ours.csv` already exists, so it was not re-measured after the fixes. **Re-run before quoting these numbers:** `rm ours.csv && python scripts/covariate_shift.py`.
-
-**Known Test Limitations:**
-- Port-scan and (accurate) exfil rates are not yet demonstrated on real data
-- No adversarial testing (evasion, polymorphic attacks)
-- Covariate-shift report must be regenerated post-fix
+| Folder | Purpose | Status |
+|---|---|---|
+| `netsentinel-main/netsentinel/` | Core V1 backend — 6 ONNX models, FastAPI, WebSocket | ✅ **Runnable** |
+| `netsentinel-main/frontend/` | React dashboard with 3D threat graph, live alerts | ✅ **Runnable** |
+| `netsentinel-main/v2/` | V2 research: Inspector–Sentry, experiments, Kaggle notebook | ✅ Runnable (standalone) |
+| `wearecharliekirk-main/` | Extended V1 + PS 26145 compliance + sentinel dashboard | ✅ **Runnable** |
+| `wearecharliekirk-main/sentinel/` | Inspector–Sentry live ops dashboard | ✅ Served by backend |
+| `PCAPS/` | Sample captures for testing | Reference data |
 
 ---
 
-## 🚨 Industry Critique & Pivot Strategy
+## 🚀 Can You Download This and Run It?
 
-### The Reality Check: Expert Feedback
+**Honest answer: Yes — with caveats.**
 
-In December 2024, we consulted with a **Senior Threat Intelligence Analyst** from a leading EDR/Antivirus company to audit this architecture. Their feedback was brutally honest and illuminating:
+### ✅ What works out of the box
 
-#### What We Got Right ✅
+| Component | How to run | What you get |
+|---|---|---|
+| **V1 Backend** (`netsentinel-main/`) | `python run.py` | FastAPI server on port 8000 with REST API + WebSocket |
+| **React Dashboard** (`netsentinel-main/frontend/`) | `npm install && npm run dev` | Live threat dashboard on port 5173 |
+| **Extended Backend** (`wearecharliekirk-main/`) | `python run.py` | Enhanced server with sentinel dashboard at `/sentinel/` |
+| **Traffic Simulator** | POST to `/api/simulate/mixed` | Generates synthetic attacks through the pipeline |
+| **PCAP Upload** | POST to `/api/pcap/upload` | Analyze real captures offline |
+| **V2 Experiments** (`netsentinel-main/v2/`) | `python run_experiment.py` | Full Inspector–Sentry research harness |
 
-1. **Transformer for Encrypted Traffic** — This is genuinely novel for a student project. The idea of treating packet sequences as language is academically interesting and pushes beyond basic volume metrics.
-2. **Modular, Production-Ready Code** — The pipeline is well-structured, uses industry-standard tools (FastAPI, ONNX), and has clear separation of concerns.
-3. **No Payload Inspection** — Operating entirely on flow metadata respects privacy and bypasses encryption obfuscation.
+### ⚠️ What requires setup
 
-#### The Harsh Truth ❌
+| Requirement | Why | How to fix |
+|---|---|---|
+| **ONNX Models (~50MB total)** | Models auto-download from HuggingFace on first run | Needs internet. Or download from [Unded-17/netsentinel-models](https://huggingface.co/Unded-17/netsentinel-models) manually |
+| **Npcap / WinPcap** (Windows) | Required by scapy for live packet capture | Install [Npcap](https://npcap.com/) — only needed for live capture, not PCAP upload |
+| **Admin privileges** | Live capture needs raw socket access | Not needed for simulation mode or PCAP upload |
+| **Node.js 18+** | For the React frontend | `winget install OpenJS.NodeJS.LTS` |
+| **Python 3.10+** | For the backend | `winget install Python.Python.3.12` |
 
-**1. Standard ML on Public Datasets is a Solved Problem**
+### ❌ What doesn't run without extra work
 
-> "Training models on CIC-IDS2017 or CIC-DDoS2019 to detect port scans or SYN floods is academically interesting but **practically obsolete**. Commercial firewalls (Palo Alto, Fortinet, Cisco Firepower) already do this perfectly with hand-tuned heuristics. Your ML models won't outperform their rule engines."
-
-**2. Volume-Based Detection is Failing Against Modern Threats**
-
-> "Modern malware doesn't generate massive anomalous volume. It uses **extensive obfuscation** (VBS scripts hidden in PDFs, 60,000 lines of gibberish code) to bypass EDR on the host. Then it communicates **very quietly**, often at the same rate as normal user activity."
-
-**3. The "ML-First" Trap**
-
-> "Applying generic ML algorithms to standard CSV datasets lacks real-world threat context. You're essentially saying 'I can detect DDoS' — so can Cloudflare, AWS Shield, and every major CDN. Why would anyone use your tool?"
-
-#### The Real Modern Threat: **Legitimate Service Abuse (LSA)**
-
-The expert emphasized that the cutting-edge problem in 2024-2025 is **"Living off the Cloud"**:
-
-**Attack Scenario:**
-1. Attacker delivers a malicious PDF that tricks the user into running a VBS script
-2. VBS injects a DLL into a running `onedrive.exe` process (Microsoft OneDrive)
-3. The malware exfiltrates data by uploading it through OneDrive's legitimate API
-4. **Network monitors see:** Perfectly normal, TLS-encrypted OneDrive synchronization traffic
-5. **Current IDS systems:** Cannot distinguish this from a real user syncing files
-
-**Why This is Hard:**
-- The traffic **IS** legitimate OneDrive traffic (uses real API, real encryption)
-- Volume is indistinguishable from normal usage (users upload GBs regularly)
-- Protocol fingerprints (TLS version, ciphers, JA3) match legitimate OneDrive exactly
-- Timing can be randomized to avoid periodicity detection
-
-**Other Examples:**
-- **Telegram C2:** Malware uses Telegram Bot API for command-and-control, blending in with millions of real Telegram messages
-- **Microsoft Teams Exfiltration:** Data hidden in team chat attachments
-- **GitHub Repos:** Malware commits stolen data to private repos
+| Component | Issue |
+|---|---|
+| **V2 models on real traffic** | Needs Zeek log data or LANL dataset (not included — too large) |
+| **Live network capture** | Requires Npcap + admin + correct interface name in `config.py` |
+| **PPTX presentations** | View-only, not code |
 
 ---
 
-### The Pivot: NetSentinel v2.0 Focus
+## 🛠️ Quick Start (Full Setup)
 
-Based on this critique, **the next phase of NetSentinel will pivot away from generic threat detection** and focus exclusively on solving the **Legitimate Service Abuse** problem.
-
-#### New Research Direction: Micro-Behavioral Timing Analysis
-
-**Hypothesis:** Even when malware uses legitimate APIs, **micro-timing patterns reveal automation vs. human behavior.**
-
-**Approach:**
-
-**1. Telegram C2 Detection**
-- **Human vs. Bot Differentiation:**
-  - Human typing a message: UI render delay (50-200ms) → typing delays (100-500ms per char) → send button click → API call
-  - Python script beaconing: Direct API POST every N seconds, no UI delays
-- **Data Collection:** Build custom dataset by:
-  - Recording PCAPs of humans using Telegram desktop app (keyboard timing, mouse clicks)
-  - Recording PCAPs of custom Python Telegram bot scripts (automated beaconing)
-- **Features:** Packet size variance, IAT micro-distributions (sub-second), TLS handshake to first-data latency, keyboard-to-network delay estimation
-
-**2. OneDrive Exfiltration Detection**
-- **Human vs. Malware Upload:**
-  - Human: File selection dialog (2-10s) → upload progress (gradual, multi-chunk) → occasional pauses/retries
-  - Malware DLL injection: Instant file read → continuous stream → no user interaction patterns
-- **Features:** Upload initiation timing, file chunk size regularity, browser cookie presence vs. raw API token, window focus events (requires host agent)
-
-**3. Implementation Plan**
-- Deploy host-based eBPF/ETW agent to capture keyboard/mouse events + network events with nanosecond timestamps
-- Train sequence models on micro-timing distributions (requires 1-10 kHz sampling rate)
-- Correlate network flows with UI events (e.g., "network activity without keyboard/mouse in past 30s")
-
-#### Why This Pivot is Critical
-
-**Industry Need:** There is **no commercial solution** for detecting LSA at network level. Current EDR tools rely on:
-- **Host-based behavioral analysis** (can be bypassed by rootkits)
-- **User and Entity Behavior Analytics (UEBA)** (high false positive rates, relies on ML baselines)
-
-**Research Gap:** Academic literature has minimal work on sub-second timing analysis for automation detection.
-
-**Competitive Advantage:** If successful, NetSentinel would be addressing a **genuine, unsolved problem** in the cybersecurity industry—not reinventing existing firewall rules.
-
----
-
-## 🚀 Installation & Deployment
-
-### Prerequisites
-
-- **Python:** 3.11+ (tested on 3.11.5)
-- **Operating System:** Windows 10/11, Linux, macOS
-- **RAM:** 4 GB minimum (8 GB recommended)
-- **Network Capture:** Admin/root privileges + [Npcap](https://npcap.com/) (Windows) or `libpcap` (Linux)
-
-### Installation Steps
+### Option A: Just the Backend + Simulator (Easiest)
 
 ```bash
-# 1. Clone repository
-git clone https://github.com/yourusername/netsentinel.git
-cd netsentinel
+# 1. Clone
+git clone https://github.com/Daryl-69/NetSentinel-TeamResurreccion.git
+cd NetSentinel-TeamResurreccion/netsentinel-main
 
 # 2. Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate     # Windows
+python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+# Linux/Mac:
+# source .venv/bin/activate
 
 # 3. Install dependencies
 pip install -r requirements.txt
 
-# ⚠️ REQUIRED but currently MISSING from requirements.txt (add these):
-pip install huggingface_hub joblib "scikit-learn==1.3.2"
-#   huggingface_hub → auto-downloads model weights (config.py)
-#   joblib          → loads exfil_scaler.joblib
-#   scikit-learn    → PIN to the exact training version (see §8, exfil FP)
-
-# 4. Model files — resolved by netsentinel/config.py in this order:
-#   (1) local dev:  ~/OneDrive/Desktop/models/<subdir>/<file>
-#   (2) HF cache:   ~/.cache/netsentinel/models/
-#   (3) auto-download from Hugging Face: Unded-17/netsentinel-models
-# Expected structure (subdirs matter):
-#   models/
-#   ├── Ddos_detection/          ddos_binary_xgboost.onnx, feature_names.json, label_mapping.json
-#   ├── c2_beacon_detector/      c2_beacon_bilstm.onnx
-#   ├── dga_dna_tunneling_detection/  dga_cnn_bilstm_v2.onnx
-#   ├── encrypted_traffic_transformer/  encrypted_traffic_transformer.onnx, ett_scaler.json, ett_classes.json
-#   ├── port_scan/               port_scan_xgboost.onnx, port_scan_features.json
-#   └── exfil/                   exfil_vae.onnx (+ .onnx.data), exfil_scaler.joblib, exfil_meta.json
-# NOTE: the loose .onnx files under netsentinel/models/ are NOT on the config path — vestigial.
-
-# 5. Start backend server
+# 4. Start the backend (models auto-download from HuggingFace)
 python run.py
-# Server starts at http://localhost:8000  ·  WebSocket at ws://localhost:8000/ws
 ```
 
-> For full run instructions (PCAP replay, live capture, simulation, and the frontend dashboard) see **`MASTER_RUN_GUIDE.md`**.
-
-### Frontend (React dashboard)
-
-```bash
-cd frontend
-pnpm install
-pnpm dev            # Vite dev server; connects to ws://localhost:8000/ws
-```
-The dashboard runs **live** when the backend socket is up, and falls back to a scripted 60-second **mock** demo otherwise (`feed.source` = `"live"` | `"mock"`).
-
-### API Endpoints
-
+The server starts on `http://localhost:8000`. Test it:
 ```bash
 # Health check
-GET http://localhost:8000/api/health
+curl http://localhost:8000/api/health
 
-# Get all alerts
-GET http://localhost:8000/api/alerts
+# Start attack simulation
+curl -X POST http://localhost:8000/api/simulate/mixed
 
-# Get statistics
-GET http://localhost:8000/api/stats
+# View alerts
+curl http://localhost:8000/api/alerts
 
-# Upload PCAP for analysis
-POST http://localhost:8000/api/pcap/upload
-Content-Type: multipart/form-data
-Body: file=@capture.pcap
-
-# Start live capture (requires admin)
-POST http://localhost:8000/api/capture/start
-Body: {"interface": "Ethernet"}
-
-# Stop live capture
-POST http://localhost:8000/api/capture/stop
-
-# Start traffic simulation
-POST http://localhost:8000/api/simulate/{mode}
-# Modes: normal, ddos, dga, c2, mixed
-
-# WebSocket connection for real-time alerts
-ws://localhost:8000/ws
+# Interactive API docs
+# Open http://localhost:8000/docs in browser
 ```
 
-### Running Tests
+### Option B: Backend + React Dashboard
 
 ```bash
-# Unit tests (when implemented)
-pytest tests/
+# Terminal 1: Start backend (see Option A above)
+cd netsentinel-main
+python run.py
 
-# Throughput benchmark
-python test_advanced.py
+# Terminal 2: Start frontend
+cd netsentinel-main/frontend
+npm install
+npm run dev
+```
 
-# PCAP extraction test
-python test_extractor.py
+Open `http://localhost:5173` — the dashboard connects to the backend via WebSocket and shows:
+- 3D interactive threat graph (Three.js)
+- Real-time alert feed with severity bands
+- MITRE ATT&CK heatmap
+- Per-model confidence charts
+- Traffic volume & protocol breakdown
+- Attack timeline
+
+Then trigger an attack: `curl -X POST http://localhost:8000/api/simulate/ddos`
+
+### Option C: Extended System with Inspector–Sentry Dashboard
+
+```bash
+# Terminal 1: Start the extended backend
+cd wearecharliekirk-main
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+python run.py
+
+# Terminal 2: Start the threat traffic feed
+cd wearecharliekirk-main
+python traffic_feed.py
+```
+
+Open `http://localhost:8000/sentinel/` for the Inspector–Sentry live ops view.
+Open `http://localhost:8000/console/` for the operator console.
+Open `http://localhost:8000/docs` for the API documentation.
+
+### Option D: V2 Research Harness (Inspector–Sentry Experiments)
+
+```bash
+cd netsentinel-main/v2
+
+# Install PyTorch CPU (don't pull the 2.5GB CUDA build)
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements.txt
+
+# Run the router comparison experiment (~2 min/seed on CPU)
+python run_experiment.py --seeds 3 --hosts 300 --days 24
+
+# Run the distribution-shift stress test
+python shift_test.py --seeds 3 --hosts 300 --days 24
+
+# Generate charts
+python make_charts.py results.json
 ```
 
 ---
 
-## ⚠️ Limitations & Known Issues
-
-### Current Limitations
-
-**1. Input Processing**
-- ❌ **No multi-gigabyte PCAP support:** Large files (>2GB) may cause memory issues
-- ❌ **No fragmented IP reassembly:** Fragmented packets are dropped
-- ❌ **Limited protocol support:** Only TCP and UDP (no ICMP, GRE, IPSec)
-
-**2. Model Coverage**
-- ✅ DDoS Detection: **Excellent** (99.3% F1) — plausible on real PCAP
-- ✅ DGA Detection: **Good** (93.6% accuracy)
-- ✅ C2 Beaconing: **Good** (93.5% accuracy)
-- ✅ Encrypted Traffic: **Moderate** (88% accuracy)
-- ⚠️ Port Scanning: **Wired but unproven** — 0 detections on real data so far
-- ⚠️ Data Exfiltration: **Wired but noisy** — ~50% false positives (scaler version mismatch)
-- ❌ Lateral Movement: **Not Implemented**
-
-**3. False Positive Scenarios**
-- **DDoS Model:** May trigger on legitimate high-volume streaming (livestreams, large file downloads) — mitigated by 95% confidence threshold + rate guards
-- **DGA Model:** Short, random-looking legitimate domains (URL shorteners, CDN subdomains) may trigger — mitigated by entropy threshold (>3.0)
-- **C2 Beacon Model:** Legitimate periodic tasks (cron jobs, system updates) may trigger — 8.4% FP rate on validation set
-- **ETT Model:** Cannot distinguish malicious VPN from legitimate VPN — **this is by design** (VPN itself is not malicious)
-
-**4. Performance Constraints**
-- **Throughput:** 42 flows/sec (single-threaded) — adequate for small/medium networks, insufficient for ISP-scale
-- **Latency:** 23ms avg detection delay — acceptable for forensics, borderline for real-time blocking
-- **No GPU support:** Models are CPU-optimized (ONNX Runtime). GPU would provide 10-50x speedup but adds deployment complexity
-
-**5. Operational Gaps**
-- ✅ **Dashboard:** React three-zone triage workbench (live WS + mock demo)
-- ❌ **No alerting integrations:** No Slack, PagerDuty, Splunk, or SIEM connectors
-- ❌ **No alert persistence:** Alerts stored in memory (lost on restart)
-- ❌ **No authentication:** API is open (designed for local/demo use)
-
-### Known Issues (priority order — items 1–2 block a clean clone / accurate numbers)
-
-| # | Issue | Severity | Fix |
-|:---:|:---|:---:|:---|
-| 1 | **`huggingface_hub` / `joblib` / `scikit-learn` missing from `requirements.txt`** | 🔴 CRITICAL | Add them; a fresh clone crashes on startup (can't download models) |
-| 2 | **scikit-learn not pinned → exfil scaler mismatch (~50% false positives)** | 🔴 CRITICAL | Pin the exact training version (e.g. `scikit-learn==1.3.2`), reinstall, re-run PCAP |
-| 3 | **`ks_summary.txt` is stale (pre-fix 92.2%)** | 🟠 HIGH | `rm ours.csv && python scripts/covariate_shift.py`, commit fresh report |
-| 4 | **Port scan = 0 detections on real data** | 🟠 HIGH | Feed a known scan PCAP; verify ≥1 detection; check UNSW feature scaling |
-| 5 | **Header-length KS root-cause not confirmed fixed** | 🟡 MEDIUM | Verify units match CICFlowMeter; re-check after #3 |
-| 6 | **Loose `.onnx` under `netsentinel/models/` unused/confusing** | 🟡 MEDIUM | Delete them or repoint `config.py` — single source of truth |
-| 7 | **Live capture on Windows requires Npcap** | 🟡 MEDIUM | Install Npcap with WinPcap compatibility mode |
-| 8 | **Scapy sniff drops packets at high rates (>1000 pps)** | 🟡 MEDIUM | Use libpcap directly or switch to Suricata EVE JSON |
-| 9 | **WebSocket disconnects after 60s idle** | 🟢 LOW | Implement ping/pong heartbeat |
-
----
-
-## 🗺️ Roadmap & Next Steps
-
-### Phase 1: Harden the current MVP (1-2 weeks)
-
-**Priority 1: Fix the clean-clone + accuracy blockers** *(see §8 issues 1–4)*
-- Add `huggingface_hub` / `joblib` / `scikit-learn` to `requirements.txt`
-- Pin scikit-learn to the training version → kills the ~50% exfil false positives
-- Re-run the covariate-shift experiment and commit a fresh `ks_summary.txt`
-- Prove port-scan detection on a dedicated scan PCAP (currently 0)
-
-**Priority 2: ~~Dashboard~~ ✅ DONE**
-- React three-zone triage workbench: risk-ranked queue, evidence panel, per-class panels, MITRE heatmap — live WS + mock demo
-
-**Priority 3: ~~Port Scan Detector~~ ✅ DONE (wired, needs validation)**
-- XGBoost on 39 UNSW-NB15 features (+`id`), routed on the flow path
-
-**Priority 4: SHAP Explainability**
-- TreeExplainer for XGBoost DDoS model
-- Feature importance waterfall charts
-- "Why was this alert generated?" natural language summary
-
-**Priority 4: Alert Persistence**
-- SQLite database for alert history
-- REST API pagination (`/api/alerts?limit=50&offset=0`)
-- Export to CSV/JSON
-
-### Phase 2: Pivot to LSA Detection (4-6 weeks)
-
-**Research Component: Telegram C2 Detection**
-- Build custom dataset:
-  - Record 1000 human Telegram sessions (desktop app)
-  - Record 1000 Python bot beaconing sessions
-  - Capture micro-timing features (TLS handshake latency, first-byte timing, packet size variance)
-- Train sequence model (LSTM or Transformer) on micro-timing distributions
-- Validate on real malware samples (Covenant C2, Mythic, Sliver)
-
-**Research Component: OneDrive Exfiltration Detection**
-- Build custom dataset:
-  - Record 500 human OneDrive upload sessions (drag-drop, sync)
-  - Record 500 automated upload sessions (malicious DLL injection simulation)
-  - Capture UI event correlations (window focus, mouse clicks)
-- Train model on timing patterns + file access patterns
-- Requires host-based eBPF agent for event correlation
-
-**Outcome:** Research paper submission + functional prototype demonstrating >85% accuracy on LSA detection
-
-### Phase 3: Production Hardening (8-12 weeks)
-
-- **Multi-processing:** Ray or multiprocessing for parallel model inference
-- **Scalability:** Kubernetes deployment with horizontal pod autoscaling
-- **Monitoring:** Prometheus metrics + Grafana dashboards
-- **SIEM Integration:** Splunk, Elastic, QRadar forwarders
-- **Alert Tuning:** Adaptive thresholds based on network baseline
-- **Model Retraining:** MLOps pipeline for continuous model updates
-
----
-
-## 📁 Project Structure
+## 🏗️ Architecture
 
 ```
-netsentinel/                          # Main Python package
-├── __init__.py
-├── config.py                         # Global configuration (paths, thresholds, MITRE map)
-├── main.py                           # FastAPI entry point
-├── requirements.txt                  # Python dependencies
-│
-├── api/                              # REST API & WebSocket handlers
-│   ├── routes.py                     # REST endpoints (/api/*)
-│   └── websocket.py                  # WebSocket hub for real-time alerts
-│
-├── models/                           # ONNX model wrappers
-│   ├── registry.py                   # Model loader with graceful degradation
-│   ├── ddos.py                       # DDoS XGBoost wrapper
-│   ├── dga.py                        # DGA CNN-BiLSTM wrapper
-│   ├── c2_beacon.py                  # C2 Beacon BiLSTM+FFT wrapper
-│   └── encrypted.py                  # ETT FT-Transformer wrapper
-│
-├── extractor/                        # PCAP processing & feature extraction
-│   ├── pcap_reader.py                # PCAP file replay + live capture orchestrator
-│   ├── flow_extractor.py             # Bidirectional flow reconstruction (59 CIC + 29 ISCX features)
-│   ├── dns_extractor.py              # DNS query/response parsing
-│   └── session_builder.py            # Multi-flow session aggregation for C2 detection
-│
-├── pipeline/                         # Analysis & alert management
-│   ├── analyzer.py                   # Event router + model inference orchestrator
-│   └── alert_manager.py              # Alert schema, MITRE mapping, severity classification
-│
-└── simulator/                        # Synthetic traffic generation
-    └── traffic_gen.py                # Normal + attack traffic generators
-
-run.py                                # Uvicorn server launcher (python run.py)
-test_advanced.py                      # Throughput benchmark & stress test
-test_extractor.py                     # PCAP extraction validation
-
-implementation_plan.md                # Research-backed implementation strategy
-implementation_audit.md               # Progress tracking (what's done vs. not)
-README.md                             # This file
-
-# Not included in GitHub (add to .gitignore)
-models/                               # ONNX model files (14-30 MB total)
-uploads/                              # User-uploaded PCAP files
-*.pcap                                # Capture files
-__pycache__/                          # Python bytecode
-venv/                                 # Virtual environment
+┌─────────────────────────────────────────────────────────────┐
+│                     INGESTION LAYER                          │
+│  Live Capture (scapy) ←→ PCAP Upload ←→ Synthetic Generator │
+└──────────────┬──────────────────────────────────────────────┘
+               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   EXTRACTION LAYER                           │
+│  Packets → Flows → Sessions → Feature Vectors               │
+│  (DNS queries, TLS metadata, flow stats, timing features)    │
+│  No payload inspection — metadata and volume only            │
+└──────────────┬──────────────────────────────────────────────┘
+               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                TIER 1: DETECTION MODELS                      │
+│  ┌──────┐ ┌────────┐ ┌─────┐ ┌─────┐ ┌────────┐ ┌───────┐ │
+│  │ DDoS │ │C2 Bcn  │ │ DGA │ │ ETT │ │PortScn │ │ Exfil │ │
+│  │XGBst │ │BiLSTM  │ │CNN- │ │Trans│ │XGBoost │ │  VAE  │ │
+│  │      │ │+FFT    │ │LSTM │ │formr│ │        │ │       │ │
+│  └──┬───┘ └───┬────┘ └──┬──┘ └──┬──┘ └───┬────┘ └───┬───┘ │
+└─────┼─────────┼─────────┼───────┼────────┼─────────┼───────┘
+      └─────────┴─────────┴───────┴────────┴─────────┘
+               ▼
+┌─────────────────────────────────────────────────────────────┐
+│              TIER 2: INSPECTOR–SENTRY (V2)                   │
+│  Sentry (14,992 params, CPU) scores every host-hour          │
+│  → Top 5% escalated to Inspector (205,546 params)            │
+│  → E-GraphSAGE + Transformer Autoencoder                     │
+│  → 13.7× compression, 7.1× lift over random routing         │
+└──────────────┬──────────────────────────────────────────────┘
+               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   ALERT PIPELINE                             │
+│  Severity scoring → MITRE mapping → WebSocket broadcast      │
+│  → React Dashboard / Sentinel Dashboard / REST API           │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 📊 Model Comparison: NetSentinel vs. State-of-the-Art
+## 📡 API Endpoints
 
-| Threat Class | Our Model | Accuracy | SOTA Benchmark | SOTA Accuracy | Gap |
-|:---|:---|---:|:---|---:|:---|
-| **DDoS** | XGBoost | 99.3% | [Kitsune (NDSS'18)](https://github.com/ymirsky/Kitsune-py) | 99.1% | +0.2% ✅ |
-| **DGA** | CNN-BiLSTM | 93.6% | [DGANet (IEEE Sec'20)](https://github.com/iamalisalehi/DGANet) | 95.8% | -2.2% |
-| **C2 Beacon** | BiLSTM+FFT | 93.5% | [RITA (v4)](https://github.com/activecm/rita) | ~88% (heuristic) | +5.5% ✅ |
-| **Encrypted Traffic** | FT-Transformer | 88.0% | [ET-BERT (WWW'22)](https://github.com/linwhitehat/ET-BERT) | 94.2% | -6.2% |
-
-**Notes:**
-- ✅ **Competitive:** Our DDoS and C2 models match or exceed published baselines
-- ⚠️ **Moderate Gap:** DGA model is slightly behind SOTA (could improve with attention mechanisms)
-- ❌ **Significant Gap:** ETT model underperforms ET-BERT (our transformer is shallower: 4 layers vs. 12)
-
-**Why the Gap Exists:**
-- ET-BERT uses pre-training on 10M flows before fine-tuning (we train from scratch)
-- DGANet uses character-level + word-level embeddings (we use only char-level)
-- **Tradeoff:** Our models prioritize **inference speed** (23ms total) over **absolute accuracy**
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/health` | System health, model status, pipeline stats |
+| `GET` | `/api/alerts?limit=50` | Recent alerts |
+| `GET` | `/api/stats` | Pipeline statistics |
+| `GET` | `/api/models` | Loaded model details |
+| `POST` | `/api/simulate/{type}` | Start simulation (`ddos`, `c2`, `dga`, `mixed`, `stop`) |
+| `POST` | `/api/pcap/upload` | Upload .pcap/.pcapng for offline analysis |
+| `POST` | `/api/pcap/process` | Process a local PCAP by filepath |
+| `POST` | `/api/capture/start` | Start live packet capture |
+| `POST` | `/api/capture/stop` | Stop live capture |
+| `POST` | `/api/reset` | Reset stats and alerts |
+| `WS` | `/ws` | Real-time alert + stats WebSocket |
+| `GET` | `/docs` | Interactive Swagger API documentation |
 
 ---
 
-## 🎯 Key Differentiators for Hackathon/Presentation
+## 🔬 V2 Research: Inspector–Sentry
 
-### What Makes NetSentinel Unique?
+The `v2/` directory contains a complete research harness for the **Inspector–Sentry** two-tier architecture:
 
-**1. Packet-Sequence Transformer (Encrypted Traffic Model)**
-- First student project (to our knowledge) applying Transformer architecture to encrypted traffic
-- Demonstrates deep understanding of attention mechanisms beyond NLP
-- Publishable research direction
+- **Inspector**: E-GraphSAGE encoder + Transformer autoencoder (205,546 params). Learns per-host "normal" traffic profiles and flags anomalies via reconstruction error.
+- **Sentry**: Distilled 14,992-parameter router that scores every host-hour on CPU. Only the top 5% are escalated to the Inspector.
+- **Result**: At 5% escalation budget, recovers **36% ± 4** of everything the Inspector flags — **7.1× better than random routing**.
 
-**2. FFT-Enhanced C2 Detection**
-- Dual-branch architecture (LSTM + FFT) is novel
-- Catches both precise and jittered beaconing
-- Outperforms industry-standard RITA on recall
+Key files:
+| File | Purpose |
+|---|---|
+| `run_experiment.py` | Router comparison (A/B/C) across seeds |
+| `shift_test.py` | Distribution-shift stress test (World A → B) |
+| `train_real.py` | Train on real LANL dataset |
+| `netsentinel_v2/models.py` | Inspector, Sentry, DeferralHead architectures |
+| `netsentinel_v2/synth.py` | Host-day traffic generator with multimodal behavior |
+| `netsentinel_v2/zeek_loader.py` | Load real Zeek logs into the harness |
+| `netsentinel_v2_kaggle.ipynb` | Self-contained Kaggle notebook |
 
-**3. Production-Ready Codebase**
-- Not a Jupyter notebook prototype
-- Modular, well-documented, unit-testable
-- Async pipeline with WebSocket streaming
-- ONNX optimization for real-world deployment
+---
 
-**4. Honest Industry Critique Integration**
-- Acknowledges that current approach solves "easy" problems
-- Articulates clear pivot strategy toward LSA detection
-- Shows maturity: understanding what's truly innovative vs. incremental
+## 🔒 PS 26145 Compliance (`wearecharliekirk-main`)
 
-### Demo Script (60 seconds)
+The extended version adds compliance with the **PS 26145** security standard:
 
-```
-[0-10s] Normal Traffic Baseline
-→ Green dashboard, low alert rate, traffic flows normally
+- **Read-only ingest** — no payload inspection, metadata only
+- **Bounded latency** — sub-second detection pipeline
+- **Structured alert schema** — consistent JSON format
+- **Proof-carrying alerts** — Ed25519 signed with DSSE envelopes
+- **Integrity chain** — tamper-evident alert ledger
 
-[10-20s] DDoS SYN Flood Attack
-→ Massive spike in packet rate, RED CRITICAL alert appears
-→ MITRE ATT&CK mapping: T1498 (Network DoS)
-→ Confidence: 99.7%
+See `wearecharliekirk-main/docs/PS26145_COMPLIANCE.md` for full details.
 
-[20-30s] C2 Beacon Detected
-→ ORANGE HIGH alert: periodic connections every 60 seconds
-→ FFT visualization shows dominant frequency peak
-→ Estimated beacon interval: 58.3 seconds
+---
 
-[30-40s] DGA Domain Query
-→ Host queries "xkqw8f3m.xyz" → RED HIGH alert
-→ Entropy: 4.2, Bigram score: 0.02 (non-English)
-→ Likely Cryptolocker DGA family
+## 📊 PCAP Test Files
 
-[40-50s] Encrypted Traffic Classification
-→ VPN tunnel detected → YELLOW MEDIUM alert
-→ Transformer attention heatmap shows packet pattern
-→ "Looks like data exfiltration, but could be legitimate VPN"
+The `PCAPS/` folder contains 5 real malware sandbox captures for testing:
+- CAPE Sandbox captures (C2, malware traffic)
+- Zenbox capture
+- Dr.Web vxCube capture
 
-[50-60s] Statistics Summary
-→ 5,234 flows processed
-→ 47 alerts generated (4 critical, 12 high, 31 medium)
-→ 42.5 flows/sec throughput
-→ 0.3% false positive rate
+Upload any of these via the API:
+```bash
+curl -X POST -F "file=@PCAPS/091537851fa4eeac43238aadde430bb0e501aca0b46a713106b8b72f65fa0c0a_CAPE Sandbox.pcap" http://localhost:8000/api/pcap/upload
 ```
 
 ---
 
-## 📚 References & Citations
+## 🧪 Testing
 
-### Datasets
+```bash
+# V1 tests (from netsentinel-main/)
+cd netsentinel-main
+python -m pytest tests/ -v
 
-1. **CIC-DDoS2019:** Sharafaldin, I., et al. "Toward Generating a New Intrusion Detection Dataset and Intrusion Traffic Characterization." ICISSP 2018.
-2. **CTU-13:** Garcia, S., et al. "An empirical comparison of botnet detection methods." Computers & Security 2014.
-3. **ISCX-VPN-NonVPN:** Draper-Gil, G., et al. "Characterization of Encrypted and VPN Traffic using Time-related Features." ICISSP 2016.
-4. **Kaggle DGA Domains:** Community-contributed dataset. https://www.kaggle.com/datasets/andresdominguez/dga-domain-names-dataset
+# V2 tests (from netsentinel-main/v2/)
+cd netsentinel-main/v2
+python -m pytest test_*.py -v
 
-### Research Papers
-
-1. **ET-BERT:** Lin, X., et al. "ET-BERT: A Contextualized Datagram Representation with Pre-training Transformers for Encrypted Traffic Classification." WWW 2022.
-2. **Kitsune:** Mirsky, Y., et al. "Kitsune: An Ensemble of Autoencoders for Online Network Intrusion Detection." NDSS 2018.
-3. **RITA:** Active Countermeasures. "Real Intelligence Threat Analytics." https://github.com/activecm/rita
-4. **CICFlowMeter:** Lashkari, A.H., et al. "Characterization of Tor Traffic using Time based Features." ICISSP 2017.
-
-### Inspirations
-
-- **FoxIO JA4+ Fingerprinting:** https://github.com/FoxIO-LLC/ja4
-- **PyTorch Geometric (GNN):** https://github.com/pyg-team/pytorch_geometric
-- **FastAPI Best Practices:** https://github.com/zhanymkanov/fastapi-best-practices
+# Extended tests (from wearecharliekirk-main/)
+cd wearecharliekirk-main
+python -m pytest tests/ -v
+```
 
 ---
 
-## 🤝 Contributing
+## 📦 Models
 
-This is an academic research project for SIH 2026. Contributions, critiques, and collaborations are welcome.
+Models are hosted on HuggingFace and **auto-download on first run**:
 
-**Areas needing help:**
-- React dashboard development (TypeScript + WebSocket integration)
-- SHAP/LIME explainability integration
-- Kubernetes deployment manifests
-- LSA detection dataset collection (ethical, consented data only)
+**Repository**: [Unded-17/netsentinel-models](https://huggingface.co/Unded-17/netsentinel-models)
 
-**Contact:** [Your email / GitHub username]
+| Model | Format | Size |
+|---|---|---|
+| DDoS XGBoost (binary + multi) | `.onnx` + feature names | ~1.5 MB |
+| C2 Beacon BiLSTM + FFT | `.onnx` + scaler params | ~2 MB |
+| DGA CNN-BiLSTM | `.onnx` | ~1 MB |
+| Encrypted Traffic Transformer | `.onnx` + scaler + classes | ~3 MB |
+| Port Scan XGBoost | `.onnx` + feature names | ~750 KB |
+| Exfiltration VAE | `.onnx` + scaler + meta | ~500 KB |
 
----
-
-## 📄 License
-
-This project is licensed under the MIT License. Model weights are provided under the same license.
-
-**Disclaimer:** This tool is for educational and research purposes only. Do not deploy on production networks without proper security review. The authors are not responsible for misuse.
-
----
-
-## 🏆 Acknowledgments
-
-- **Canadian Institute for Cybersecurity (CIC)** for open-sourcing the IDS datasets
-- **Stratosphere IPS** for the CTU-13 botnet captures
-- **Industry Expert** (anonymous) for the brutally honest architecture critique
-- **SIH 2026 Organizers** for the problem statement and motivation
+Manual download (if no internet on target machine):
+```bash
+pip install huggingface_hub
+huggingface-cli download Unded-17/netsentinel-models --local-dir ~/.cache/netsentinel/models
+```
 
 ---
 
-*"The best way to predict the future is to invent it. But first, you must understand why the present is broken."*
+## ⚙️ Dependencies
 
-— NetSentinel Team, 2024
+### Backend (Python 3.10+)
+```
+fastapi >= 0.115.0       # Web framework
+uvicorn[standard]        # ASGI server
+scapy >= 2.5.0           # Packet parsing
+onnxruntime >= 1.19.0    # ML inference (CPU)
+numpy, pandas            # Data processing
+huggingface_hub          # Model auto-download
+scikit-learn             # Preprocessing
+websockets               # Real-time communication
+```
+
+### Frontend (Node.js 18+)
+```
+react 19, react-dom 19   # UI framework
+recharts                 # Charts
+three.js                 # 3D threat graph
+lucide-react             # Icons
+vite 8                   # Build tool
+tailwindcss 4            # Styling
+typescript 5             # Type safety
+```
+
+### V2 Research (additional)
+```
+torch >= 2.4             # PyTorch (CPU index recommended)
+scipy, matplotlib        # Analysis & charts
+cryptography >= 42.0     # QUIC decryption
+```
+
+---
+
+## 📄 Documentation Index
+
+Detailed documentation is in `netsentinel-main/docs_deep/`:
+
+| Document | What it covers |
+|---|---|
+| `ARCHITECTURE.md` | Complete system architecture |
+| `ARCHITECTURE_V2.md` | V2 Inspector–Sentry design |
+| `HOW_THE_REAL_PIPELINE_WORKS.md` | Extraction → detection flow |
+| `LIVE_CAPTURE_GUIDE.md` | Setting up live capture |
+| `VALIDATION_AND_STRATEGY.md` | Validation approach |
+| `V2_HARDENING.md` | V2 hardening decisions |
+| `FRONTEND_INTEGRATION_PLAN.md` | Frontend ↔ backend integration |
+| `CRITIQUE.md` | Honest limitations |
+
+---
+
+## 📝 License
+
+MIT License — see `netsentinel-main/LICENSE`
+
+---
+
+## 👥 Team Resurreccion
+
+Built for **Smart India Hackathon 2026**
+
+---
+
+*Note: The V2 synthetic data generator is a stand-in, not a substitute for real network data. Claims about detection accuracy are validated on the synthetic generator and the LANL dataset. See `v2/README.md` § "Honesty boundary" for what the numbers do and do not prove.*
