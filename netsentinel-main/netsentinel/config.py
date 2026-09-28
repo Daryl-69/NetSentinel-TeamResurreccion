@@ -99,11 +99,11 @@ def get_model_path(relative_path: str) -> str:
     except ImportError:
         print(f"  [ERROR] huggingface_hub not installed. Install with: pip install huggingface_hub")
         print(f"  [ERROR] Or download models manually from: https://huggingface.co/{HF_REPO_ID}")
-        raise
+        return None
     except Exception as e:
-        print(f"  [ERROR] Failed to download {relative_path}: {e}")
+        print(f"  [WARN] Failed to download {relative_path}: {e}")
         print(f"  [INFO] Download manually from: https://huggingface.co/{HF_REPO_ID}/tree/main")
-        raise
+        return None
 
 
 # Model paths using auto-download
@@ -117,7 +117,7 @@ C2_SEQ_SCALE_PATH = get_model_path("c2_beacon_detector/scaler_seq_scale.npy")
 C2_FFT_MEAN_PATH = get_model_path("c2_beacon_detector/scaler_fft_mean.npy")
 C2_FFT_SCALE_PATH = get_model_path("c2_beacon_detector/scaler_fft_scale.npy")
 
-DGA_MODEL_PATH = get_model_path("dga_dna_tunneling_detection/dga_cnn_bilstm_v2.onnx")
+DGA_MODEL_PATH = get_model_path("dga_dna_tunneling_detection/dga_cnn_bilstm.onnx")
 
 ETT_MODEL_PATH = get_model_path("encrypted_traffic_transformer/encrypted_traffic_transformer.onnx")
 ETT_SCALER_PATH = get_model_path("encrypted_traffic_transformer/ett_scaler.json")
