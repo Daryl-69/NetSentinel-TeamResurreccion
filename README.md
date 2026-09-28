@@ -1,12 +1,14 @@
 # NetSentinel — AI-Powered Network Threat Detection System
 
-**Team Resurreccion | SIH 2026**
+**Team Resurreccion | SIH 2026 — Problem Statement SIH25126**
 
 > *"See Everything. Touch Nothing. Trust the Chain."*
 
-NetSentinel is an AI-powered **Network Detection & Response (NDR)** system that detects six families of network threats in real time using ONNX-deployed ML models — from raw packets to alerts, without reading payloads.
+NetSentinel is an AI-powered **Network Detection & Response (NDR)** system built for **Smart India Hackathon 2026**. It tackles the challenge of detecting sophisticated cyber threats — DDoS, C2 beaconing, DGA domains, encrypted malware, port scans, and data exfiltration — in real time, using **only packet metadata and traffic volume**. No payloads are ever read or decrypted.
 
----
+The system runs **six ONNX-deployed ML models** (XGBoost, BiLSTM, CNN, Transformer, VAE) as a FastAPI backend with WebSocket-powered dashboards, a two-tier **Inspector–Sentry** architecture for cost-efficient escalation (13.7× model compression, 7.1× lift over random routing), and full **MITRE ATT&CK mapping** for every alert. Models auto-download from HuggingFace and run on CPU — no GPU needed.
+
+
 
 ## ⚡ Quick Start — Download and Run
 
