@@ -86,6 +86,19 @@ python traffic_feed.py
 ✅ Open **http://localhost:8000/console/** — Operator console  
 ✅ Open **http://localhost:8000/docs** — Full API documentation
 
+> **The Inspector–Sentry cascade (left half of `/sentinel/`) needs PyTorch**, which `requirements.txt` does not install. Without it the panel shows *"PyTorch is not available"*. Install it once into `tier2/.venv`, which the backend finds automatically (or point `NETSENTINEL_TIER2_PYTHON` at any Python that has torch):
+> ```bash
+> cd NetSentinel-TeamResurreccion/wearecharliekirk-main/tier2
+> python -m venv .venv
+> .venv/bin/pip install torch --index-url https://download.pytorch.org/whl/cpu     # Windows: .venv\Scripts\pip ...
+> .venv/bin/pip install -r requirements.txt
+> ```
+> Then restart `python run.py` and reload `/sentinel/`. The Inspector trains on its own (about 10 s), the Sentry is distilled from it (205,546 → 14,992 parameters), and it then scores 60 hosts every hour. Running `python traffic_feed.py` starts a kill chain on one host (`dev-011`) in its "host chain" segment, and that host then gets escalated and flagged (or trigger it directly with `curl -X POST http://localhost:8000/api/cascade/attack`).
+>
+> **This cascade runs on a synthetic organisation, not on your captured traffic.** The Inspector needs a commissioning window of days of a site's own host behaviour, and the live pipeline doesn't have that yet (`GET /api/tier2` reports `"wired_into_live_pipeline": false`). The right half of `/sentinel/` (Live Detections) *does* show detections from live capture and `traffic_feed.py`.
+>
+> ⚠️ With the integrity layer enabled (the default), the extended backend **makes git commits** (`integrity: checkpoint #N`, updating `integrity/latest_sth.json`) in this checkout while it runs. Don't run it on a branch you plan to push as-is.
+
 ### 4️⃣ V2 Research Harness (Inspector–Sentry experiments)
 
 ```bash
@@ -191,7 +204,7 @@ Same flags, same requirements:
 cd NetSentinel-TeamResurreccion/wearecharliekirk-main
 sudo .venv/bin/python run.py --live         # Windows (as Administrator): python run.py --live
 ```
-Then open **http://localhost:8000/sentinel/** or **http://localhost:8000/console/**. The extended build also analyses IPv6 and uses rule-based volumetric, DNS-behaviour and beacon detectors alongside the models.
+Then open **http://localhost:8000/sentinel/** or **http://localhost:8000/console/**. The extended build also analyses IPv6 and uses rule-based volumetric, DNS-behaviour and beacon detectors alongside the models. On `/sentinel/`, live-capture detections appear in the *Live Detections* panel. The Inspector–Sentry cascade panel is a synthetic-organisation demo and does not score captured traffic (see step 3️⃣).
 
 ### What "real time" means here
 
@@ -416,7 +429,7 @@ cd wearecharliekirk-main
 python traffic_feed.py
 ```
 
-Open `http://localhost:8000/sentinel/` for the Inspector–Sentry live ops view.
+Open `http://localhost:8000/sentinel/` for the Inspector–Sentry live ops view (the cascade panel needs PyTorch in `tier2/.venv` — see step 3️⃣ of the Quick Start).
 Open `http://localhost:8000/console/` for the operator console.
 Open `http://localhost:8000/docs` for the API documentation.
 
