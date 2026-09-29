@@ -1,0 +1,16 @@
+{
+ "path": "inspector_baseline.pt",
+ "meta": {
+  "trained_at": 1790657950.6950545,
+  "source": "own_corpus.npz (97 real pcaps, D:\\\\capture)",
+  "hosts": 15,
+  "days": 4,
+  "live_windows": 94,
+  "params": {
+   "inspector": 205546,
+   "sentry": 14992,
+   "ratio": 13.7
+  }
+ },
+ "thr": 3.172244071960449
+}
