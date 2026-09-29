@@ -3,6 +3,7 @@ Data Exfiltration Detection using VAE (Expert 6)
 Dataset: CIC-Bell-DNS-EXF-2021
 MITRE ATT&CK: T1041 (Exfil Over C2), T1048 (Exfil Alt Protocol), T1071.004 (DNS)
 """
+import math
 import numpy as np
 import onnxruntime as ort
 import joblib
@@ -37,9 +38,11 @@ class ExfiltrationDetector:
         # Load scaler (CRITICAL: must match training scikit-learn version)
         self.scaler = joblib.load(EXFIL_SCALER_PATH)
         
-        # Threshold for reconstruction error (from metadata)
-        # Tuned to F1=0.89 on validation set
-        self.threshold = 0.15
+        # Threshold for reconstruction error. 0.15 flagged every ordinary
+        # lookup on live traffic (pypi.org, github.com ...). Empirically:
+        # normal DNS MSE < 0.45, tunnel DNS MSE > 0.99 (same value as the
+        # extended wearecharliekirk-main build).
+        self.threshold = 0.70
         
         print(f"[OK] Exfiltration VAE loaded ({len(self.feature_names)} features)")
     
@@ -80,7 +83,13 @@ class ExfiltrationDetector:
             
             # Normalize confidence: mse > threshold = anomaly
             # Confidence is how much the MSE exceeds threshold
-            conf = min(mse / self.threshold, 1.0) if mse > self.threshold else 0.0
+            # Graded: 0 at the threshold, 0.63 at 2x, 0.95 at 4x. (mse/threshold
+            # clamped to 1.0 made every detection exactly 100% confident.)
+            if mse > self.threshold:
+                excess = (mse - self.threshold) / self.threshold
+                conf = 1.0 - math.exp(-excess)
+            else:
+                conf = 0.0
             
             is_exfil = mse > self.threshold
             

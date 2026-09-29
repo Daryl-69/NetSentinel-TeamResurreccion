@@ -11,6 +11,7 @@ This is the entry point. It:
    and the integrity layer
 """
 import asyncio
+import os
 import time
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -117,7 +118,6 @@ async def startup():
             proof_store = ProofStore(INTEGRITY_PROOF_STORE_PATH)
 
             # 4. Git anchor backend
-            import os
             repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             git_anchor = GitAnchorBackend(repo_root)
 
@@ -217,6 +217,17 @@ async def startup():
     # Start background simulation loop and the metrics feed
     asyncio.create_task(simulation_loop())
     asyncio.create_task(metrics_loop())
+
+    # `python run.py --live` → capture real traffic from startup
+    if os.environ.get("NETSENTINEL_LIVE") == "1":
+        from netsentinel.api.routes import start_live_capture
+        from netsentinel.extractor.pcap_reader import LiveCaptureError
+        from netsentinel.config import CAPTURE_INTERFACE
+        try:
+            info = await start_live_capture(CAPTURE_INTERFACE, analyzer, ws_hub)
+            print(f"\n[>] Live capture running on '{info['interface']}'")
+        except LiveCaptureError as e:
+            print(f"\n[!] Live capture NOT started: {e}")
     
     print("\n[>] Server ready!")
     print(f"   REST API:      http://localhost:8000/api/health")

@@ -3,7 +3,9 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
 
-import siteConfiguration from './.figma/make/site.json'
+// .figma/ is Figma Make's local workspace and is not committed (see .gitignore),
+// so importing .figma/make/site.json broke `npm run dev` on a fresh clone.
+const siteConfiguration: FigmaSiteConfiguration = { title: 'NetSentinel' }
 
 // Vite config — https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -31,13 +33,13 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: '0.0.0.0',
-      port: parseInt(process.env.PORT || '8443'),
+      port: parseInt(process.env.PORT || '5173'),
       strictPort: true,
       watch: { ignored: ['**/.figma/**'] },
     },
     preview: {
       host: '0.0.0.0',
-      port: parseInt(process.env.PORT || '8443'),
+      port: parseInt(process.env.PORT || '5173'),
     },
   }
 })

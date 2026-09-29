@@ -303,6 +303,8 @@ export function useThreatFeed(): FeedState {
         ws.onmessage = (e) => {
           try {
             const rawAlert = JSON.parse(e.data);
+            // Stats frames ({"type": "stats"}, every 2 s during live capture) are not alerts
+            if (rawAlert.type && rawAlert.type !== "alert") return;
             // Handle backend message format: {"type": "alert", "data": {...}}
             const alertData = rawAlert.type === "alert" && rawAlert.data ? rawAlert.data : rawAlert;
             const alert = parseBackendAlert(alertData);

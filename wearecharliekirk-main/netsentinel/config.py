@@ -7,10 +7,34 @@ from pathlib import Path
 # ============================================================
 HF_REPO_ID = "Unded-17/netsentinel-models"
 HF_CACHE_DIR = os.path.join(os.path.expanduser("~"), ".cache", "netsentinel", "models")
+# Under `sudo` (needed for live capture) "~" is root's home; reuse the models
+# the invoking user already downloaded instead of fetching them again.
+SUDO_USER_CACHE_DIR = (
+    os.path.join(os.path.expanduser(f"~{os.environ['SUDO_USER']}"), ".cache", "netsentinel", "models")
+    if os.environ.get("SUDO_USER") else None
+)
 
 # ============================================================
 # Model Paths (with auto-download from HuggingFace)
 # ============================================================
+def _is_real_file(path: str) -> bool:
+    """True if `path` exists and is not a Git LFS pointer stub.
+
+    models/ is tracked with Git LFS. A GitHub "Download ZIP" or a clone
+    without git-lfs gives ~130-byte text stubs in place of the models;
+    treating those as models makes every ONNX load fail with
+    INVALID_PROTOBUF. Skip them so the lookup falls through to the cache
+    and the HuggingFace download.
+    """
+    if not os.path.isfile(path):
+        return False
+    try:
+        with open(path, "rb") as f:
+            return not f.read(64).startswith(b"version https://git-lfs")
+    except OSError:
+        return False
+
+
 def get_model_path(relative_path: str) -> str:
     """
     Get model file path. Downloads from Hugging Face if not found locally.
@@ -33,7 +57,7 @@ def get_model_path(relative_path: str) -> str:
     env_base = os.environ.get("NETSENTINEL_MODELS_DIR")
     if env_base:
         env_path = os.path.join(env_base, relative_path)
-        if os.path.exists(env_path):
+        if _is_real_file(env_path):
             return env_path
 
     # 1. A models/ directory shipped alongside the repo. This is the supported
@@ -43,21 +67,26 @@ def get_model_path(relative_path: str) -> str:
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models"
     )
     repo_path = os.path.join(repo_base, relative_path)
-    if os.path.exists(repo_path):
+    if _is_real_file(repo_path):
         return repo_path
 
     # Try local development path first
     local_base = os.path.join(os.path.expanduser("~"), "OneDrive", "Desktop", "models")
     local_path = os.path.join(local_base, relative_path)
     
-    if os.path.exists(local_path):
+    if _is_real_file(local_path):
         return local_path
     
     # Try cache directory
     cache_path = os.path.join(HF_CACHE_DIR, relative_path)
     
-    if os.path.exists(cache_path):
+    if _is_real_file(cache_path):
         return cache_path
+
+    if SUDO_USER_CACHE_DIR:
+        sudo_path = os.path.join(SUDO_USER_CACHE_DIR, relative_path)
+        if _is_real_file(sudo_path):
+            return sudo_path
     
     # Download from Hugging Face
     print(f"  [INFO] Model not found locally, downloading from Hugging Face: {relative_path}")
@@ -72,10 +101,24 @@ def get_model_path(relative_path: str) -> str:
         downloaded_path = hf_hub_download(
             repo_id=HF_REPO_ID,
             filename=relative_path,
-            cache_dir=HF_CACHE_DIR,
             local_dir=HF_CACHE_DIR,
-            local_dir_use_symlinks=False,  # Copy file directly, don't use symlinks
         )
+
+        # ONNX models exported with external weights need their companion
+        # .onnx.data next to them (C2 Beacon, ETT, Exfil VAE); exfil_vae.onnx
+        # references expert6_vae.onnx.data.
+        if relative_path.endswith(".onnx"):
+            companions = [relative_path + ".data"]
+            if relative_path.endswith("exfil_vae.onnx"):
+                companions.append(relative_path.replace("exfil_vae.onnx", "expert6_vae.onnx.data"))
+            for companion in companions:
+                if _is_real_file(os.path.join(HF_CACHE_DIR, companion)):
+                    continue
+                try:
+                    hf_hub_download(repo_id=HF_REPO_ID, filename=companion, local_dir=HF_CACHE_DIR)
+                    print(f"  [OK] Downloaded companion: {companion}")
+                except Exception:
+                    pass  # Not every model has external data
         
         print(f"  [OK] Downloaded: {relative_path}")
         return downloaded_path
@@ -249,7 +292,10 @@ DNS_MODEL_ALERT_REPEAT_S = 600
 FLOW_IDLE_TIMEOUT = 120       # Seconds of inactivity before a flow is flushed
 FLOW_ACTIVE_TIMEOUT = 300     # Max seconds a flow can stay open
 SESSION_MIN_FLOWS = 100       # Flows needed per (src, dst) pair for C2 detection
-CAPTURE_INTERFACE = "Ethernet"  # Default Windows interface name (change for Linux)
+# Interface for live capture. Empty = auto-detect the interface carrying the
+# default route (eth0 / wlan0 / en0 / "Wi-Fi" ...). Override per request with
+# POST /api/capture/start?interface=<name>, or set NETSENTINEL_IFACE.
+CAPTURE_INTERFACE = os.environ.get("NETSENTINEL_IFACE", "")
 PCAP_UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
 os.makedirs(PCAP_UPLOAD_DIR, exist_ok=True)
 

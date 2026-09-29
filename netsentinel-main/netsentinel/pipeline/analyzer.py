@@ -11,17 +11,41 @@ model(s). Supports all 6 detection classes:
   - Data Exfiltration / DNS Tunnel (DNS path, requires lexical features)
   - C2 Beacon (session path)
 """
+import ipaddress
 import math
 from collections import Counter, defaultdict
 
 from netsentinel.models.registry import ModelRegistry
 from netsentinel.pipeline.alert_manager import AlertManager
-from netsentinel.config import THRESHOLDS
+from netsentinel.config import THRESHOLDS, ETT_ALERT_ON_VPN
 from netsentinel.extractor.unsw_feature_builder import (
     build_unsw_features,
     ConnectionTracker,
 )
 from netsentinel.extractor.dns_feature_builder import build_dns_features
+
+
+# Known-good second-level domains whose random-looking subdomains made the
+# name models fire (e.g. r20swj13mr.microsoft.com). Same list as the extended
+# wearecharliekirk-main build.
+_DGA_WHITELIST_SLDS = {
+    "microsoft.com", "windows.com", "windowsupdate.com", "msftncsi.com",
+    "msedge.net", "msn.com", "live.com", "office.com", "office365.com",
+    "outlook.com", "skype.com", "bing.com", "azure.com", "azureedge.net",
+    "google.com", "googleapis.com", "gstatic.com", "googlevideo.com",
+    "googleusercontent.com", "youtube.com", "ytimg.com", "gmail.com",
+    "amazon.com", "amazonaws.com", "cloudfront.net", "aws.amazon.com",
+    "apple.com", "icloud.com", "akamai.net", "akamaiedge.net",
+    "cloudflare.com", "cloudflare-dns.com", "fastly.net",
+    "fbcdn.net", "facebook.com", "whatsapp.net", "instagram.com",
+    "github.com", "githubusercontent.com", "github.io",
+    "verisign.com", "digicert.com", "letsencrypt.org",
+    "w3.org", "wikipedia.org", "mozilla.org", "mozilla.net", "mozilla.com",
+    "ubuntu.com", "debian.org", "centos.org",
+    "update.microsoft.com",
+    # package registries hit by `pip install` / `npm install` (registry.npmjs.org scores 0.77)
+    "npmjs.org", "pypi.org", "pythonhosted.org",
+}
 
 
 class FlowAnalyzer:
@@ -93,9 +117,11 @@ class FlowAnalyzer:
         
         source_ip = event.get("source_ip")
         flow_meta = {"domain": domain, "src_ip": source_ip}
+        labels = domain.lower().strip().rstrip(".").split(".")
+        base_domain = ".".join(labels[-2:]) if len(labels) >= 2 else domain
 
         # --- DGA detection ---
-        if self.registry.dga:
+        if self.registry.dga and base_domain not in _DGA_WHITELIST_SLDS:
             result = self.registry.dga.predict(domain)
             
             # Calculate raw entropy to filter out false positives
@@ -195,7 +221,7 @@ class FlowAnalyzer:
                 # Heuristic guard: real DDoS has high packet/byte rates
                 pkt_rate = features.get("Flow Packets/s", 0)
                 byte_rate = features.get("Flow Bytes/s", 0)
-                if pkt_rate > 100 or byte_rate > 50000:
+                if (pkt_rate > 100 or byte_rate > 50000) and _is_flood_shaped(features, dest_ip):
                     # Add src_ip_entropy evidence
                     if dest_ip and dest_ip in self._recent_src_ips:
                         src_entropy = _shannon_entropy_of_ips(
@@ -211,7 +237,8 @@ class FlowAnalyzer:
                     )
         
         # --- Encrypted traffic detection (only if no DDoS detected) ---
-        if alert is None and self.registry.ett and features:
+        # VPN-* is an application class, not an attack — see ETT_ALERT_ON_VPN.
+        if alert is None and ETT_ALERT_ON_VPN and self.registry.ett and features:
             result = self.registry.ett.predict(features)
             if result["is_vpn"] and result["confidence"] >= THRESHOLDS["encrypted_malware"]:
                 alert = self.alert_manager.create_alert(
@@ -260,6 +287,30 @@ def _proto_name(proto) -> str:
     if isinstance(proto, str):
         return proto
     return {6: "TCP", 17: "UDP", 1: "ICMP"}.get(proto, "TCP")
+
+
+def _is_flood_shaped(features: dict, dest_ip: str | None) -> bool:
+    """Flood-shape guard for the DDoS XGBoost on captured traffic.
+
+    On flows built by our live extractor the XGBoost scores ordinary two-way
+    client traffic (a page load, a download) as DDoS with >0.99 confidence —
+    the feature-distribution shift documented in LIVE_RESULTS.md. A flood is
+    one-sided: spoofed SYNs and junk datagrams get no (or almost no) reply.
+    So require that shape, and never treat broadcast/multicast as a victim.
+    """
+    if dest_ip and _is_broadcast_or_multicast(dest_ip):
+        return False
+    fwd = features.get("Total Fwd Packets", 0) or 0
+    bwd = features.get("Total Backward Packets", 0) or 0
+    return bwd == 0 or fwd >= 10 * bwd
+
+
+def _is_broadcast_or_multicast(ip: str) -> bool:
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    return addr.is_multicast or ip.endswith(".255")
 
 
 def _shannon_entropy_of_ips(ip_list: list[str]) -> float:

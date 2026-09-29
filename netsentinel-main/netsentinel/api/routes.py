@@ -1,10 +1,15 @@
 """REST API Routes — Health, alerts, stats, simulation, PCAP, capture."""
 import os
+import time
 import asyncio
 import shutil
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks
+from fastapi.responses import JSONResponse
 
-from netsentinel.config import PCAP_UPLOAD_DIR, CAPTURE_INTERFACE
+from netsentinel.config import PCAP_UPLOAD_DIR, CAPTURE_INTERFACE, LIVE_FLUSH_INTERVAL_S
+from netsentinel.extractor.pcap_reader import (
+    LiveCaptureError, default_interface, list_interfaces,
+)
 
 router = APIRouter(prefix="/api")
 
@@ -147,32 +152,39 @@ def create_routes(analyzer, alert_manager, ws_hub, simulator_control, packet_pro
             "size_bytes": os.path.getsize(request.filepath),
         }
 
+    @router.get("/capture/interfaces")
+    async def capture_interfaces():
+        """List interfaces available for live capture, and the default one."""
+        return {
+            "default": CAPTURE_INTERFACE or default_interface(),
+            "interfaces": list_interfaces(),
+        }
+
     @router.post("/capture/start")
     async def start_capture(interface: str = CAPTURE_INTERFACE):
-        """Start live packet capture on the specified interface."""
+        """Start live packet capture.
+
+        interface: e.g. eth0 / wlan0 / en0 / Wi-Fi. Omit to use the interface
+        carrying the default route. Needs root/admin (and Npcap on Windows).
+        """
         if _packet_processor is None:
-            return {"error": "Extraction layer not initialized"}
-
-        if _packet_processor._live_running:
-            return {"error": "Live capture already running"}
-
-        event_queue = asyncio.Queue(maxsize=10000)
-
-        # Start capture
-        await _packet_processor.start_live_capture(interface, event_queue)
-
-        # Start consumer task
-        asyncio.create_task(_consume_live_events(event_queue, analyzer, ws_hub))
-
-        return {"status": f"Live capture started on '{interface}'"}
+            return JSONResponse({"error": "Extraction layer not initialized"}, status_code=503)
+        try:
+            info = await start_live_capture(interface, analyzer, ws_hub)
+        except LiveCaptureError as e:
+            return JSONResponse({"error": str(e)}, status_code=400)
+        return {
+            "status": f"Live capture started on '{info['interface']}'",
+            **info,
+        }
 
     @router.post("/capture/stop")
     async def stop_capture():
         """Stop live packet capture."""
         if _packet_processor is None:
-            return {"error": "Extraction layer not initialized"}
+            return JSONResponse({"error": "Extraction layer not initialized"}, status_code=503)
 
-        _packet_processor.stop_live_capture()
+        await asyncio.to_thread(_packet_processor.stop_live_capture)
         return {"status": "Live capture stopped"}
 
     @router.get("/extractor/stats")
@@ -223,16 +235,48 @@ async def _process_pcap_background(pcap_path: str, analyzer, ws_hub):
     })
 
 
+async def start_live_capture(interface, analyzer, ws_hub) -> dict:
+    """Open the capture on `interface` (None/"" = default route) and start
+    feeding its events through the pipeline. Raises LiveCaptureError."""
+    if _packet_processor is None:
+        raise LiveCaptureError("Extraction layer not initialized")
+    event_queue = asyncio.Queue(maxsize=10000)
+    info = await _packet_processor.start_live_capture(
+        interface or None, event_queue, flush_interval=LIVE_FLUSH_INTERVAL_S,
+    )
+    asyncio.create_task(_consume_live_events(event_queue, analyzer, ws_hub))
+    return info
+
+
 async def _consume_live_events(event_queue: asyncio.Queue, analyzer, ws_hub):
-    """Consume events from live capture queue and run through pipeline."""
+    """Consume events from live capture queue and run through pipeline.
+
+    Also pushes a stats frame over the WebSocket every 2 s so dashboards see
+    packet/flow counters move. Exits once capture has stopped and the queue
+    is drained.
+    """
+    last_stats = 0.0
     while True:
         try:
-            event = await asyncio.wait_for(event_queue.get(), timeout=5.0)
-            alert = analyzer.analyze_flow(event)
-            if alert:
-                await ws_hub.broadcast_alert(alert)
+            event = await asyncio.wait_for(event_queue.get(), timeout=1.0)
         except asyncio.TimeoutError:
-            continue
-        except Exception:
-            break
+            event = None
 
+        if event is not None:
+            try:
+                alert = analyzer.analyze_flow(event)
+                if alert:
+                    await ws_hub.broadcast_alert(alert)
+            except Exception as e:
+                # One bad event must not kill live detection
+                print(f"[!] Live pipeline error: {e}")
+
+        now = time.time()
+        if now - last_stats >= 2.0:
+            last_stats = now
+            stats = analyzer.get_stats()
+            stats["extractor"] = _packet_processor.stats
+            await ws_hub.broadcast_stats(stats)
+
+        if event is None and not _packet_processor._live_running and event_queue.empty():
+            break

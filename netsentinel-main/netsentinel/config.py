@@ -7,6 +7,12 @@ from pathlib import Path
 # ============================================================
 HF_REPO_ID = "Unded-17/netsentinel-models"
 HF_CACHE_DIR = os.path.join(os.path.expanduser("~"), ".cache", "netsentinel", "models")
+# Under `sudo` (needed for live capture) "~" is root's home; reuse the models
+# the invoking user already downloaded instead of fetching them again.
+SUDO_USER_CACHE_DIR = (
+    os.path.join(os.path.expanduser(f"~{os.environ['SUDO_USER']}"), ".cache", "netsentinel", "models")
+    if os.environ.get("SUDO_USER") else None
+)
 
 # ============================================================
 # Model Paths (with auto-download from HuggingFace)
@@ -38,6 +44,11 @@ def get_model_path(relative_path: str) -> str:
     
     if os.path.exists(cache_path):
         return cache_path
+
+    if SUDO_USER_CACHE_DIR:
+        sudo_path = os.path.join(SUDO_USER_CACHE_DIR, relative_path)
+        if os.path.exists(sudo_path):
+            return sudo_path
     
     # Download from Hugging Face
     print(f"  [INFO] Model not found locally, downloading from Hugging Face: {relative_path}")
@@ -134,10 +145,18 @@ EXFIL_META_PATH = get_model_path("exfil/exfil_meta.json")
 # Detection Thresholds
 # ============================================================
 # If a model's confidence exceeds this threshold, an alert is generated.
+#
+# The encrypted-traffic transformer is a 14-class APPLICATION classifier
+# (BROWSING/CHAT/.../VPN-* from ISCX VPN-nonVPN). "VPN-*" means a flow looks
+# tunnelled, not that it is malicious, and on ordinary live traffic it fires
+# on plain HTTPS. So it is telemetry by default; set True (or
+# NETSENTINEL_ETT_ALERTS=1) only if "a host uses a VPN" should raise alerts.
+ETT_ALERT_ON_VPN = os.environ.get("NETSENTINEL_ETT_ALERTS") == "1"
+
 THRESHOLDS = {
     "ddos": 0.95,
     "c2_beacon": 0.80,
-    "dga": 0.80,
+    "dga": 0.70,   # the HuggingFace DGA model's DGA-class confidence tops out near 0.80
     "encrypted_malware": 0.70,
     "port_scan": 0.85,
     "exfiltration": 0.70,
@@ -203,6 +222,11 @@ TARGET = {"ip": "10.0.0.1", "country": "IN", "lat": 28.61, "lon": 77.21, "city":
 FLOW_IDLE_TIMEOUT = 120       # Seconds of inactivity before a flow is flushed
 FLOW_ACTIVE_TIMEOUT = 300     # Max seconds a flow can stay open
 SESSION_MIN_FLOWS = 100       # Flows needed per (src, dst) pair for C2 detection
-CAPTURE_INTERFACE = "Ethernet"  # Default Windows interface name (change for Linux)
+# Interface for live capture. Empty = auto-detect the interface carrying the
+# default route (eth0 / wlan0 / en0 / "Wi-Fi" ...). Override per request with
+# POST /api/capture/start?interface=<name>, or set NETSENTINEL_IFACE.
+CAPTURE_INTERFACE = os.environ.get("NETSENTINEL_IFACE", "")
+# Seconds between sweeps that emit idle flows (UDP, TCP without FIN/RST)
+LIVE_FLUSH_INTERVAL_S = 5
 PCAP_UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
 os.makedirs(PCAP_UPLOAD_DIR, exist_ok=True)
