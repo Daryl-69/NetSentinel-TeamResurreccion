@@ -7,7 +7,7 @@ Queries -> {"type": "dns", "domain", "source_ip", "dest_ip", "query_type",
             "query_bytes", "timestamp", "lexical"}
 Replies -> {"type": "dns_response", "domain", "source_ip" (the client the
             reply went to), "dest_ip" (the resolver), "rcode", "answers",
-            "response_bytes", "timestamp"}
+            "response_bytes", "timestamp", "answer_ips" (A/AAAA, if any)}
 
 PS 26145 (c) "record-type anomalies": every query type is kept. The earlier
 version dropped anything that was not A/AAAA/CNAME/MX/TXT/SRV, which threw
@@ -42,6 +42,21 @@ def _qname(q) -> str:
     if isinstance(name, bytes):
         return name.decode("utf-8", errors="ignore").rstrip(".")
     return str(name).rstrip(".")
+
+
+def _answer_ips(dns) -> list:
+    """A / AAAA addresses from a Scapy DNS reply (lets Tier 2 name peers that
+    were reached without TLS SNI)."""
+    out = []
+    try:
+        an = dns.an
+        rrs = list(an) if isinstance(an, list) else [an[i] for i in range(int(dns.ancount or 0))]
+        for rr in rrs[:32]:
+            if getattr(rr, "type", None) in (1, 28) and getattr(rr, "rdata", None):
+                out.append(str(rr.rdata))
+    except Exception:
+        pass
+    return out
 
 
 def _dns_message_len(packet) -> int:
@@ -115,14 +130,19 @@ class DNSExtractor:
             _qname(q) if q is not None else None,
             int(getattr(q, "qtype", 1) or 1) if q is not None else None,
             int(getattr(dns, "rcode", 0) or 0), int(getattr(dns, "ancount", 0) or 0),
-            _dns_message_len(packet))
+            _dns_message_len(packet),
+            _answer_ips(dns) if dns.qr else None)
 
     def process_fields(self, ts: float, src_ip: str, dst_ip: str, qr: int, qname,
-                       qtype, rcode: int, ancount: int, msg_len: int) -> Optional[dict]:
+                       qtype, rcode: int, ancount: int, msg_len: int,
+                       answer_ips: Optional[list] = None) -> Optional[dict]:
         """One DNS message as parsed fields (also called by the fast reader)."""
         if qr == 1:
-            return self._handle_response(qname or "", qtype, rcode, ancount, msg_len,
-                                         client_ip=dst_ip, resolver_ip=src_ip, ts=ts)
+            ev = self._handle_response(qname or "", qtype, rcode, ancount, msg_len,
+                                       client_ip=dst_ip, resolver_ip=src_ip, ts=ts)
+            if answer_ips:
+                ev["answer_ips"] = answer_ips
+            return ev
         if qname:
             return self._handle_query(qname, qtype or 1, msg_len, src_ip, ts, dst_ip)
         return None

@@ -10,7 +10,7 @@
    "bootLog","liveHosts","budgetPct","escN","verdicts","dayN","hourClock","totline","inspectorCore",
    "sentryParams","inspParams","flowSvg","cascadeBody","sparkAlerts","scoreChart","scoreHost","latBars",
    "compA","compB","compX","chainHost","chainSteps","c2Timeline","c2Gaps","c2Side","famTiles","ticker",
-   "criteria","banner"].forEach(function (k) { el[k] = $(k); });
+   "criteria","banner","modeBadge","cascadeHint"].forEach(function (k) { el[k] = $(k); });
 
   var CHAIN = [
     { key: "Recon_API",       icon: "01", name: "Recon API",   d: "enumerate" },
@@ -246,14 +246,19 @@
       el.bootLog.innerHTML = '<div class="boot-err">' + esc(st.error || "unknown error") + '</div>';
       return;
     }
-    if (st.status !== "running") {
+    if (st.status !== "running" || (st.mode === "real" && st.meta && st.meta.hosts && !st.meta.hosts.length)) {
       el.boot.hidden = false;
+      if (st.mode === "real" && st.status === "running")
+        el.bootTitle.textContent = st.meta.threshold ? "Watching real traffic — waiting for the first connections…"
+                                                     : "Collecting real traffic to commission the Inspector…";
       if (st.logs && st.logs.length) el.bootLog.innerHTML = st.logs.slice(-4).map(function (l) { return "<div>" + esc(l) + "</div>"; }).join("");
       return;
     }
-    // running: build grid once
-    if (!meta && st.meta && st.meta.hosts) {
+    showMode(st.mode, st);
+    // running: build the grid once -- and again whenever the real device set changes
+    if (st.meta && st.meta.hosts && (!meta || (st.meta.version || 0) !== (meta.version || 0))) {
       meta = st.meta;
+      targetId = meta.target ? meta.target.id : null;
       buildGrid(meta);
       el.boot.hidden = true;
       if (meta.params) {
@@ -274,6 +279,21 @@
     }
   }
 
+  function showMode(mode, st) {
+    if (!mode) return;
+    el.modeBadge.hidden = false;
+    el.modeBadge.className = "mode-badge" + (mode === "real" ? " real" : "");
+    if (mode === "real") {
+      var ins = st.inspector || {}, live = ins.live || {}, base = ins.baseline || {};
+      el.modeBadge.textContent = "REAL TRAFFIC" + (st.iface ? " · " + st.iface : "");
+      el.cascadeHint.textContent = "your devices, hour by hour · commissioned on " + (base.host_days || 0) +
+        " baseline + " + ((ins.model || {}).live_host_days || 0) + " live device-days · live corpus " +
+        (live.windows || 0) + " windows" + (ins.training ? " · retraining…" : "");
+    } else {
+      el.modeBadge.textContent = "SYNTHETIC DEMO";
+    }
+  }
+
   function setPhase(stage) {
     var idx = { building: 1, commissioning: 1, distilling: 2, watching: 3 }[stage] || 0;
     Array.prototype.forEach.call(el.phaseTrack.children, function (c) {
@@ -286,13 +306,16 @@
   function buildGrid(m) {
     var hosts = m.hosts, n = hosts.length;
     var cols = Math.ceil(Math.sqrt(n * 1.5));
+    // a real network may have one or two devices: keep tiles tile-sized
+    if (n < 12) cols = Math.max(4, cols);
     el.hostGrid.style.gridTemplateColumns = "repeat(" + cols + ",1fr)";
-    el.hostGrid.style.gridAutoRows = "1fr";
+    el.hostGrid.style.gridAutoRows = n < 12 ? "72px" : "1fr";
     el.hostGrid.innerHTML = "";
     hostEl = {};
     hosts.forEach(function (h) {
       var parts = h.name.split("-");
       var d = document.createElement("div");
+      if (h.ip) d.title = h.ip;
       d.className = "host off" + (targetId === h.id ? " target" : "");
       d.innerHTML = '<span class="hr">' + esc(parts[0]) + '</span><span class="hn">' + esc(parts[1] || "") + '</span>';
       el.hostGrid.appendChild(d);
@@ -308,6 +331,7 @@
   }
 
   function renderHour(h, st) {
+    renderHour._seen = renderHour._seen || {};
     el.dayN.textContent = h.day;
     el.hourClock.textContent = h.clock;
     el.liveHosts.textContent = h.live_hosts;
@@ -372,6 +396,18 @@
     // chain
     updateChain(h);
 
+    // real traffic: banner once per flagged device and hour
+    if (h.mode === "real") {
+      (h.verdicts || []).forEach(function (v) {
+        var key = v.host + "@" + (h.date || "") + h.hour;
+        if (v.flagged && !renderHour._seen[key]) {
+          renderHour._seen[key] = true;
+          banner("Inspector flagged " + v.name + (v.ip ? " (" + v.ip + ")" : ""),
+            (v.categories || []).join("  ›  "), true);
+        }
+      });
+      return;
+    }
     // banner on a fresh target flag
     if (targetFlag && !renderHour._flagged) {
       renderHour._flagged = true;
@@ -428,7 +464,7 @@
   }
   function updateChain(h) {
     var on = {}; (h.target_categories || []).forEach(function (c) { on[c] = true; });
-    var active = h.attack_active;
+    var active = h.attack_active || h.mode === "real";
     var reached = -1;
     CHAIN.forEach(function (c, i) { if (on[c.key]) reached = i; });
     Array.prototype.forEach.call(el.chainSteps.children, function (node, i) {
@@ -437,7 +473,10 @@
       if (on[CHAIN[i].key]) node.classList.add("on");
       else if (i < reached) node.classList.add("done");
     });
-    if (active && meta && meta.target) {
+    if (h.mode === "real" && meta && meta.target) {
+      el.chainHost.innerHTML = 'Real traffic · watching <b>' + esc2(meta.target.name) + '</b> — this hour: ' +
+        ((h.target_categories || []).length ? esc2(h.target_categories.join(" · ")) : "no traffic");
+    } else if (active && meta && meta.target) {
       var stepName = reached >= 0 ? CHAIN[reached].name : "starting";
       el.chainHost.innerHTML = 'Watching <b>' + esc2(meta.target.name) + '</b> — now at <span class="red">' + esc2(stepName) + '</span>';
     } else if (meta && meta.target) {

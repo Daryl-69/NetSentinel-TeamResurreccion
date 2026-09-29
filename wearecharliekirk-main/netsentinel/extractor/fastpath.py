@@ -273,4 +273,26 @@ def parse_dns(p: Pkt) -> Optional[dict]:
             return out if out["qr"] == 1 else None
         out["qname"] = name.decode("utf-8", errors="ignore")
         out["qtype"] = _u16(msg, o)[0]
+        if out["qr"] == 1 and an and qd == 1:
+            out["answer_ips"] = _answer_ips(msg, o + 4, an)
     return out
+
+
+def _answer_ips(msg: bytes, o: int, an: int) -> list:
+    """A / AAAA addresses in the answer section (lets Tier 2 name a peer
+    that was reached without TLS SNI). Best effort: stops at anything odd."""
+    ips = []
+    for _ in range(min(an, 32)):
+        _name, o = _qname(msg, o)
+        if o is None or o + 10 > len(msg):
+            break
+        rtype, rdlen = _u16(msg, o)[0], _u16(msg, o + 8)[0]
+        o += 10
+        if o + rdlen > len(msg):
+            break
+        if rtype == 1 and rdlen == 4:
+            ips.append(_ntop(_AF4, msg[o:o + 4]))
+        elif rtype == 28 and rdlen == 16:
+            ips.append(_ntop(_AF6, msg[o:o + 16]))
+        o += rdlen
+    return ips

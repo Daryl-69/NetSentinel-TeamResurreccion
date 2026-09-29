@@ -13,6 +13,7 @@ from netsentinel.config import PCAP_UPLOAD_DIR, CAPTURE_INTERFACE
 from netsentinel.extractor.pcap_reader import (
     LiveCaptureError, default_interface, list_interfaces,
 )
+from netsentinel.inspector import INSPECTOR as _INSPECTOR
 from netsentinel.pipeline.metrics import METRICS
 from netsentinel.pipeline.alert_schema import ALERT_SCHEMA
 from netsentinel.pipeline.ps26145 import build_status, THREATS
@@ -216,6 +217,8 @@ def create_routes(analyzer, alert_manager, ws_hub, simulator_control, packet_pro
         if _packet_processor is None:
             return JSONResponse({"error": "Extraction layer not initialized"}, status_code=503)
         await asyncio.to_thread(_packet_processor.stop_live_capture)
+        if _INSPECTOR.running:
+            await asyncio.to_thread(_INSPECTOR.stop)
         return {"status": "Live capture stopped"}
 
     @router.get("/extractor/stats")
@@ -292,11 +295,39 @@ def create_routes(analyzer, alert_manager, ws_hub, simulator_control, packet_pro
 
     @router.post("/cascade/start")
     async def cascade_start(req: CascadeStart):
+        # While live capture runs, /sentinel/ shows the Inspector on real traffic
+        if _INSPECTOR.running:
+            return {"status": _INSPECTOR.status, "mode": "real"}
         return CASCADE.start(tick=max(0.2, min(req.tick, 5.0)))
 
     @router.get("/cascade/state")
     async def cascade_state(since: int = 0):
-        return CASCADE.state(max(0, since))
+        if _INSPECTOR.running or _INSPECTOR.status in ("starting", "error"):
+            return _INSPECTOR.state(max(0, since))
+        return dict(CASCADE.state(max(0, since)), mode="synthetic")
+
+    # ---------------- Tier 2 on real traffic (netsentinel/inspector.py)
+    @router.get("/inspector/state")
+    async def inspector_state(since: int = 0):
+        """Inspector-Sentry on the live network: devices, hourly verdicts,
+        baseline/live corpus sizes, current model."""
+        return _INSPECTOR.state(max(0, since))
+
+    @router.post("/inspector/start")
+    async def inspector_start():
+        if not (_packet_processor and _packet_processor._live_running):
+            return JSONResponse({"error": "start live capture first (POST /api/capture/start)"}, status_code=400)
+        return await _start_inspector(_packet_processor._live_interface)
+
+    @router.post("/inspector/stop")
+    async def inspector_stop():
+        await asyncio.to_thread(_INSPECTOR.stop)
+        return {"status": "stopped"}
+
+    @router.post("/inspector/retrain")
+    async def inspector_retrain():
+        """Re-commission now on baseline + live corpus (otherwise every 24 h)."""
+        return _INSPECTOR.retrain()
 
     @router.post("/cascade/attack")
     async def cascade_attack():
@@ -509,13 +540,32 @@ async def _process_pcap_background(pcap_path: str, analyzer, ws_hub):
 
 async def start_live_capture(interface, analyzer, ws_hub) -> dict:
     """Open the capture on `interface` (None/"" = default route) and start
-    feeding its events through the pipeline. Raises LiveCaptureError."""
+    feeding its events through the pipeline. Raises LiveCaptureError.
+
+    Also starts Tier 2 on the same traffic (Inspector-Sentry on real devices)
+    when the Tier 2 Python has PyTorch; see netsentinel/inspector.py."""
     if _packet_processor is None:
         raise LiveCaptureError("Extraction layer not initialized")
     event_queue = asyncio.Queue(maxsize=10000)
     info = await _packet_processor.start_live_capture(interface or None, event_queue)
     asyncio.create_task(_consume_live_events(event_queue, analyzer, ws_hub))
+    if getattr(config, "INSPECTOR_ON_LIVE", True):
+        info["inspector"] = await _start_inspector(info["interface"])
     return info
+
+
+async def _start_inspector(iface) -> dict:
+    from netsentinel import inspector as INS
+    if not await asyncio.to_thread(INS.available):
+        msg = ("Tier 2 not started: PyTorch is not installed for %s "
+               "(see README: install it into tier2/.venv)" % INS.tier2_python())
+        print(f"  [i] {msg}")
+        return {"status": "unavailable", "detail": msg}
+    from netsentinel.cascade_live import CASCADE
+    CASCADE.stop()                    # the synthetic demo and the real view share /sentinel/
+    res = await asyncio.to_thread(INS.INSPECTOR.start, iface)
+    print(f"  [>] Tier 2 Inspector-Sentry watching real traffic on '{iface}'")
+    return res
 
 
 async def _consume_live_events(event_queue: asyncio.Queue, analyzer, ws_hub):
@@ -528,6 +578,7 @@ async def _consume_live_events(event_queue: asyncio.Queue, analyzer, ws_hub):
             event = None
         try:
             if event is not None:
+                _INSPECTOR.observe(event)          # Tier 2: no-op unless it is running
                 for alert in analyzer.analyze(event):
                     await ws_hub.broadcast_alert(alert)
             now = time.time()
