@@ -1,9 +1,9 @@
 {
-  "tree_size": 173,
-  "root_hash": "418f8ddf573ef185e764a0b0e178d215b27c15eb7aefb9678258b8e96b6a8e50",
-  "timestamp_rfc3339": "2026-09-12T15:21:58Z",
-  "unix_seconds": 1789226518,
-  "checkpoint_sequence": 89,
-  "nid_pubkey": "aa9380835ea139de6151682d6c677db830292825d211f7139807dadd3b7443e3",
-  "signature": "b70b94d9ec3816211c36b1a41b89c3234ef51ff32556dcecfb8c16c468add0aea467e39566c56fb5c7f26bde514179fdec41c7aadb1627c0566e480d04161707"
+  "tree_size": 4,
+  "root_hash": "1c6a2434c8baa752f6cc8e3b2f0b22106e012dcb0106b1ae869c0474f2f1790c",
+  "timestamp_rfc3339": "2026-09-29T03:10:42Z",
+  "unix_seconds": 1790651442,
+  "checkpoint_sequence": 3,
+  "nid_pubkey": "fd4d40aed26501f9a22c657a59918aa036df726584685bb70ed361573e9aed3b",
+  "signature": "567841bab79067cd61bc3c0f3b3d5935b5a2512706827ac91e3a7272fe3bbf65b1334af3dcccee2578a7887cceb7760ef2bab65f621934c2bdf1830440b6280d"
 }
