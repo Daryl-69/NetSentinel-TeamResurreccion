@@ -1,9 +1,9 @@
 {
-  "tree_size": 4,
-  "root_hash": "1c6a2434c8baa752f6cc8e3b2f0b22106e012dcb0106b1ae869c0474f2f1790c",
-  "timestamp_rfc3339": "2026-09-29T03:10:42Z",
-  "unix_seconds": 1790651442,
-  "checkpoint_sequence": 3,
+  "tree_size": 6,
+  "root_hash": "b61e39d63b7920aaf49b7d93ca8461db89e96c1ca48387c9a81633d8a7868d2c",
+  "timestamp_rfc3339": "2026-09-29T03:12:42Z",
+  "unix_seconds": 1790651562,
+  "checkpoint_sequence": 4,
   "nid_pubkey": "fd4d40aed26501f9a22c657a59918aa036df726584685bb70ed361573e9aed3b",
-  "signature": "567841bab79067cd61bc3c0f3b3d5935b5a2512706827ac91e3a7272fe3bbf65b1334af3dcccee2578a7887cceb7760ef2bab65f621934c2bdf1830440b6280d"
+  "signature": "035ac55759263f24b895280ebf7b1146d90730572bbba885e5468dfd743cef1ffe856779bbbaa32afbbb77092d7e38eaa517cedd83daf5c17e1efe1852d21705"
 }
