@@ -3,9 +3,10 @@
 Input: Domain name string (e.g., "xkqw8f3m.evil.com")
 Output: {"threat": "DGA"|"DNS Tunnel"|"Benign", "confidence": float}
 
-The model has two input branches:
-  - char_input: [1, 253] int64 — character-level encoded domain
-  - stat_input: [1, 7] float32 — 7 statistical features
+Model inputs (both exports are supported):
+  - dga_cnn_bilstm.onnx    (HuggingFace): domain_chars [batch, 128] int64
+  - dga_cnn_bilstm_v2.onnx (local only):  domain_chars + stat_features [batch, 7] float32
+Vocab: 0=PAD, 1=UNK, 2–39 = a-z0-9-. (vocab_size=40, see dga_metrics.json)
 """
 import math
 import numpy as np
@@ -14,8 +15,8 @@ from collections import Counter
 
 from netsentinel.config import DGA_MODEL_PATH
 
-# Character encoding (same as training)
-CHAR_VOCAB = {c: i + 1 for i, c in enumerate("abcdefghijklmnopqrstuvwxyz0123456789-.")}
+# Character encoding (same as training): 0 = PAD, 1 = UNK, 2–39 = a-z 0-9 - .
+CHAR_VOCAB = {c: i + 2 for i, c in enumerate("abcdefghijklmnopqrstuvwxyz0123456789-.")}
 MAX_DOMAIN_LEN = 128
 
 # English bigram frequencies for the bigram score feature
@@ -36,9 +37,9 @@ CLASS_NAMES = ["benign", "dga", "dns_tunnel"]
 
 
 def _encode_domain(domain: str) -> np.ndarray:
-    """Encode domain to int array [253]."""
+    """Encode domain to int array [MAX_DOMAIN_LEN] (0 = PAD, 1 = UNK)."""
     domain = domain.lower().strip()
-    encoded = [CHAR_VOCAB.get(c, 0) for c in domain[:MAX_DOMAIN_LEN]]
+    encoded = [CHAR_VOCAB.get(c, 1) for c in domain[:MAX_DOMAIN_LEN]]
     # Pad to MAX_DOMAIN_LEN
     encoded += [0] * (MAX_DOMAIN_LEN - len(encoded))
     return np.array(encoded, dtype=np.int64)
@@ -99,7 +100,11 @@ class DGADetector:
         )
         
         self.input_names = [inp.name for inp in self.session.get_inputs()]
-        print(f"  [OK] DGA Detector loaded (char[253] + stat[7], 3 classes)")
+        # The HuggingFace export takes only the character branch; the v2
+        # export adds the 7 statistical features as a second input.
+        self._dual_input = len(self.input_names) > 1
+        branches = f"char[{MAX_DOMAIN_LEN}]" + (" + stat[7]" if self._dual_input else "")
+        print(f"  [OK] DGA Detector loaded ({branches}, 3 classes)")
     
     def predict(self, domain: str) -> dict:
         """
@@ -113,22 +118,18 @@ class DGADetector:
         """
         # Encode
         char_input = _encode_domain(domain).reshape(1, MAX_DOMAIN_LEN)
-        stat_input = _compute_stat_features(domain).reshape(1, 7)
+        feed = {self.input_names[0]: char_input}
+        if self._dual_input:
+            feed[self.input_names[1]] = _compute_stat_features(domain).reshape(1, 7)
         
         # Run inference
-        feed = {
-            self.input_names[0]: char_input,
-            self.input_names[1]: stat_input,
-        }
         results = self.session.run(None, feed)
         
-        # Output: softmax probabilities [1, 3]
-        probs = results[0][0]
-        
-        # Apply softmax if not already applied
-        if probs.min() < 0 or probs.sum() > 1.5:
-            exp_probs = np.exp(probs - np.max(probs))
-            probs = exp_probs / exp_probs.sum()
+        # Output: raw logits [1, 3] → softmax. (Guessing "already softmaxed"
+        # from the values misfires whenever all three logits are small and positive.)
+        logits = results[0][0]
+        exp_probs = np.exp(logits - np.max(logits))
+        probs = exp_probs / exp_probs.sum()
         
         predicted_class = int(np.argmax(probs))
         confidence = float(probs[predicted_class])

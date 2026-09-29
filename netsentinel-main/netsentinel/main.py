@@ -8,6 +8,7 @@ This is the entry point. It:
 5. Provides REST endpoints for health, alerts, stats, PCAP upload, live capture
 """
 import asyncio
+import os
 import time
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -17,11 +18,13 @@ from netsentinel.models.registry import ModelRegistry
 from netsentinel.pipeline.analyzer import FlowAnalyzer
 from netsentinel.pipeline.alert_manager import AlertManager
 from netsentinel.api.websocket import WebSocketHub
-from netsentinel.api.routes import create_routes, router
+from netsentinel.api.routes import create_routes, router, start_live_capture
 from netsentinel.simulator.traffic_gen import generate_event
 from netsentinel.extractor import PacketProcessor
+from netsentinel.extractor.pcap_reader import LiveCaptureError
 from netsentinel.config import (
     MAX_ALERTS_STORED, FLOW_IDLE_TIMEOUT, FLOW_ACTIVE_TIMEOUT, SESSION_MIN_FLOWS,
+    CAPTURE_INTERFACE,
 )
 
 # ============================================================
@@ -73,7 +76,15 @@ async def startup():
     
     # Start background simulation loop
     asyncio.create_task(simulation_loop())
-    
+
+    # `python run.py --live` → capture real traffic from startup
+    if os.environ.get("NETSENTINEL_LIVE") == "1":
+        try:
+            info = await start_live_capture(CAPTURE_INTERFACE, analyzer, ws_hub)
+            print(f"\n[>] Live capture running on '{info['interface']}'")
+        except LiveCaptureError as e:
+            print(f"\n[!] Live capture NOT started: {e}")
+
     print("\n[>] Server ready!")
     print(f"   REST API:      http://localhost:8000/api/health")
     print(f"   WebSocket:     ws://localhost:8000/ws")

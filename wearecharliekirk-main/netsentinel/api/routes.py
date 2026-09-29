@@ -7,8 +7,12 @@ import asyncio
 import shutil
 import threading
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks
+from fastapi.responses import JSONResponse
 
 from netsentinel.config import PCAP_UPLOAD_DIR, CAPTURE_INTERFACE
+from netsentinel.extractor.pcap_reader import (
+    LiveCaptureError, default_interface, list_interfaces,
+)
 from netsentinel.pipeline.metrics import METRICS
 from netsentinel.pipeline.alert_schema import ALERT_SCHEMA
 from netsentinel.pipeline.ps26145 import build_status, THREATS
@@ -183,24 +187,35 @@ def create_routes(analyzer, alert_manager, ws_hub, simulator_control, packet_pro
             "size_bytes": os.path.getsize(request.filepath),
         }
 
+    @router.get("/capture/interfaces")
+    async def capture_interfaces():
+        """List interfaces available for live capture, and the default one."""
+        return {
+            "default": CAPTURE_INTERFACE or default_interface(),
+            "interfaces": list_interfaces(),
+        }
+
     @router.post("/capture/start")
     async def start_capture(interface: str = CAPTURE_INTERFACE):
-        """Start live (receive-only) capture on the specified interface."""
+        """Start live (receive-only) capture.
+
+        interface: e.g. eth0 / wlan0 / en0 / Wi-Fi. Omit to use the interface
+        carrying the default route. Needs root/admin (and Npcap on Windows).
+        """
         if _packet_processor is None:
-            return {"error": "Extraction layer not initialized"}
-        if _packet_processor._live_running:
-            return {"error": "Live capture already running"}
-        event_queue = asyncio.Queue(maxsize=10000)
-        await _packet_processor.start_live_capture(interface, event_queue)
-        asyncio.create_task(_consume_live_events(event_queue, analyzer, ws_hub))
-        return {"status": f"Live capture started on '{interface}'"}
+            return JSONResponse({"error": "Extraction layer not initialized"}, status_code=503)
+        try:
+            info = await start_live_capture(interface, analyzer, ws_hub)
+        except LiveCaptureError as e:
+            return JSONResponse({"error": str(e)}, status_code=400)
+        return {"status": f"Live capture started on '{info['interface']}'", **info}
 
     @router.post("/capture/stop")
     async def stop_capture():
         """Stop live packet capture."""
         if _packet_processor is None:
-            return {"error": "Extraction layer not initialized"}
-        _packet_processor.stop_live_capture()
+            return JSONResponse({"error": "Extraction layer not initialized"}, status_code=503)
+        await asyncio.to_thread(_packet_processor.stop_live_capture)
         return {"status": "Live capture stopped"}
 
     @router.get("/extractor/stats")
@@ -490,6 +505,17 @@ async def _process_pcap_background(pcap_path: str, analyzer, ws_hub):
         "reader": processor.reader_used,
         **analyzer.get_stats(),
     })
+
+
+async def start_live_capture(interface, analyzer, ws_hub) -> dict:
+    """Open the capture on `interface` (None/"" = default route) and start
+    feeding its events through the pipeline. Raises LiveCaptureError."""
+    if _packet_processor is None:
+        raise LiveCaptureError("Extraction layer not initialized")
+    event_queue = asyncio.Queue(maxsize=10000)
+    info = await _packet_processor.start_live_capture(interface or None, event_queue)
+    asyncio.create_task(_consume_live_events(event_queue, analyzer, ws_hub))
+    return info
 
 
 async def _consume_live_events(event_queue: asyncio.Queue, analyzer, ws_hub):

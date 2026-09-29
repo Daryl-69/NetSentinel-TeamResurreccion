@@ -13,6 +13,10 @@ The system runs **six ONNX-deployed ML models** (XGBoost, BiLSTM, CNN, Transform
 ## ⚡ Quick Start — Download and Run
 
 > **Prerequisites:** Python 3.10+ and Node.js 18+ installed. Internet for first run (models auto-download from HuggingFace).
+>
+> **Downloaded the ZIP instead of cloning?** Extract it and use `NetSentinel-TeamResurreccion-main` wherever the commands below say `NetSentinel-TeamResurreccion`. Everything else is the same (the model files inside the ZIP are Git LFS stubs, so the backends download the real models from HuggingFace on first run).
+>
+> **Want to monitor your real network in real time?** Do step 1, then follow [📡 Real-Time Detection on a Live Network](#-real-time-detection-on-a-live-network).
 
 ### 1️⃣ Backend + AI Pipeline (detects 6 threat families)
 
@@ -21,7 +25,7 @@ git clone https://github.com/Daryl-69/NetSentinel-TeamResurreccion.git
 cd NetSentinel-TeamResurreccion/netsentinel-main
 
 # Create virtual environment & install
-python -m venv .venv
+python -m venv .venv          # Linux/Mac: python3 -m venv .venv
 # Windows:
 .venv\Scripts\activate
 # Linux/Mac:
@@ -31,6 +35,10 @@ pip install -r requirements.txt
 
 # Start the server (models auto-download on first run)
 python run.py
+
+# ...or capture your real network traffic live (needs admin/root — see the live section below)
+# sudo .venv/bin/python run.py --live        (Linux/Mac)
+# python run.py --live                       (Windows, terminal "Run as Administrator")
 ```
 
 ✅ Server starts at **http://localhost:8000** — API docs at **http://localhost:8000/docs**
@@ -60,14 +68,16 @@ npm run dev
 # In a NEW terminal:
 cd NetSentinel-TeamResurreccion/wearecharliekirk-main
 
-python -m venv .venv
+python -m venv .venv          # Linux/Mac: python3 -m venv .venv
 # Windows:
 .venv\Scripts\activate
+# Linux/Mac:
+# source .venv/bin/activate
 
 pip install -r requirements.txt
-python run.py
+python run.py                 # add --live (with sudo / as Administrator) to capture real traffic
 
-# In ANOTHER terminal — push threat traffic into the engine:
+# In ANOTHER terminal (activate the same .venv) — push synthetic threat traffic into the engine:
 cd NetSentinel-TeamResurreccion/wearecharliekirk-main
 python traffic_feed.py
 ```
@@ -98,6 +108,108 @@ python make_charts.py results.json
 ✅ Produces router comparison, escalation budget curves, and distribution-shift analysis
 
 > **Note:** Steps 1 & 2 are the core demo (backend + dashboard). Step 3 is the extended version. Step 4 is the research harness. Each step is independent — you can run any combination.
+
+---
+
+## 📡 Real-Time Detection on a Live Network
+
+Both backends can sniff live traffic from your network card and run the models on it in real time. The capture is **receive-only**: nothing is transmitted and no payload is decrypted.
+
+### Requirements
+
+| | |
+|---|---|
+| **Admin / root** | Raw packet capture needs it. Linux/macOS: `sudo`. Windows: open the terminal with **Run as Administrator**. |
+| **Windows only: [Npcap](https://npcap.com/)** | Install it and tick *"Install Npcap in WinPcap API-compatible Mode"*. |
+| **Linux (optional): `tcpdump`** | `sudo apt install tcpdump` lets the kernel filter packets (lower CPU). Without it NetSentinel filters in Python, which also works. |
+| **Models** | Run `python run.py` once normally first (step 1) so the models are downloaded. Under `sudo`, the models you already downloaded are reused. |
+
+### 1. See which interfaces you can capture on
+
+```bash
+cd NetSentinel-TeamResurreccion/netsentinel-main
+python run.py --list-ifaces        # (inside the activated .venv)
+```
+```
+   lo                       127.0.0.1
+ * eth0                     192.168.1.23
+ * = default (used when --iface is omitted)
+```
+You usually don't need this. The interface with your default route (the one you use for the internet) is picked automatically. Typical names: `eth0` / `wlan0` / `enp3s0` (Linux), `en0` (macOS Wi-Fi), `Wi-Fi` / `Ethernet` (Windows).
+
+### 2. Start the backend with live capture
+
+**Linux / macOS**
+```bash
+cd NetSentinel-TeamResurreccion/netsentinel-main
+sudo .venv/bin/python run.py --live                  # default interface
+sudo .venv/bin/python run.py --live --iface wlan0    # or name one
+```
+> Use the venv's Python with `sudo`. Plain `sudo python` runs the system Python, which doesn't have the dependencies.
+
+**Windows** (PowerShell or Terminal opened **as Administrator**)
+```powershell
+cd NetSentinel-TeamResurreccion\netsentinel-main
+.venv\Scripts\activate
+python run.py --live
+python run.py --live --iface "Wi-Fi"                 # or name one
+```
+
+You should see `[>] Live capture running on 'eth0'`. If capture can't start, the server still runs and prints the reason: wrong interface name (with the list of valid ones), not running as admin/root, or Npcap missing.
+
+### 3. Watch it
+
+- **Dashboard:** in a second terminal, `cd netsentinel-main/frontend && npm install && npm run dev`, then open **http://localhost:5173**. The header shows **LIVE** and alerts appear as they happen.
+- **Terminal:**
+  ```bash
+  curl http://localhost:8000/api/extractor/stats   # packet / flow / DNS counters climbing
+  curl http://localhost:8000/api/alerts            # alerts raised from your traffic
+  ```
+  > Windows PowerShell: type `curl.exe`, not `curl` (there `curl` is an alias for `Invoke-WebRequest`).
+
+### 4. Give it something to detect (harmless)
+
+```bash
+nslookup xkqw8f3mzpq7v2hjrtz.com       # or: ping xkqw8f3mzpq7v2hjrtz.com
+```
+A random-looking domain lookup raises a **DGA** alert within a second or so, even though the domain doesn't exist. Normal browsing should raise no alerts. (If your browser or OS uses DNS-over-HTTPS, its lookups are encrypted and invisible to a metadata sensor. `nslookup` always uses plain DNS.)
+
+### Start / stop capture without restarting
+
+With the server already running as admin/root:
+```bash
+curl http://localhost:8000/api/capture/interfaces                           # list + default
+curl -X POST "http://localhost:8000/api/capture/start?interface=eth0"       # omit ?interface= for the default
+curl -X POST http://localhost:8000/api/capture/stop
+```
+You can also set the default interface with the `NETSENTINEL_IFACE` environment variable.
+
+### Extended system (`wearecharliekirk-main`)
+
+Same flags, same requirements:
+```bash
+cd NetSentinel-TeamResurreccion/wearecharliekirk-main
+sudo .venv/bin/python run.py --live         # Windows (as Administrator): python run.py --live
+```
+Then open **http://localhost:8000/sentinel/** or **http://localhost:8000/console/**. The extended build also analyses IPv6 and uses rule-based volumetric, DNS-behaviour and beacon detectors alongside the models.
+
+### What "real time" means here
+
+| Traffic | Reaches the detectors |
+|---|---|
+| DNS queries (DGA, DNS tunnel/exfil) | immediately |
+| TCP connections (DDoS, port scan) | when the connection closes (FIN/RST) |
+| UDP and long-lived connections | after 120 s idle or 300 s total (`FLOW_IDLE_TIMEOUT` / `FLOW_ACTIVE_TIMEOUT` in `netsentinel/config.py`) |
+| C2 beaconing | once 100 flows between the same two hosts have been seen |
+
+**Scope:** on a normal PC you see your own machine's traffic plus broadcasts. To watch a whole network, run NetSentinel on a machine connected to a switch mirror/SPAN port or a network tap. The interface is put in promiscuous mode.
+
+### Known limits on real traffic
+
+- `netsentinel-main` analyses **IPv4 only**. Use the extended build for IPv6.
+- The DDoS XGBoost was trained on CICFlowMeter features and scores ordinary two-way traffic from the live extractor as DDoS (see `netsentinel-main/LIVE_RESULTS.md`). In `netsentinel-main`, live DDoS alerts therefore also require a flood shape: high rate and one-sided, with little or no reply traffic. The extended build uses its rate/source-entropy DDoS detector on live traffic instead.
+- The exfiltration VAE (ROC-AUC 0.78) still flags some long telemetry/CDN hostnames, such as `*.data.microsoft.com`.
+- The encrypted-traffic model classifies *applications* (including "VPN-*"). That is recorded as telemetry, not raised as an alert (`netsentinel-main`: set `NETSENTINEL_ETT_ALERTS=1` to alert on it again; extended: `ETT_ALERT_ON_VPN` in `config.py`).
 
 ---
 
@@ -206,6 +318,7 @@ NetSentinel-TeamResurreccion/
 | **Extended Backend** (`wearecharliekirk-main/`) | `python run.py` | Enhanced server with sentinel dashboard at `/sentinel/` |
 | **Traffic Simulator** | POST to `/api/simulate/mixed` | Generates synthetic attacks through the pipeline |
 | **PCAP Upload** | POST to `/api/pcap/upload` | Analyze real captures offline |
+| **Live Capture** | `sudo .venv/bin/python run.py --live` | Real-time detection on your network card ([details](#-real-time-detection-on-a-live-network)) |
 | **V2 Experiments** (`netsentinel-main/v2/`) | `python run_experiment.py` | Full Inspector–Sentry research harness |
 
 ### ⚠️ What requires setup
@@ -213,8 +326,8 @@ NetSentinel-TeamResurreccion/
 | Requirement | Why | How to fix |
 |---|---|---|
 | **ONNX Models (~50MB total)** | Models auto-download from HuggingFace on first run | Needs internet. Or download from [Unded-17/netsentinel-models](https://huggingface.co/Unded-17/netsentinel-models) manually |
-| **Npcap / WinPcap** (Windows) | Required by scapy for live packet capture | Install [Npcap](https://npcap.com/) — only needed for live capture, not PCAP upload |
-| **Admin privileges** | Live capture needs raw socket access | Not needed for simulation mode or PCAP upload |
+| **Npcap** (Windows) | Required by scapy for live packet capture | Install [Npcap](https://npcap.com/) — only needed for live capture, not PCAP upload |
+| **Admin / root** | Live capture needs raw socket access | `sudo .venv/bin/python run.py --live` (Linux/Mac) or an Administrator terminal (Windows). Not needed for simulation or PCAP upload |
 | **Node.js 18+** | For the React frontend | `winget install OpenJS.NodeJS.LTS` |
 | **Python 3.10+** | For the backend | `winget install Python.Python.3.12` |
 
@@ -223,7 +336,6 @@ NetSentinel-TeamResurreccion/
 | Component | Issue |
 |---|---|
 | **V2 models on real traffic** | Needs Zeek log data or LANL dataset (not included — too large) |
-| **Live network capture** | Requires Npcap + admin + correct interface name in `config.py` |
 | **PPTX presentations** | View-only, not code |
 
 ---
@@ -295,7 +407,7 @@ Then trigger an attack: `curl -X POST http://localhost:8000/api/simulate/ddos`
 # Terminal 1: Start the extended backend
 cd wearecharliekirk-main
 python -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\activate          # Linux/Mac: source .venv/bin/activate
 pip install -r requirements.txt
 python run.py
 
@@ -382,7 +494,8 @@ python make_charts.py results.json
 | `POST` | `/api/simulate/{type}` | Start simulation (`ddos`, `c2`, `dga`, `mixed`, `stop`) |
 | `POST` | `/api/pcap/upload` | Upload .pcap/.pcapng for offline analysis |
 | `POST` | `/api/pcap/process` | Process a local PCAP by filepath |
-| `POST` | `/api/capture/start` | Start live packet capture |
+| `GET` | `/api/capture/interfaces` | Interfaces available for live capture + the default |
+| `POST` | `/api/capture/start?interface=eth0` | Start live packet capture (omit `interface` for the default-route interface) |
 | `POST` | `/api/capture/stop` | Stop live capture |
 | `POST` | `/api/reset` | Reset stats and alerts |
 | `WS` | `/ws` | Real-time alert + stats WebSocket |
@@ -442,18 +555,22 @@ curl -X POST -F "file=@PCAPS/091537851fa4eeac43238aadde430bb0e501aca0b46a713106b
 ## 🧪 Testing
 
 ```bash
-# V1 tests (from netsentinel-main/)
+pip install pytest
+
+# V1 unit tests (from netsentinel-main/)
 cd netsentinel-main
-python -m pytest tests/ -v
+python -m pytest tests/test_models.py tests/test_extractor.py tests/test_exfiltration.py tests/test_c2_fft_fix.py tests/test_gating_integration.py tests/test_port_scan.py -v
 
 # V2 tests (from netsentinel-main/v2/)
 cd netsentinel-main/v2
 python -m pytest test_*.py -v
 
-# Extended tests (from wearecharliekirk-main/)
+# Extended unit tests (from wearecharliekirk-main/)
 cd wearecharliekirk-main
-python -m pytest tests/ -v
+python -m pytest tests/test_ps26145.py tests/test_tls_fingerprints.py tests/test_tier2_bridge.py tests/test_integrity_merkle.py tests/test_extractor.py tests/test_models.py tests/test_port_scan.py tests/test_portscan.py tests/test_exfiltration.py tests/test_c2_fft_fix.py tests/test_gating_integration.py -v
 ```
+
+> The other files in `tests/` (`test_advanced.py`, `test_live_system.py`, `test_real_pipeline.py`, `simple_test.py`, …) are scripts that talk to a **running** server (`python run.py` first) and some need `pip install requests`. `pytest tests/` on the whole folder stops at those.
 
 ---
 

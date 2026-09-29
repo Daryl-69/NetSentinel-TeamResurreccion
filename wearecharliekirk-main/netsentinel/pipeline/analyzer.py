@@ -60,9 +60,11 @@ _DGA_WHITELIST_SLDS = {
     "fbcdn.net", "facebook.com", "whatsapp.net", "instagram.com",
     "github.com", "githubusercontent.com", "github.io",
     "verisign.com", "digicert.com", "letsencrypt.org",
-    "w3.org", "wikipedia.org", "mozilla.org", "mozilla.net",
+    "w3.org", "wikipedia.org", "mozilla.org", "mozilla.net", "mozilla.com",
     "ubuntu.com", "debian.org", "centos.org",
     "update.microsoft.com",
+    # package registries hit by `pip install` / `npm install` (registry.npmjs.org scores 0.77)
+    "npmjs.org", "pypi.org", "pythonhosted.org",
 }
 
 

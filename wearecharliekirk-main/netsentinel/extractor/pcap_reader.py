@@ -36,6 +36,82 @@ from netsentinel.extractor.session_builder import SessionBuilder
 logger = logging.getLogger(__name__)
 
 
+class LiveCaptureError(RuntimeError):
+    """Live capture could not be started (bad interface, no privileges, no Npcap)."""
+
+
+# ----------------------------------------------------------------------
+# Interface helpers for live capture
+# ----------------------------------------------------------------------
+
+def default_interface() -> Optional[str]:
+    """Name of the interface that carries the default route (Scapy's pick)."""
+    try:
+        from scapy.all import conf
+        iface = conf.iface
+        return getattr(iface, "name", None) or (str(iface) if iface else None)
+    except Exception:
+        return None
+
+
+def list_interfaces() -> list[dict]:
+    """Interfaces Scapy can capture on, with their IPv4 address and MAC."""
+    try:
+        from scapy.all import conf
+    except ImportError:
+        return []
+    out = []
+    for iface in conf.ifaces.values():
+        out.append({
+            "name": iface.name,
+            "description": getattr(iface, "description", "") or "",
+            "ip": getattr(iface, "ip", "") or "",
+            "mac": getattr(iface, "mac", "") or "",
+        })
+    return out
+
+
+def open_live_socket(interface: str, bpf_filter: Optional[str]):
+    """Open a receive-only capture socket on `interface`.
+
+    Returns (socket, kernel_filter_applied). Raises LiveCaptureError with an
+    actionable message when the interface is wrong or privileges are missing.
+
+    Scapy compiles BPF filters with libpcap/tcpdump. Minimal Linux installs
+    have neither, so instead of failing we capture unfiltered and let the
+    caller filter in Python.
+    """
+    from scapy.all import conf
+
+    def _hint(e: Exception) -> str:
+        msg = str(e)
+        if isinstance(e, PermissionError) or "Operation not permitted" in msg:
+            return (f"Permission denied opening '{interface}'. Live capture needs root/admin: "
+                    "run with sudo on Linux/macOS, or as Administrator with Npcap on Windows.")
+        if "not found" in msg.lower() or "No such device" in msg:
+            names = ", ".join(i["name"] for i in list_interfaces()) or "none found"
+            return (f"Interface '{interface}' not found. Available: {names}. "
+                    "See GET /api/capture/interfaces.")
+        if os.name == "nt" and "pcap" in msg.lower():
+            return f"{msg} — install Npcap from https://npcap.com/ (tick 'WinPcap API-compatible Mode')."
+        return f"Could not open '{interface}' for capture: {msg}"
+
+    if bpf_filter:
+        try:
+            return conf.L2listen(iface=interface, filter=bpf_filter), True
+        except PermissionError as e:
+            raise LiveCaptureError(_hint(e)) from e
+        except Exception as e:
+            if "filter" not in str(e).lower():
+                raise LiveCaptureError(_hint(e)) from e
+            logger.warning(f"Kernel BPF filter unavailable ({e}); filtering in Python instead")
+
+    try:
+        return conf.L2listen(iface=interface), False
+    except Exception as e:
+        raise LiveCaptureError(_hint(e)) from e
+
+
 def _wire_len(packet) -> int:
     n = getattr(packet, "wirelen", None)
     if n:
@@ -104,6 +180,9 @@ class PacketProcessor:
         self._event_count = 0
         self._live_sniffer_thread: Optional[threading.Thread] = None
         self._live_running = False
+        self._live_stop: Optional[threading.Event] = None
+        self._live_interface: Optional[str] = None
+        self._live_error: Optional[str] = None
         self._first_ts = None
         self._last_ts = None
         # The sniffer thread and the periodic flush on the event loop both
@@ -333,30 +412,48 @@ class PacketProcessor:
 
     async def start_live_capture(
         self,
-        interface: str,
+        interface: Optional[str],
         event_queue: asyncio.Queue,
         bpf_filter: str = "ip or ip6",   # "ip" alone is IPv4-ONLY and drops all IPv6
-    ):
+    ) -> dict:
         """Start live packet capture, pushing events into an asyncio Queue.
 
-        Runs Scapy's sniff() in a background thread (receive only, store=False)
-        and hands events to the event loop thread-safely.
+        The capture socket is opened here, synchronously, so a wrong interface
+        name or missing root/admin rights raises LiveCaptureError to the caller
+        instead of failing silently in the background. Scapy's sniff() then
+        runs in a dedicated thread (receive only, store=False) and hands
+        events to the event loop thread-safely.
+
+        interface: e.g. "eth0", "en0", "Wi-Fi"; None/"" = default-route interface.
+        Returns {"interface": ..., "kernel_filter": bool}.
         """
         if self._live_running:
-            logger.warning("Live capture already running")
-            return
+            raise LiveCaptureError("Live capture already running")
+
+        interface = interface or default_interface()
+        if not interface:
+            raise LiveCaptureError(
+                "No network interface found. Pass one explicitly, "
+                "e.g. POST /api/capture/start?interface=eth0"
+            )
+
+        sock, kernel_filter = open_live_socket(interface, bpf_filter)
+
+        lfilter = None
+        if not kernel_filter:
+            from scapy.layers.inet import IP
+            from scapy.layers.inet6 import IPv6
+            lfilter = lambda p: IP in p or IPv6 in p
 
         from netsentinel import config
+        loop = asyncio.get_running_loop()
+        stop = threading.Event()
+        self._live_stop = stop
+        self._live_interface = interface
+        self._live_error = None
         self._live_running = True
         self._cic_covered = False
         self.metrics.set_source("live", interface)
-        loop = asyncio.get_event_loop()
-
-        def _packet_callback(packet):
-            if not self._live_running:
-                return
-            for event in self.process_packet(packet):
-                loop.call_soon_threadsafe(_put, event)
 
         def _put(event):
             try:
@@ -364,37 +461,61 @@ class PacketProcessor:
             except asyncio.QueueFull:
                 self.metrics.dropped()
 
-        def _run_sniffer():
+        def _packet_callback(packet):
+            if stop.is_set():
+                return
             try:
-                from scapy.all import sniff
-                logger.info(f"Live capture started on '{interface}' (filter: {bpf_filter})")
-                sniff(
-                    iface=interface,
-                    filter=bpf_filter,
-                    prn=_packet_callback,
-                    store=False,
-                    stop_filter=lambda _: not self._live_running,
-                )
-            except PermissionError:
-                logger.error(
-                    "Permission denied — live capture requires admin/root. "
-                    "On Windows, run as Administrator with Npcap installed."
-                )
+                events = self.process_packet(packet)
+            except Exception as e:  # one malformed packet must not end the capture
+                logger.debug(f"Skipping packet: {e}")
+                return
+            for event in events:
+                loop.call_soon_threadsafe(_put, event)
+
+        def _run_sniffer():
+            # sniff() with a 1 s timeout in a loop: stop() takes effect within a
+            # second even on a quiet interface, and the socket stays open
+            # between calls so no packets are lost.
+            from scapy.all import sniff
+            logger.info(
+                f"Live capture started on '{interface}' "
+                f"(filter: {bpf_filter} {'in kernel' if kernel_filter else 'in Python'})"
+            )
+            try:
+                while not stop.is_set():
+                    sniff(
+                        opened_socket=sock,
+                        prn=_packet_callback,
+                        lfilter=lfilter,
+                        store=False,
+                        timeout=1,
+                        stop_filter=lambda _: stop.is_set(),
+                    )
+                    if getattr(sock, "closed", False) and not stop.is_set():
+                        # sniff() closes a socket that errors (interface went down)
+                        raise LiveCaptureError(f"Capture socket on '{interface}' closed unexpectedly")
             except Exception as e:
+                self._live_error = str(e)
                 logger.error(f"Live capture error: {e}")
             finally:
-                self._live_running = False
+                try:
+                    sock.close()
+                except Exception:
+                    pass
+                if self._live_stop is stop:
+                    self._live_running = False
                 logger.info("Live capture stopped")
 
         self._live_sniffer_thread = threading.Thread(
             target=_run_sniffer, daemon=True, name="scapy-sniffer"
         )
         self._live_sniffer_thread.start()
-        asyncio.create_task(self._periodic_flush(event_queue, float(config.LIVE_FLUSH_INTERVAL_S)))
+        asyncio.create_task(self._periodic_flush(event_queue, stop, float(config.LIVE_FLUSH_INTERVAL_S)))
+        return {"interface": interface, "kernel_filter": kernel_filter}
 
-    async def _periodic_flush(self, event_queue: asyncio.Queue, interval: float):
+    async def _periodic_flush(self, event_queue: asyncio.Queue, stop: threading.Event, interval: float):
         """Periodically flush idle flows and unanswered probes during live capture."""
-        while self._live_running:
+        while not stop.is_set():
             await asyncio.sleep(interval)
             for event in self.flush_expired(time.time()):
                 try:
@@ -403,10 +524,12 @@ class PacketProcessor:
                     self.metrics.dropped()
 
     def stop_live_capture(self):
-        """Stop the live capture thread."""
-        self._live_running = False
+        """Stop the live capture thread (returns within ~1 s)."""
+        if self._live_stop is not None:
+            self._live_stop.set()
         if self._live_sniffer_thread and self._live_sniffer_thread.is_alive():
             self._live_sniffer_thread.join(timeout=5)
+        self._live_running = False
         logger.info("Live capture stopped")
 
     # ------------------------------------------------------------------
@@ -422,6 +545,8 @@ class PacketProcessor:
             "events_generated": self._event_count,
             "capture_span_s": round(span, 3) if span is not None else None,
             "live_capture_active": self._live_running,
+            "live_interface": self._live_interface,
+            "live_error": self._live_error,
             "cic_covered": self._cic_covered,
             "reader": self.reader_used,
             "flow_extractor": self.flow_extractor.stats,
