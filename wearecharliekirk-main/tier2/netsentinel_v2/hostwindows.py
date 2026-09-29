@@ -248,6 +248,11 @@ class CorpusStore:
         return [(h, lh, c, n, np.frombuffer(f, np.float32), fl)
                 for h, lh, c, n, f, fl in self.db.execute(q, args)]
 
+    def device_hours(self) -> int:
+        """Distinct (device, hour) pairs stored (flagged ones excluded)."""
+        return self.db.execute(
+            "SELECT COUNT(*) FROM (SELECT DISTINCT host, lhour FROM windows WHERE flagged = 0)").fetchone()[0]
+
     def summary(self) -> dict:
         r = self.db.execute(
             "SELECT COUNT(*), COUNT(DISTINCT host), MIN(lhour), MAX(lhour), "
@@ -446,3 +451,54 @@ def ingest(records: Iterable[FlowRecord], store: CorpusStore, lag_hours: int = 6
             print(f"    ... {i:,} connections", flush=True)
     written += store.put(agg.pop_all())
     return {"connections": agg.records, "windows_written": written, "late_connections": late}
+
+
+# --------------------------------------------------------------------------
+# Other corpora: pcap_to_tensor.py output, and corpora exported by other sensors
+# --------------------------------------------------------------------------
+def rows_from_npz(path: str, host_prefix: str = "") -> tuple[list, int]:
+    """pcap_to_tensor.py output -> corpus rows. Returns (rows, tz_offset).
+
+    Only files written by the fixed pcap_to_tensor.py (hourly flows, clock-
+    aligned, `lhour0` stored) are accepted. Older files filed every packet to
+    one server:port across the whole capture under a single hour, which is
+    not what the live sensor measures -- a model trained on one flagged 43% of
+    ordinary hours. Re-run pcap_to_tensor.py (or `python -m netsentinel.inspector
+    import <pcaps>`) instead of importing those.
+    """
+    z = np.load(path, allow_pickle=False)
+    if "lhour0" not in z.files or not bool(z.get("hourly_flows", False)):
+        raise ValueError(
+            f"{path} was written by the old pcap_to_tensor.py (whole-capture flows, no clock "
+            f"alignment) and would teach the Inspector the wrong 'normal'. Re-run "
+            f"`python pcap_to_tensor.py <pcaps> --tz +05:30` or import the pcaps directly.")
+    E, M, hosts = z["edges"], z["mask"], [str(h) for h in z["hosts"]]
+    l0 = int(z["lhour0"])
+    rows = []
+    for hi, d, w, c in np.argwhere(M > 0):
+        f = E[hi, d, w, c]
+        rows.append((host_prefix + hosts[hi], l0 + int(d) * WINDOWS_PER_DAY + int(w), int(c),
+                     float(np.expm1(f[0])), f.astype(np.float32)))
+    return rows, int(z["tz_offset"])
+
+
+def merge_corpus(src_path: str, dst: "CorpusStore", host_prefix: str) -> int:
+    """Copy another corpus's windows (e.g. one exported by another sensor) into
+    dst. Hosts get a prefix so two networks' 192.168.1.10 stay distinct.
+    Windows keep their own local hours (each network's own clock)."""
+    src = CorpusStore(src_path, create=False)
+    rows = [(host_prefix + h, lh, c, n, f) for h, lh, c, n, f, _fl in src.rows()]
+    return dst.put(rows)
+
+
+def export_corpus(src: "CorpusStore", out_path: str, prefix: str = "site") -> dict:
+    """Pseudonymised copy of a corpus to share (flagged windows left out):
+    hourly statistics only, device addresses replaced by <prefix>-01, -02, ..."""
+    if os.path.exists(out_path):
+        os.remove(out_path)
+    out = CorpusStore(out_path, tz_offset=src.tz)
+    hosts = sorted({r[0] for r in src.rows()})
+    alias = {h: "%s-%02d" % (prefix, i + 1) for i, h in enumerate(hosts)}
+    out.put([(alias[h], lh, c, n, f) for h, lh, c, n, f, _fl in src.rows()])
+    out.meta_set("exported_at", int(time.time()))
+    return out.summary()

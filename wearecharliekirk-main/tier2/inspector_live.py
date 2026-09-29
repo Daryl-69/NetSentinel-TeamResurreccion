@@ -90,31 +90,39 @@ def training_stores(base, live):
 # models
 # --------------------------------------------------------------------------
 def train_bundle(base, live, epochs_teacher=8, epochs_student=10, live_days=60,
-                 seed=0, log=print, exclude_today=True):
-    """Commission the Inspector and distil the Sentry on baseline + live corpus."""
+                 seed=0, log=print, exclude_today=True, init=None):
+    """Commission the Inspector and distil the Sentry on baseline + live corpus.
+
+    init: an existing bundle to warm-start from (fine-tune) -- e.g. the model
+    shipped with the repo, trained on the team's capture. Its knowledge is the
+    starting point and the corpora refine it, so a network with little data of
+    its own still benefits from everything the model learned before.
+    """
     import torch
     from netsentinel_v2 import train as T
     from run_experiment import count_params
 
     before = {}
     if exclude_today:
-        before["live:"] = (HW.local_hour(time.time(), live.tz) // W) * W   # today is incomplete
+        before["live:"] = HW.local_hour(time.time(), live.tz)   # the hour still in progress
     # baseline: every day of the capture; live: the most recent `live_days`
     Sb = HW.build_samples([(base, "base:")]) if base is not None else None
     Sl = HW.build_samples([(live, "live:")], max_days=live_days or None, before_lhour=before)
     S = _cat(Sb, Sl)
-    if S is None or len(S["host_day"]) < 2:
+    if S is None or len(S["host_day"]) < (1 if init is not None else 2):
         raise RuntimeError("not enough traffic to commission the Inspector yet "
                            "(import the baseline capture, or let the sensor run for a day)")
     E, M, Co = S["edges"], S["mask"], S["cohort"]
     n_base = sum(1 for h, _ in S["host_day"] if h.startswith("base:"))
     n_live = len(S["host_day"]) - n_base
     log(f"Commissioning: the Inspector learns each device's normal "
-        f"({n_base} baseline + {n_live} live device-days, no attack labels)")
+        f"({n_base} baseline + {n_live} live device-days, no attack labels"
+        f"{'; fine-tuning ' + init['meta'].get('source', 'the current model') if init else ''})")
     t0 = time.time()
     Es, mu, sd = T.standardise(E, M)
     with _quiet():
-        insp = T.train_inspector(Es, M, Co, epochs=epochs_teacher, seed=seed)
+        insp = T.train_inspector(Es, M, Co, epochs=epochs_teacher, seed=seed,
+                                 init=init["inspector"] if init else None)
     Z, err = T.inspector_forward(insp, Es, M, Co)
     live_w = M.sum(-1) > 0
     thr = float(np.quantile(err[live_w], 0.99)) if live_w.any() else float(np.quantile(err, 0.99))
@@ -122,7 +130,8 @@ def train_bundle(base, live, epochs_teacher=8, epochs_student=10, live_days=60,
         f"of its own error on real traffic = {thr:.4f}")
     t0 = time.time()
     with _quiet():
-        sen = T.train_sentry(Es, M, Z, err, epochs=epochs_student, seed=seed)
+        sen = T.train_sentry(Es, M, Z, err, epochs=epochs_student, seed=seed,
+                             init=init["sentry"] if init else None)
         Zs = T.sentry_forward(sen, Es, M)
         head = T.train_head(Zs, (err / (thr + 1e-9)).astype(np.float32), loss="mse", seed=seed)
     pi, ps = count_params(insp), count_params(sen)
@@ -131,7 +140,9 @@ def train_bundle(base, live, epochs_teacher=8, epochs_student=10, live_days=60,
         "inspector": insp, "sentry": sen, "head": head, "mu": mu, "sd": sd, "thr": thr,
         "meta": {"trained_at": time.time(), "baseline_host_days": n_base, "live_host_days": n_live,
                  "params": {"inspector": pi, "sentry": ps, "ratio": round(pi / ps, 1)},
-                 "live_windows_at_train": int(live.summary()["windows"])},
+                 "live_windows_at_train": int(live.summary()["windows"]),
+                 "warm_start_from": (init["meta"].get("source") if init else None),
+                 "shipped": False},
     }
 
 
@@ -151,6 +162,7 @@ def save_bundle(b, state_dir, keep=5) -> str:
     torch.save({"inspector": b["inspector"].state_dict(), "sentry": b["sentry"].state_dict(),
                 "head": b["head"].state_dict(), "head_din": b["head"].net[0].in_features,
                 "mu": b["mu"], "sd": b["sd"], "thr": b["thr"], "meta": b["meta"]}, path)
+    b["meta"]["source"] = os.path.relpath(path, HERE)
     with open(os.path.join(d, "current.json"), "w") as f:
         json.dump({"path": os.path.basename(path), "meta": b["meta"], "thr": b["thr"]}, f, indent=1)
     for old in sorted(glob.glob(os.path.join(d, "inspector-*.pt")))[:-keep]:
@@ -176,14 +188,14 @@ def load_bundle(state_dir, shipped_dir=SHIPPED_MODELS):
     import torch
     from netsentinel_v2.models import Inspector, Sentry
     from netsentinel_v2 import train as T
-    p = None
+    p = shipped = None
     for d in (os.path.join(state_dir, "models"), shipped_dir):
         cur = os.path.join(d, "current.json")
         if os.path.exists(cur):
             with open(cur) as f:
                 cand = os.path.join(d, json.load(f)["path"])
             if os.path.exists(cand):
-                p = cand
+                p, shipped = cand, (d == shipped_dir)
                 break
     if p is None:
         return None
@@ -204,8 +216,35 @@ def load_bundle(state_dir, shipped_dir=SHIPPED_MODELS):
                                "sentry": sum(x.numel() for x in sen.parameters())})
     meta.setdefault("trained_on", meta.get("source", ""))
     meta["source"] = os.path.relpath(p, HERE)
+    meta["shipped"] = bool(shipped)
     return {"inspector": insp, "sentry": sen, "head": head, "mu": ck["mu"], "sd": ck["sd"],
-            "thr": float(ck["thr"]), "meta": meta}
+            "thr": float(ck["thr"]), "thr_trained": float(ck["thr"]), "meta": meta}
+
+
+# --------------------------------------------------------------------------
+# calibration: a model from ANOTHER network re-learns its alarm threshold here
+# --------------------------------------------------------------------------
+def _calib_path(state_dir):
+    return os.path.join(state_dir, "models", "calibration.json")
+
+
+def load_calibration(state_dir, bundle):
+    """Saved calibration for this exact model, or a fresh one."""
+    key = f"{bundle['meta'].get('source')}@{bundle['meta'].get('trained_at')}"
+    try:
+        with open(_calib_path(state_dir)) as f:
+            c = json.load(f)
+        if c.get("model") == key:
+            return c
+    except (OSError, ValueError):
+        pass
+    return {"model": key, "errors": [], "hours": [], "done": False, "thr": None}
+
+
+def save_calibration(state_dir, c):
+    os.makedirs(os.path.dirname(_calib_path(state_dir)), exist_ok=True)
+    with open(_calib_path(state_dir), "w") as f:
+        json.dump(c, f)
 
 
 def score_hour(bundle, hosts, rows, w_now, budget_k):
@@ -265,6 +304,7 @@ class Service:
         self.day0 = HW.local_hour(time.time(), self.live.tz) // W
         self.last_retrain_check = 0.0
         self.fail_windows = -1                # live corpus size at the last failed attempt
+        self.calib = None                     # threshold calibration for a shipped model
         self.q: queue.Queue = queue.Queue()
 
     # ---- host registry
@@ -292,27 +332,67 @@ class Service:
               "target": ({"id": target, "name": self._name(self.hosts[target])} if target is not None else None)})
 
     # ---- training
+    # ---- calibration (shipped model on a new network)
+    def _set_bundle(self, b):
+        """Install a model; a shipped one re-learns its threshold on this network."""
+        self.bundle = b
+        self.calib = None
+        if b is not None and b["meta"].get("shipped"):
+            self.calib = load_calibration(self.a.state, b)
+            if self.calib["done"]:
+                b["thr"] = float(self.calib["thr"])
+
+    @property
+    def calibrating(self):
+        return self.calib is not None and not self.calib["done"]
+
+    def _calibrate(self, errs, hour_of_day):
+        c = self.calib
+        c["errors"].extend(float(e) for e in errs)
+        c.setdefault("hours", [])
+        if hour_of_day not in c["hours"]:
+            c["hours"].append(hour_of_day)
+        save_calibration(self.a.state, c)
+        n = len(c["errors"])
+        # enough device-hours AND enough different hours of the day: calibrating
+        # only on quiet night hours leaves the threshold far too low (measured)
+        if n >= self.a.calibrate_hours and len(c["hours"]) >= self.a.calibrate_min_hours_of_day:
+            q = float(np.quantile(c["errors"], 0.99))
+            c["thr"] = max(q, self.bundle["thr_trained"])
+            c["done"] = True
+            save_calibration(self.a.state, c)
+            self.bundle["thr"] = c["thr"]
+            emit({"type": "log", "text": f"Calibrated on {n} device-hours of this network: alert threshold "
+                  f"{self.bundle['thr_trained']:.3f} -> {c['thr']:.3f} (99th percentile of the errors here)"})
+            self._ready()
+        else:
+            emit({"type": "log", "text": f"Calibrating to this network: {n}/{self.a.calibrate_hours} device-hours, "
+                  f"{len(c['hours'])}/{self.a.calibrate_min_hours_of_day} hours of the day (no alerts until done)"})
+
     def _train(self, reason):
         if self.training:
             return
         self.training = True
+        init = self.bundle                    # fine-tune whatever is running now (keeps what it learned)
 
         def run():
             try:
                 emit({"type": "stage", "stage": "commissioning",
                       "text": f"Training ({reason}) on baseline + live corpus"})
                 b = train_bundle(self.base, self.live, self.a.epochs_teacher, self.a.epochs_student,
-                                 self.a.live_days, log=lambda t: emit({"type": "log", "text": t}))
+                                 self.a.live_days, log=lambda t: emit({"type": "log", "text": t}),
+                                 init=init)
                 path = save_bundle(b, self.a.state)
                 with self.lock:
-                    self.bundle = b
+                    self._set_bundle(b)
                     self.train_error = None
                 emit({"type": "log", "text": f"New Inspector/Sentry live ({os.path.basename(path)})"})
                 emit({"type": "stage", "stage": "watching", "text": "Watching real traffic"})
                 self._ready()
             except Exception as e:
                 self.train_error = str(e)
-                self.fail_windows = self.live.summary()["windows"]
+                self.fail_windows = (self.live.device_hours() if self.bundle is not None
+                                     and self.bundle["meta"].get("shipped") else self.live.summary()["windows"])
                 emit({"type": "log", "text": f"Training skipped: {e}"})
                 if self.bundle is None:
                     emit({"type": "stage", "stage": "collecting",
@@ -332,6 +412,13 @@ class Service:
                 self._train("first commissioning")
             elif self.train_error and self.live.summary()["windows"] > self.fail_windows:
                 self._train("retry with new live traffic")
+            return
+        if b["meta"].get("shipped"):
+            # first fit to this network: fine-tune the shipped model on baseline +
+            # this network's traffic as soon as there is a day's worth of device-hours
+            dh = self.live.device_hours()
+            if dh >= self.a.first_retrain_hours and dh > self.fail_windows:
+                self._train(f"first fit to this network, {dh} device-hours")
             return
         age_h = (now - b["meta"]["trained_at"]) / 3600
         grown = self.live.summary()["windows"] - b["meta"].get("live_windows_at_train", 0)
@@ -376,13 +463,18 @@ class Service:
         lday, w = divmod(lhour, W)
         rows = self._day_rows(lday, lhour, extra)
         day_hosts = sorted({r[0] for r in rows})
-        k = max(1, int(round(self.a.budget * len(hosts_now))))
+        cal = self.calibrating
+        # while calibrating, the Inspector checks every active device (to learn
+        # this network's error distribution) and raises nothing
+        k = len(hosts_now) if cal else max(1, int(round(self.a.budget * len(hosts_now))))
         scores, esc, errs, cats, s_ms, i_ms = score_hour(b, day_hosts, rows, w, k)
         by_host = dict(zip(day_hosts, scores))
-        flagged = [h for h, e in errs.items() if e >= b["thr"]]
+        flagged = [] if cal else [h for h, e in errs.items() if e >= b["thr"]]
+        if cal and final:
+            self._calibrate([errs[h] for h in hosts_now if h in errs], w)
         verdicts = [{"host": self.hosts.index(h), "name": self._name(h), "ip": h,
                      "score": round(by_host[h], 4), "error": round(errs[h], 5),
-                     "flagged": errs[h] >= b["thr"], "categories": cats[h]} for h in esc]
+                     "flagged": h in flagged, "calibrating": cal, "categories": cats[h]} for h in esc]
         live_n = sum(1 for s in scores if s is not None)
         tot = dict(self.totals)
         tot["scored"] += live_n; tot["escalated"] += len(esc); tot["confirmed"] += len(flagged); tot["hours"] += 1
@@ -397,7 +489,7 @@ class Service:
               "date": time.strftime("%Y-%m-%d", lt),
               "sentry": [round(by_host[h], 4) if by_host.get(h) is not None else None for h in self.hosts],
               "escalated": [self.hosts.index(h) for h in esc], "verdicts": verdicts,
-              "threshold": b["thr"], "attack_active": False, "target": target,
+              "threshold": b["thr"], "calibrating": cal, "attack_active": False, "target": target,
               "target_categories": cats.get(th, []), "totals": tot,
               "sentry_ms": round(s_ms, 2), "inspector_ms": round(i_ms, 2), "live_hosts": live_n})
         return flagged
@@ -439,6 +531,9 @@ class Service:
         return {"type": "status", "flows_in": self.flows_in, "devices": len(self.hosts),
                 "training": self.training, "train_error": self.train_error,
                 "model": None if b is None else {**b["meta"], "threshold": b["thr"]},
+                "calibration": None if self.calib is None else
+                    {"done": self.calib["done"], "device_hours": len(self.calib["errors"]),
+                     "needed": self.a.calibrate_hours, "threshold": self.calib["thr"]},
                 "baseline": self.base.summary() if self.base is not None else None,
                 "live": self.live.summary(), "retrain_hours": self.a.retrain_hours,
                 "iface": self.iface}
@@ -446,7 +541,7 @@ class Service:
     def run(self):
         emit({"type": "stage", "stage": "building", "text": "Loading the Inspector for real traffic"})
         try:
-            self.bundle = load_bundle(self.a.state)
+            self._set_bundle(load_bundle(self.a.state))
         except Exception as e:
             emit({"type": "log", "text": f"Could not load the saved model ({e}); retraining"})
         if self.base is None:
@@ -461,6 +556,11 @@ class Service:
                   % (m["source"], time.strftime("%Y-%m-%d %H:%M", time.localtime(m["trained_at"])),
                      m["baseline_host_days"], m["live_host_days"],
                      f"; {m['trained_on']}" if m.get("trained_on") else "")})
+            if self.calibrating:
+                emit({"type": "log", "text": "This model was trained on another network: calibrating its alert "
+                      f"threshold on the first {self.a.calibrate_hours} device-hours here (over at least "
+                      f"{self.a.calibrate_min_hours_of_day} hours of the day), then fine-tuning it on "
+                      f"this network after {self.a.first_retrain_hours}"})
             emit({"type": "stage", "stage": "watching", "text": "Watching real traffic"})
         else:
             self._train("first commissioning")
@@ -509,6 +609,12 @@ def main():
     s.add_argument("--grace", type=float, default=7.0, help="minutes after an hour ends before it is closed")
     s.add_argument("--budget", type=float, default=0.05)
     s.add_argument("--retrain-hours", type=float, default=24.0)
+    s.add_argument("--calibrate-hours", type=int, default=24,
+                   help="device-hours used to re-learn a shipped model's threshold on this network")
+    s.add_argument("--calibrate-min-hours-of-day", type=int, default=6,
+                   help="...spread over at least this many different hours of the day")
+    s.add_argument("--first-retrain-hours", type=int, default=48,
+                   help="device-hours of this network before the shipped model is fine-tuned on it")
     s.add_argument("--live-days", type=int, default=60, help="most recent live days used for training")
     s.add_argument("--epochs-teacher", type=int, default=8)
     s.add_argument("--epochs-student", type=int, default=10)
@@ -517,6 +623,8 @@ def main():
     t.add_argument("--live-days", type=int, default=60)
     t.add_argument("--epochs-teacher", type=int, default=8)
     t.add_argument("--epochs-student", type=int, default=10)
+    t.add_argument("--from-scratch", action="store_true",
+                   help="train new weights instead of fine-tuning the current (or shipped) model")
     t.add_argument("--publish", action="store_true",
                    help="also write tier2/data/models/inspector_baseline.pt (committed with the repo)")
 
@@ -544,7 +652,11 @@ def main():
         Service(a).run()
     elif a.cmd == "train":
         base, live = open_corpora(a.state, a.baseline)
-        b = train_bundle(base, live, a.epochs_teacher, a.epochs_student, a.live_days, exclude_today=False)
+        init = None if a.from_scratch else load_bundle(a.state)
+        if init is not None:
+            print(f"fine-tuning {init['meta']['source']} (use --from-scratch for new weights)")
+        b = train_bundle(base, live, a.epochs_teacher, a.epochs_student, a.live_days,
+                         exclude_today=False, init=init)
         print("saved", save_bundle(b, a.state))
         if a.publish:
             print("published", publish_bundle(b), "-- commit tier2/data/ to ship it")

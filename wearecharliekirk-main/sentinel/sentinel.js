@@ -288,7 +288,9 @@
       el.modeBadge.textContent = "REAL TRAFFIC" + (st.iface ? " · " + st.iface : "");
       el.cascadeHint.textContent = "your devices, hour by hour · commissioned on " + (base.host_days || 0) +
         " baseline + " + ((ins.model || {}).live_host_days || 0) + " live device-days · live corpus " +
-        (live.windows || 0) + " windows" + (ins.training ? " · retraining…" : "");
+        (live.windows || 0) + " windows" + (ins.training ? " · retraining…" : "") +
+        (ins.calibration && !ins.calibration.done ? " · calibrating to this network " +
+          ins.calibration.device_hours + "/" + ins.calibration.needed + " device-hours (no alerts yet)" : "");
     } else {
       el.modeBadge.textContent = "SYNTHETIC DEMO";
     }

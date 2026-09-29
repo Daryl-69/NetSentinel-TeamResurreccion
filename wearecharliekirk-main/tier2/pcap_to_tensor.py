@@ -143,9 +143,16 @@ def local_addresses(paths, verbose=True):
     return local
 
 
-def extract(paths, local, verbose=True):
+def extract(paths, local, verbose=True, tz_offset=0):
     """One pass over the packets. Flows are BIDIRECTIONAL and keyed on the
-    client (private) side, so bytes_up and bytes_down are both real."""
+    client (private) side, so bytes_up and bytes_down are both real.
+
+    Flows are also keyed on the LOCAL CLOCK HOUR of each packet. Without the
+    hour in the key, every packet to one server:port across the whole capture
+    became ONE flow, filed under the hour of its first packet: a 4-day,
+    15M-packet capture collapsed into 94 windows and the model trained on it
+    flagged 43% of ordinary hours. One hour per window is what the live
+    sensor builds, so this is what the models must be trained on."""
     sni_by_dst = {}          # server ip -> hostname, seen on that flow
     dns_map = {}             # answer ip -> queried name
     flows = defaultdict(lambda: {"up": 0, "down": 0, "ts": [], "pkts": 0})
@@ -154,7 +161,7 @@ def extract(paths, local, verbose=True):
     t_lo = t_hi = None
 
     def note(host, peer, port, ts, nbytes, outbound):
-        f = flows[(host, peer, port)]
+        f = flows[(host, peer, port, int((ts + tz_offset) // 3600))]
         f["up" if outbound else "down"] += nbytes
         f["ts"].append(ts)
         f["pkts"] += 1
@@ -266,14 +273,17 @@ def dns_answers(pay):
     return out
 
 
-def build(flows, sni_by_dst, dns_map, t_lo, verbose=True):
-    """Aggregate real flows into the tensor. Hosts = LAN-side IPs."""
+def build(flows, sni_by_dst, dns_map, t_lo, verbose=True, tz_offset=0):
+    """Aggregate real flows into the tensor. Hosts = LAN-side IPs.
+    Day 0 starts at LOCAL midnight of the first packet's day, so window w is
+    the clock hour w (working hours line up with the live sensor's)."""
     buckets = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     peers_in = defaultdict(lambda: defaultdict(lambda: defaultdict(set)))
     cat_count = defaultdict(int)
     named_flows = unnamed_flows = 0
 
-    for (host, peer, port), f in flows.items():
+    lday0 = int((t_lo + tz_offset) // 3600) // WINDOWS_PER_DAY
+    for (host, peer, port, lhour), f in flows.items():
         name = sni_by_dst.get(peer) or dns_map.get(peer)
         if name:
             named_flows += 1
@@ -281,7 +291,7 @@ def build(flows, sni_by_dst, dns_map, t_lo, verbose=True):
             unnamed_flows += 1
         cat = resolve_category(name, peer)
         cat_count[cat] += 1
-        hour = int((min(f["ts"]) - t_lo) // 3600)
+        hour = lhour - lday0 * WINDOWS_PER_DAY
         buckets[host][hour][cat].append(f)
         peers_in[host][hour][cat].add(peer)
 
@@ -326,23 +336,29 @@ def build(flows, sni_by_dst, dns_map, t_lo, verbose=True):
         print(f"  flows with a hostname: {named_flows:,}/{tot:,} "
               f"({100*named_flows/max(tot,1):.1f}%)")
         print(f"  hosts {H}  days {D}  tensor {E.shape}")
-    return E, M, hosts, dict(cat_count), named_flows, unnamed_flows
+    return E, M, hosts, dict(cat_count), named_flows, unnamed_flows, lday0 * WINDOWS_PER_DAY
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="+")
     ap.add_argument("--out", default="own_corpus.npz")
+    ap.add_argument("--tz", default=None, help="capture site's UTC offset, e.g. +05:30 (default: this machine)")
     a = ap.parse_args()
 
     print("=" * 70)
     print("  REAL CAPTURE -> TENSOR   (no synthetic substitution)")
     print("=" * 70)
+    from netsentinel_v2.hostwindows import parse_tz
+    tz = parse_tz(a.tz)
     local = local_addresses(a.files)
-    flows, sni, dnsm, t_lo, t_hi = extract(a.files, local)
+    flows, sni, dnsm, t_lo, t_hi = extract(a.files, local, tz_offset=tz)
+    if t_lo is None:
+        sys.exit("no packets read -- pcap_to_tensor.py reads pcapng (dumpcap's default); for classic "
+                 ".pcap files use `python -m netsentinel.inspector import <files>` instead")
     span_h = (t_hi - t_lo) / 3600.0 if t_lo else 0
     print(f"  span {span_h:.2f} hours")
-    E, M, hosts, cats, res, unres = build(flows, sni, dnsm, t_lo)
+    E, M, hosts, cats, res, unres, lhour0 = build(flows, sni, dnsm, t_lo, tz_offset=tz)
 
     live = (M.sum(-1) > 0)
     print()
@@ -353,8 +369,10 @@ def main():
     print()
     print(f"  live windows total : {int(live.sum()):,}")
     print(f"  live windows/host  : {live.sum()/max(len(hosts),1):.1f}")
-    np.savez_compressed(a.out, edges=E, mask=M,
-                        hosts=np.array(hosts), span_hours=span_h)
+    # lhour0 + tz make the file importable into a corpus with real clock hours:
+    #   python -m netsentinel.inspector import own_corpus.npz --baseline
+    np.savez_compressed(a.out, edges=E, mask=M, hosts=np.array(hosts), span_hours=span_h,
+                        lhour0=lhour0, tz_offset=tz, hourly_flows=True)
     print(f"  wrote {a.out}")
 
 

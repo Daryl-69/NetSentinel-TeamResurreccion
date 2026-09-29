@@ -230,10 +230,11 @@ Then open **http://localhost:8000/sentinel/** or **http://localhost:8000/console
 
 When live capture runs (`wearecharliekirk-main`, `run.py --live`) and PyTorch is installed in `tier2/.venv` (step 3️⃣), the Inspector–Sentry cascade watches **your real devices**:
 
-1. **Commissioned on the baseline:** the team's 20-day capture, imported once into `tier2/data/baseline_corpus.sqlite`.
-2. **Watches live traffic:** every connection the sensor sees goes into a per-device, per-hour window (9 service categories × 10 statistics). Every 30 s the Sentry scores each device's current hour, the top 5 % (at least one device) go to the Inspector, and a device is **flagged** when the Inspector's reconstruction error passes its commissioned 99th-percentile threshold.
-3. **Keeps your traffic:** each finished hour (after a 7-minute grace for late connections) is added to `tier2/state/live_corpus.sqlite`.
-4. **Trains itself:** every 24 h it re-commissions on baseline + the last 60 days of your live corpus and hot-swaps the new models. **Hours the Inspector flagged are kept out of training**, so an intrusion in progress isn't learned as normal. The first retrain that uses your data happens after your first complete day.
+1. **Starts from the team's model:** `tier2/data/models/inspector_baseline.pt` ships with the repo. It was trained on the team's own capture (97 pcaps, about 4 days, 15.3 M packets).
+2. **Calibrates to your network:** that model learned someone else's normal, so for the first **24 device-hours** (spread over at least 6 hours of the day) it scores every device and raises **no alerts**. It then sets its alarm threshold from your network's own traffic. Measured on a network it had never seen, this took false alarms from **43 % to 0.1 %** of device-hours.
+3. **Watches live traffic:** every connection the sensor sees goes into a per-device, per-hour window (9 service categories × 10 statistics). Every 30 s the Sentry scores each device's current hour, the top 5 % (at least one device) go to the Inspector, and a device is **flagged** when the Inspector's reconstruction error passes its commissioned 99th-percentile threshold.
+4. **Keeps your traffic:** each finished hour (after a 7-minute grace for late connections) is added to your local database, `tier2/state/live_corpus.sqlite`.
+5. **Trains itself on the combination:** after **48 device-hours** it **fine-tunes the team's model** on the team's baseline corpus + your database. It starts from the team's weights, so what the team's capture taught it is kept. After that it retrains every 24 h (baseline + your last 60 days) and hot-swaps the models. **Hours the Inspector flagged are kept out of training**, so an intrusion in progress isn't learned as normal. Fine-tuning from the team's model caught **94 %** of planted attack chains, against **79 %** for training from scratch on the same data.
 
 ### One-time: import the 20-day capture as the baseline
 
@@ -256,7 +257,19 @@ The corpus holds only hourly per-device statistics: no payloads, no domain names
 git add wearecharliekirk-main/tier2/data/
 git commit -m "Add 20-day baseline corpus and trained Inspector"
 ```
-A fresh install loads the shipped model (`tier2/data/models/inspector_baseline.pt`) until it has retrained on its own traffic.
+A fresh install loads the shipped model (`tier2/data/models/inspector_baseline.pt`) until it has retrained on its own traffic. `train` fine-tunes the current model by default; add `--from-scratch` for new weights.
+
+> **Training with `pcap_to_tensor.py`?** Use the fixed version in this repo, then import its output: `python pcap_to_tensor.py D:\capture\*.pcapng --tz +05:30` followed by `python -m netsentinel.inspector import own_corpus.npz --baseline`. The old version filed every packet to one server:port across the *whole capture* under a single hour. That's why the first shipped model had only 94 windows from 15.3 M packets. `import` refuses files written by the old version.
+
+### Pooling every sensor's data into the shared baseline
+
+Each sensor keeps its own traffic in its local database. To grow the shared baseline with other networks' data, export a pseudonymised copy (hourly statistics only, device addresses replaced, flagged hours left out) and merge it:
+```bash
+python -m netsentinel.inspector export siteA_corpus.sqlite --name siteA      # on the sensor
+python -m netsentinel.inspector import siteA_corpus.sqlite --baseline         # on the team's machine
+python -m netsentinel.inspector train --publish                               # retrain on the combination, ship it
+```
+Nothing is uploaded automatically. Sending users' traffic to a server needs a place to receive it and the users' consent, so export/import is the explicit, reviewable path.
 
 Devices are identified by the **private** (RFC1918 / IPv6 ULA) addresses in the capture. A laptop's *global* IPv6 address is detected automatically from pcaps. For Zeek logs, pass it with `--local-ip <address>` (repeatable). Importing without `--baseline` adds the capture to the *live* corpus instead, e.g. to seed a new site with its own past traffic.
 
@@ -277,10 +290,9 @@ Set `NETSENTINEL_INSPECTOR=0` to keep Tier 2 off during live capture.
 ### Honest limits
 
 - **Granularity is one device-hour.** The current hour is re-scored every 30 s, but the Inspector judges the shape of a device's hour, not single packets. Tier 1's detectors stay the per-flow layer.
-- **A new network starts from someone else's normal.** Until the first retrain on your own complete day, your devices are judged against the baseline network, so expect extra flags on day one. The threshold is re-calibrated at every retrain.
+- **No alerts during calibration.** For the first 24 device-hours on a new network the Inspector only learns that network's error level. Tier 1's detectors alert as usual.
 - **Device = IP address.** A device whose address changes (DHCP) starts over as a new device.
 - **Flag exclusion only protects flagged hours.** A slow drift that never crosses the threshold can still be learned as normal. That's the usual limit of self-training anomaly detectors.
-- **Only tested on synthetic data so far:** this path was tested on a synthetic 20-day Zeek fixture, real pcaps and live traffic in a test container, not yet on the team's own 20-day capture.
 
 ---
 

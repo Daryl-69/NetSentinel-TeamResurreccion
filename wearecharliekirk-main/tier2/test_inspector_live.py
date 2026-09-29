@@ -210,6 +210,91 @@ def test_train_and_score(tmp):
     check("an ordinary office hour is not flagged", all(e < lb["thr"] for e in errs2.values()), str(errs2))
 
 
+def test_npz_and_corpus_exchange(tmp):
+    print("\npcap_to_tensor npz import, corpus export / merge")
+    E = np.zeros((1, 2, 24, 9, 10), np.float32); M = np.zeros((1, 2, 24, 9), np.float32)
+    E[0, 1, 9, 4, 0] = np.log1p(12.0); M[0, 1, 9, 4] = 1
+    good = os.path.join(tmp, "good.npz")
+    np.savez(good, edges=E, mask=M, hosts=np.array(["192.168.1.7"]), span_hours=48.0,
+             lhour0=20000 * 24, tz_offset=IST, hourly_flows=True)
+    rows, tz = HW.rows_from_npz(good)
+    check("npz window lands on its clock hour", rows and rows[0][1] == 20001 * 24 + 9 and tz == IST, str(rows[:1]))
+    check("npz connection count recovered", rows and abs(rows[0][3] - 12.0) < 1e-3)
+    legacy = os.path.join(tmp, "legacy.npz")
+    np.savez(legacy, edges=E, mask=M, hosts=np.array(["192.168.1.7"]), span_hours=48.0)
+    try:
+        HW.rows_from_npz(legacy); refused = False
+    except ValueError:
+        refused = True
+    check("old whole-capture npz refused", refused)
+    a = HW.CorpusStore(os.path.join(tmp, "siteA.sqlite"), tz_offset=IST)
+    a.put([("192.168.1.10", 20000 * 24 + 9, 4, 5, np.ones(10, np.float32))], flagged=[])
+    a.put([("192.168.1.11", 20000 * 24 + 9, 4, 5, np.ones(10, np.float32))], flagged=[("192.168.1.11", 20000 * 24 + 9)])
+    s = HW.export_corpus(a, os.path.join(tmp, "export.sqlite"), "siteA")
+    check("export leaves out flagged windows and real addresses",
+          s["windows"] == 1 and HW.CorpusStore(os.path.join(tmp, "export.sqlite")).rows()[0][0] == "siteA-01")
+    dst = HW.CorpusStore(os.path.join(tmp, "pooled.sqlite"), tz_offset=IST)
+    dst.put([("siteA-01", 20000 * 24 + 9, 4, 5, np.zeros(10, np.float32))])
+    HW.merge_corpus(os.path.join(tmp, "export.sqlite"), dst, "export:")
+    check("merged hosts are prefixed, never collide", dst.summary()["hosts"] == 2)
+
+
+def test_warm_start_and_calibration(tmp):
+    print("\nshipped model: tolerant load, calibration, warm start (needs torch)")
+    try:
+        import torch  # noqa: F401
+    except ImportError:
+        print("  [skip] torch not installed")
+        return
+    import types
+    import inspector_live as IL
+    rng = np.random.default_rng(2)
+    base = HW.CorpusStore(os.path.join(tmp, "wbase.sqlite"), tz_offset=0)
+    rows = []
+    for d in range(6):
+        for h in range(3):
+            rows += _office_day(rng, f"dev-{h}", (20000 + d) * 24)
+    base.put(rows)
+    empty = HW.CorpusStore(os.path.join(tmp, "wlive.sqlite"), tz_offset=0)
+    b = IL.train_bundle(base, empty, 2, 2, None, exclude_today=False, log=lambda t: None)
+    shipped_dir = os.path.join(tmp, "shipped")
+    IL.publish_bundle(b, shipped_dir)
+    # strip the metadata the service expects, like a model trained by another script
+    import torch as _t
+    ck = _t.load(os.path.join(shipped_dir, "inspector_baseline.pt"), weights_only=False)
+    ck["meta"] = {"source": "own_corpus.npz", "hosts": 3}
+    _t.save(ck, os.path.join(shipped_dir, "inspector_baseline.pt"))
+    lb = IL.load_bundle(os.path.join(tmp, "nostate"), shipped_dir)
+    check("model with foreign metadata loads", lb is not None and lb["meta"]["shipped"]
+          and lb["meta"]["live_host_days"] == 0 and "params" in lb["meta"])
+
+    a = types.SimpleNamespace(state=os.path.join(tmp, "svc"), baseline=os.path.join(tmp, "none.sqlite"),
+                              calibrate_hours=6, calibrate_min_hours_of_day=3, budget=0.05)
+    svc = IL.Service.__new__(IL.Service)
+    svc.a, svc.hosts, svc.own_ips, svc.meta_version = a, [], set(), 0
+    import io, contextlib
+    with contextlib.redirect_stdout(io.StringIO()):
+        svc._set_bundle(lb)
+        check("shipped model starts in calibration", svc.calibrating)
+        svc._calibrate([1.0, 1.1], 3); svc._calibrate([1.2, 9.0], 3); svc._calibrate([1.3, 1.4], 3)
+        check("needs spread over hours of the day, not just a count", svc.calibrating)
+        svc._calibrate([1.0], 10); svc._calibrate([1.1], 15)
+    check("calibration finishes and raises the threshold to this network's 99th pct",
+          not svc.calibrating and lb["thr"] >= lb["thr_trained"] and lb["thr"] > 8.0, f"{lb['thr']:.2f}")
+    with contextlib.redirect_stdout(io.StringIO()):
+        svc2 = IL.Service.__new__(IL.Service); svc2.a, svc2.hosts, svc2.own_ips, svc2.meta_version = a, [], set(), 0
+        svc2._set_bundle(IL.load_bundle(os.path.join(tmp, "nostate"), shipped_dir))
+    check("calibration survives a restart", not svc2.calibrating)
+
+    live = HW.CorpusStore(os.path.join(tmp, "wlive2.sqlite"), tz_offset=0)
+    live.put(_office_day(rng, "192.168.1.50", (20010) * 24) + _office_day(rng, "192.168.1.50", (20011) * 24))
+    w = IL.train_bundle(None, live, 2, 2, None, exclude_today=False, init=lb, log=lambda t: None)
+    same = all(torch.equal(p1, p2) for p1, p2 in zip(w["inspector"].state_dict().values(),
+                                                     lb["inspector"].state_dict().values()))
+    check("warm start fine-tunes the shipped weights (and changes them)",
+          w["meta"]["warm_start_from"] == lb["meta"]["source"] and not same)
+
+
 def main():
     tmp = tempfile.mkdtemp()
     try:
@@ -218,6 +303,8 @@ def main():
         test_zeek(tmp)
         test_store_and_samples(tmp)
         test_train_and_score(tmp)
+        test_npz_and_corpus_exchange(tmp)
+        test_warm_start_and_calibration(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print()
