@@ -30,6 +30,8 @@ Desktop.ini
 # Binary/large files
 *.npz
 *.pt
+# ...except the Inspector trained on the team's baseline capture (train --publish)
+!wearecharliekirk-main/tier2/data/models/*.pt
 *.pth
 *.h5
 *.pkl

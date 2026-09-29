@@ -55,6 +55,9 @@ DEFAULT_STATE = os.environ.get("NETSENTINEL_INSPECTOR_STATE", os.path.join(HERE,
 DEFAULT_BASELINE = os.environ.get("NETSENTINEL_BASELINE_CORPUS",
                                   os.path.join(HERE, "data", "baseline_corpus.sqlite"))
 W = HW.WINDOWS_PER_DAY
+# A model trained on the baseline and committed with the repo (train --publish):
+# a fresh install loads it until it has trained on its own traffic.
+SHIPPED_MODELS = os.path.join(HERE, "data", "models")
 
 
 def emit(obj):
@@ -155,17 +158,34 @@ def save_bundle(b, state_dir, keep=5) -> str:
     return path
 
 
-def load_bundle(state_dir):
+def publish_bundle(b, models_dir=SHIPPED_MODELS) -> str:
+    """Write the model where git tracks it (tier2/data/models/)."""
+    import torch
+    os.makedirs(models_dir, exist_ok=True)
+    path = os.path.join(models_dir, "inspector_baseline.pt")
+    torch.save({"inspector": b["inspector"].state_dict(), "sentry": b["sentry"].state_dict(),
+                "head": b["head"].state_dict(), "head_din": b["head"].net[0].in_features,
+                "mu": b["mu"], "sd": b["sd"], "thr": b["thr"], "meta": b["meta"]}, path)
+    with open(os.path.join(models_dir, "current.json"), "w") as f:
+        json.dump({"path": os.path.basename(path), "meta": b["meta"], "thr": b["thr"]}, f, indent=1)
+    return path
+
+
+def load_bundle(state_dir, shipped_dir=SHIPPED_MODELS):
+    """This machine's latest model (state/models), else the shipped one."""
     import torch
     from netsentinel_v2.models import Inspector, Sentry
     from netsentinel_v2 import train as T
-    cur = os.path.join(state_dir, "models", "current.json")
-    if not os.path.exists(cur):
-        return None
-    with open(cur) as f:
-        info = json.load(f)
-    p = os.path.join(state_dir, "models", info["path"])
-    if not os.path.exists(p):
+    p = None
+    for d in (os.path.join(state_dir, "models"), shipped_dir):
+        cur = os.path.join(d, "current.json")
+        if os.path.exists(cur):
+            with open(cur) as f:
+                cand = os.path.join(d, json.load(f)["path"])
+            if os.path.exists(cand):
+                p = cand
+                break
+    if p is None:
         return None
     ck = torch.load(p, map_location="cpu", weights_only=False)
     insp, sen = Inspector(dim=96), Sentry(dim=32, teacher_dim=96)
@@ -174,7 +194,7 @@ def load_bundle(state_dir):
     for m in (insp, sen, head):
         m.eval()
     return {"inspector": insp, "sentry": sen, "head": head, "mu": ck["mu"], "sd": ck["sd"],
-            "thr": float(ck["thr"]), "meta": ck["meta"]}
+            "thr": float(ck["thr"]), "meta": dict(ck["meta"], source=os.path.relpath(p, HERE))}
 
 
 def score_hour(bundle, hosts, rows, w_now, budget_k):
@@ -485,6 +505,8 @@ def main():
     t.add_argument("--live-days", type=int, default=60)
     t.add_argument("--epochs-teacher", type=int, default=8)
     t.add_argument("--epochs-student", type=int, default=10)
+    t.add_argument("--publish", action="store_true",
+                   help="also write tier2/data/models/inspector_baseline.pt (committed with the repo)")
 
     sub.add_parser("status")
 
@@ -512,6 +534,8 @@ def main():
         base, live = open_corpora(a.state, a.baseline)
         b = train_bundle(base, live, a.epochs_teacher, a.epochs_student, a.live_days, exclude_today=False)
         print("saved", save_bundle(b, a.state))
+        if a.publish:
+            print("published", publish_bundle(b), "-- commit tier2/data/ to ship it")
     elif a.cmd == "status":
         base, live = open_corpora(a.state, a.baseline)
         cur = os.path.join(a.state, "models", "current.json")

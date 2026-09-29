@@ -377,7 +377,9 @@ def main(argv=None):
     im.add_argument("--local-ip", action="append", default=[],
                     help="a monitored device's non-private address (e.g. global IPv6); repeatable")
     im.add_argument("--no-detect", action="store_true", help="don't auto-detect non-private local addresses")
-    sub.add_parser("train", help="(re)commission the Inspector now on baseline + live corpus")
+    tr = sub.add_parser("train", help="(re)commission the Inspector now on baseline + live corpus")
+    tr.add_argument("--publish", action="store_true",
+                    help="also write tier2/data/models/ so the trained model ships with the repo")
     sub.add_parser("status", help="corpora and current model")
     a = ap.parse_args(argv)
 
@@ -387,7 +389,7 @@ def main(argv=None):
         if a.baseline:
             print("\n  Baseline written. Commit tier2/data/baseline_corpus.sqlite so every install starts from it.")
     elif a.cmd == "train":
-        sys.exit(_tier2(["train"]))
+        sys.exit(_tier2(["train"] + (["--publish"] if a.publish else [])))
     elif a.cmd == "status":
         sys.exit(_tier2(["status"]))
 

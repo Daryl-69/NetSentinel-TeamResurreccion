@@ -246,15 +246,17 @@ python -m netsentinel.inspector import D:\capture --baseline --tz +05:30
 # ...or the Zeek logs zeekify.sh produced (one folder per hourly pcap)
 python -m netsentinel.inspector import D:\capture-zeek --baseline --tz +05:30
 
-python -m netsentinel.inspector status     # corpus size, days covered, current model
-python -m netsentinel.inspector train      # optional: commission now (it also trains itself on first start)
+python -m netsentinel.inspector status            # corpus size, days covered, current model
+python -m netsentinel.inspector train --publish   # train on it and write tier2/data/models/ (ships with the repo)
+cd tier2 && .venv\Scripts\python.exe eval_real_baseline.py   # optional: held-out false alarms + planted-chain detection
 ```
 
 The corpus holds only hourly per-device statistics: no payloads, no domain names, no packet timestamps. Device addresses are replaced with `dev-01`, `dev-02`, … So it's small enough to **commit, and every install then starts from your baseline**:
 ```bash
-git add wearecharliekirk-main/tier2/data/baseline_corpus.sqlite
-git commit -m "Add 20-day baseline corpus for the Inspector"
+git add wearecharliekirk-main/tier2/data/
+git commit -m "Add 20-day baseline corpus and trained Inspector"
 ```
+A fresh install loads the shipped model (`tier2/data/models/inspector_baseline.pt`) until it has retrained on its own traffic.
 
 Devices are identified by the **private** (RFC1918 / IPv6 ULA) addresses in the capture. A laptop's *global* IPv6 address is detected automatically from pcaps. For Zeek logs, pass it with `--local-ip <address>` (repeatable). Importing without `--baseline` adds the capture to the *live* corpus instead, e.g. to seed a new site with its own past traffic.
 
