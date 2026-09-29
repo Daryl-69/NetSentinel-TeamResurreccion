@@ -327,14 +327,25 @@ def detect_local_ips(files: list[str], sample_files: int = 3) -> set:
 def import_capture(paths: list[str], to_baseline: bool, tz: Optional[str],
                    local_ips: list[str], detect: bool = True) -> dict:
     import inspector_live as IL                      # tier2/, torch not needed for this
-    zeek_roots = [p for p in paths if os.path.isdir(p) and HW.zeek_dirs(p)]
-    pcaps = _pcap_files([p for p in paths if p not in zeek_roots])
-    if not zeek_roots and not pcaps:
+    npzs = [p for p in paths if p.lower().endswith(".npz")]
+    corpora = [p for p in paths if p.lower().endswith((".sqlite", ".db"))]
+    rest = [p for p in paths if p not in npzs and p not in corpora]
+    zeek_roots = [p for p in rest if os.path.isdir(p) and HW.zeek_dirs(p)]
+    pcaps = _pcap_files([p for p in rest if p not in zeek_roots])
+    if not zeek_roots and not pcaps and not npzs and not corpora:
         raise SystemExit(f"no pcap/pcapng files or Zeek conn logs found in: {' '.join(paths)}")
     path = IL.DEFAULT_BASELINE if to_baseline else os.path.join(IL.DEFAULT_STATE, "live_corpus.sqlite")
     store = HW.CorpusStore(path, tz_offset=HW.parse_tz(tz) if (tz or not os.path.exists(path)) else None)
     print(f"  corpus: {path}  (tz offset {store.tz:+d}s)")
     result = {"corpus_path": path}
+    for i, f in enumerate(npzs, 1):
+        rows, _tz = HW.rows_from_npz(f)              # raises for old-format files
+        print(f"  pcap_to_tensor output: {f}  ({len(rows)} windows)")
+        result[f] = {"windows_written": store.put(rows)}
+    for i, f in enumerate(corpora, 1):
+        tag = os.path.splitext(os.path.basename(f))[0][:12].replace("-", "_")
+        print(f"  corpus from another sensor: {f}")
+        result[f] = {"windows_written": HW.merge_corpus(f, store, host_prefix=f"{tag}:")}
     for root in zeek_roots:
         print(f"  Zeek logs: {root}")
         result[root] = HW.ingest(HW.records_from_zeek(root, local_ips), store)
@@ -370,7 +381,8 @@ def main(argv=None):
                                  description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     im = sub.add_parser("import", help="capture (pcap/pcapng files or Zeek logs) -> corpus")
-    im.add_argument("paths", nargs="+")
+    im.add_argument("paths", nargs="+", help="pcap/pcapng files or folders, Zeek log folders, "
+                    "pcap_to_tensor .npz files, or corpora exported by other sensors (.sqlite)")
     im.add_argument("--baseline", action="store_true",
                     help="write the shipped baseline corpus (tier2/data/), hosts pseudonymised")
     im.add_argument("--tz", default=None, help="capture site's UTC offset, e.g. +05:30 (default: this machine's)")
@@ -380,6 +392,11 @@ def main(argv=None):
     tr = sub.add_parser("train", help="(re)commission the Inspector now on baseline + live corpus")
     tr.add_argument("--publish", action="store_true",
                     help="also write tier2/data/models/ so the trained model ships with the repo")
+    ex = sub.add_parser("export", help="pseudonymised copy of this sensor's live corpus, to pool into a shared baseline")
+    ex.add_argument("out", nargs="?", default="netsentinel_corpus_export.sqlite")
+    ex.add_argument("--name", default="site", help="prefix for the device aliases (e.g. your site name)")
+    tr.add_argument("--from-scratch", action="store_true",
+                    help="don't fine-tune the current/shipped model; train new weights")
     sub.add_parser("status", help="corpora and current model")
     a = ap.parse_args(argv)
 
@@ -389,7 +406,14 @@ def main(argv=None):
         if a.baseline:
             print("\n  Baseline written. Commit tier2/data/baseline_corpus.sqlite so every install starts from it.")
     elif a.cmd == "train":
-        sys.exit(_tier2(["train"] + (["--publish"] if a.publish else [])))
+        sys.exit(_tier2(["train"] + (["--publish"] if a.publish else [])
+                        + (["--from-scratch"] if a.from_scratch else [])))
+    elif a.cmd == "export":
+        import inspector_live as IL
+        live = HW.CorpusStore(os.path.join(IL.DEFAULT_STATE, "live_corpus.sqlite"))
+        print(json.dumps(HW.export_corpus(live, a.out, a.name), indent=1))
+        print(f"\n  Wrote {a.out}. Add it to the shared baseline with:\n"
+              f"    python -m netsentinel.inspector import {a.out} --baseline")
     elif a.cmd == "status":
         sys.exit(_tier2(["status"]))
 

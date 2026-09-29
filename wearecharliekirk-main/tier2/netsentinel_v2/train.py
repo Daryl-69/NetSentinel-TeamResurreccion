@@ -85,9 +85,11 @@ def t(x):
 
 
 # ---------------------------------------------------------------- training
-def train_inspector(E, M, Co, epochs=14, dim=96, bs=64, lr=2e-3, mask_p=0.25, seed=0):
+def train_inspector(E, M, Co, epochs=14, dim=96, bs=64, lr=2e-3, mask_p=0.25, seed=0, init=None):
     torch.manual_seed(seed)
     model = Inspector(dim=dim).to(DEV)
+    if init is not None:            # warm start: fine-tune an existing Inspector
+        model.load_state_dict(init.state_dict())
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     n = len(E)
     for ep in range(epochs):
@@ -119,7 +121,7 @@ def inspector_forward(model, E, M, Co, bs=256):
 
 
 def train_sentry(E, M, Zt, ERRt, epochs=16, dim=32, bs=64, lr=2e-3,
-                 lam=4.0, seed=0):
+                 lam=4.0, seed=0, init=None):
     """Distil the ENCODER with an anomaly-weighted loss.
 
     L = E[(1 + lam * s_teacher) * ||project(f_student) - f_teacher||^2]
@@ -130,6 +132,8 @@ def train_sentry(E, M, Zt, ERRt, epochs=16, dim=32, bs=64, lr=2e-3,
     """
     torch.manual_seed(seed)
     model = Sentry(dim=dim, teacher_dim=Zt.shape[-1]).to(DEV)
+    if init is not None:            # warm start: fine-tune an existing Sentry
+        model.load_state_dict(init.state_dict())
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     s = ERRt / (np.quantile(ERRt, 0.99) + 1e-9)
     s = np.clip(s, 0, 3.0).astype(np.float32)
