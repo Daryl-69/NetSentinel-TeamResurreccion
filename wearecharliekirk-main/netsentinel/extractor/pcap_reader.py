@@ -255,7 +255,7 @@ class PacketProcessor:
                 if d:
                     ev = self.dns_extractor.process_fields(
                         p.ts, p.src, p.dst, d["qr"], d["qname"], d["qtype"],
-                        d["rcode"], d["ancount"], d["msg_len"])
+                        d["rcode"], d["ancount"], d["msg_len"], d.get("answer_ips"))
                     if ev:
                         events.append(self._tag(ev))
             flow_event = self.flow_extractor.process_fields(

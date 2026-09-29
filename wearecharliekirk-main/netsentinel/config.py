@@ -299,6 +299,12 @@ CAPTURE_INTERFACE = os.environ.get("NETSENTINEL_IFACE", "")
 PCAP_UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
 os.makedirs(PCAP_UPLOAD_DIR, exist_ok=True)
 
+# Tier 2 on real traffic: when live capture starts, also start the
+# Inspector-Sentry on the same traffic (needs PyTorch in tier2/.venv).
+# Every completed hour is added to tier2/state/live_corpus.sqlite and the
+# models retrain on baseline + live corpus every 24 h.
+INSPECTOR_ON_LIVE = os.environ.get("NETSENTINEL_INSPECTOR", "1") != "0"
+
 # Live capture: how often idle flows are swept out, and how long a flow that
 # has seen a single packet (an unanswered SYN, a lone UDP probe) waits before
 # it is emitted as a probe record. These two numbers bound how late a scan or

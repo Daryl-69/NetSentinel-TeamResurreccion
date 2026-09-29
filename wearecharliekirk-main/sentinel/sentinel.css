@@ -272,3 +272,8 @@ b{font-weight:700}
   body{overflow:auto}
   .grid{grid-template-columns:1fr}
 }
+
+/* Tier 2 mode: synthetic demo organisation vs the real devices on this network */
+.mode-badge { font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em;
+  padding: 5px 8px; border-radius: 6px; margin-left: 10px; white-space: nowrap; border: 1px solid #3a3d46; color: #9a978f; }
+.mode-badge.real { color: #3fd07a; border-color: rgba(63, 208, 122, .45); background: rgba(63, 208, 122, .08); }

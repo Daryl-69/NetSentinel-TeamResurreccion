@@ -2,8 +2,9 @@
 
 Tier 2 lives in ``tier2/``: a behavioural track that reasons about how a
 host's mix of services changes over days. It is verified standalone
-(``python tier2/verify_all.py``) and NOT wired into the live analyzer: the
-Inspector needs a commissioning window of days per site before it can score.
+(``python tier2/verify_all.py``). On live capture it runs on the real devices
+via ``netsentinel/inspector.py`` + ``tier2/inspector_live.py``: commissioned on
+the imported baseline capture, then retrained on the site's own traffic.
 
 What this module gives the console:
 
@@ -32,6 +33,14 @@ from typing import Optional
 
 REPO = Path(__file__).resolve().parent.parent
 TIER2 = REPO / "tier2"
+
+
+def _inspector_running() -> bool:
+    try:
+        from netsentinel.inspector import INSPECTOR
+        return INSPECTOR.running
+    except Exception:
+        return False
 
 
 # ----------------------------------------------------------------- python
@@ -235,10 +244,12 @@ def status(check_torch: bool = True) -> dict:
     return {
         "present": present,
         "path": "tier2/",
-        "wired_into_live_pipeline": False,
-        "why_not_wired": ("The Inspector learns each host's normal over a commissioning window of days on the "
-                          "site's own traffic; the live analyzer has no such window yet. Tier 2 runs and is "
-                          "verified on its own: python tier2/verify_all.py."),
+        "wired_into_live_pipeline": _inspector_running(),
+        "why_not_wired": ("" if _inspector_running() else
+                          "It runs on real traffic while live capture runs (python run.py --live) and PyTorch "
+                          "is installed for the Tier 2 Python; it is commissioned on "
+                          "tier2/data/baseline_corpus.sqlite (import the baseline capture with "
+                          "python -m netsentinel.inspector import ... --baseline) and retrains on the live corpus."),
         "python": tier2_python(),
         "torch": torch_available() if (present and check_torch) else None,
         "numbers": headline_numbers() if present else [],

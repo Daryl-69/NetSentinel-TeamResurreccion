@@ -141,3 +141,8 @@ netsentinel/integrity/blobs/
 netsentinel/integrity/proofs/
 netsentinel/integrity/data/
 netsentinel/integrity/seq_state.json
+
+# Tier 2 on real traffic: the live corpus (your devices' hourly traffic) and the
+# models retrained on it stay on this machine. tier2/data/baseline_corpus.sqlite
+# (the imported baseline capture) is meant to be committed.
+tier2/state/

@@ -93,9 +93,9 @@ python traffic_feed.py
 > .venv/bin/pip install torch --index-url https://download.pytorch.org/whl/cpu     # Windows: .venv\Scripts\pip ...
 > .venv/bin/pip install -r requirements.txt
 > ```
-> Then restart `python run.py` and reload `/sentinel/`. The Inspector trains on its own (about 10 s), the Sentry is distilled from it (205,546 → 14,992 parameters), and it then scores 60 hosts every hour. Running `python traffic_feed.py` starts a kill chain on one host (`dev-011`) in its "host chain" segment, and that host then gets escalated and flagged (or trigger it directly with `curl -X POST http://localhost:8000/api/cascade/attack`).
+> Then restart `python run.py` and reload `/sentinel/`. Without live capture the panel runs a **synthetic demo organisation** (badge: SYNTHETIC DEMO). The Inspector trains on its own (about 10 s), the Sentry is distilled from it (205,546 → 14,992 parameters), and it then scores 60 hosts every hour. Running `python traffic_feed.py` starts a kill chain on one host (`dev-011`) in its "host chain" segment, and that host then gets escalated and flagged (or trigger it directly with `curl -X POST http://localhost:8000/api/cascade/attack`).
 >
-> **This cascade runs on a synthetic organisation, not on your captured traffic.** The Inspector needs a commissioning window of days of a site's own host behaviour, and the live pipeline doesn't have that yet (`GET /api/tier2` reports `"wired_into_live_pipeline": false`). The right half of `/sentinel/` (Live Detections) *does* show detections from live capture and `traffic_feed.py`.
+> **With `--live`, the same panel runs on your real devices** (badge: REAL TRAFFIC). It's commissioned on the team's baseline capture, then keeps learning from your own traffic. See [🧠 Inspector–Sentry on your real network](#-inspectorsentry-on-your-real-network).
 >
 > ⚠️ With the integrity layer enabled (the default), the extended backend **makes git commits** (`integrity: checkpoint #N`, updating `integrity/latest_sth.json`) in this checkout while it runs. Don't run it on a branch you plan to push as-is.
 
@@ -204,7 +204,7 @@ Same flags, same requirements:
 cd NetSentinel-TeamResurreccion/wearecharliekirk-main
 sudo .venv/bin/python run.py --live         # Windows (as Administrator): python run.py --live
 ```
-Then open **http://localhost:8000/sentinel/** or **http://localhost:8000/console/**. The extended build also analyses IPv6 and uses rule-based volumetric, DNS-behaviour and beacon detectors alongside the models. On `/sentinel/`, live-capture detections appear in the *Live Detections* panel. The Inspector–Sentry cascade panel is a synthetic-organisation demo and does not score captured traffic (see step 3️⃣).
+Then open **http://localhost:8000/sentinel/** or **http://localhost:8000/console/**. The extended build also analyses IPv6 and uses rule-based volumetric, DNS-behaviour and beacon detectors alongside the models. On `/sentinel/`, live-capture detections appear in the *Live Detections* panel, and the Inspector–Sentry cascade panel switches to your real devices (next section).
 
 ### What "real time" means here
 
@@ -223,6 +223,62 @@ Then open **http://localhost:8000/sentinel/** or **http://localhost:8000/console
 - The DDoS XGBoost was trained on CICFlowMeter features and scores ordinary two-way traffic from the live extractor as DDoS (see `netsentinel-main/LIVE_RESULTS.md`). In `netsentinel-main`, live DDoS alerts therefore also require a flood shape: high rate and one-sided, with little or no reply traffic. The extended build uses its rate/source-entropy DDoS detector on live traffic instead.
 - The exfiltration VAE (ROC-AUC 0.78) still flags some long telemetry/CDN hostnames, such as `*.data.microsoft.com`.
 - The encrypted-traffic model classifies *applications* (including "VPN-*"). That is recorded as telemetry, not raised as an alert (`netsentinel-main`: set `NETSENTINEL_ETT_ALERTS=1` to alert on it again; extended: `ETT_ALERT_ON_VPN` in `config.py`).
+
+---
+
+## 🧠 Inspector–Sentry on your real network
+
+When live capture runs (`wearecharliekirk-main`, `run.py --live`) and PyTorch is installed in `tier2/.venv` (step 3️⃣), the Inspector–Sentry cascade watches **your real devices**:
+
+1. **Commissioned on the baseline:** the team's 20-day capture, imported once into `tier2/data/baseline_corpus.sqlite`.
+2. **Watches live traffic:** every connection the sensor sees goes into a per-device, per-hour window (9 service categories × 10 statistics). Every 30 s the Sentry scores each device's current hour, the top 5 % (at least one device) go to the Inspector, and a device is **flagged** when the Inspector's reconstruction error passes its commissioned 99th-percentile threshold.
+3. **Keeps your traffic:** each finished hour (after a 7-minute grace for late connections) is added to `tier2/state/live_corpus.sqlite`.
+4. **Trains itself:** every 24 h it re-commissions on baseline + the last 60 days of your live corpus and hot-swaps the new models. **Hours the Inspector flagged are kept out of training**, so an intrusion in progress isn't learned as normal. The first retrain that uses your data happens after your first complete day.
+
+### One-time: import the 20-day capture as the baseline
+
+From `wearecharliekirk-main` with its `.venv` active. `--tz` is the UTC offset **where the capture was recorded**, so hour-of-day means local working hours:
+
+```bash
+# raw capture files (dumpcap .pcapng/.pcap, one folder or many files)
+python -m netsentinel.inspector import D:\capture --baseline --tz +05:30
+
+# ...or the Zeek logs zeekify.sh produced (one folder per hourly pcap)
+python -m netsentinel.inspector import D:\capture-zeek --baseline --tz +05:30
+
+python -m netsentinel.inspector status     # corpus size, days covered, current model
+python -m netsentinel.inspector train      # optional: commission now (it also trains itself on first start)
+```
+
+The corpus holds only hourly per-device statistics: no payloads, no domain names, no packet timestamps. Device addresses are replaced with `dev-01`, `dev-02`, … So it's small enough to **commit, and every install then starts from your baseline**:
+```bash
+git add wearecharliekirk-main/tier2/data/baseline_corpus.sqlite
+git commit -m "Add 20-day baseline corpus for the Inspector"
+```
+
+Devices are identified by the **private** (RFC1918 / IPv6 ULA) addresses in the capture. A laptop's *global* IPv6 address is detected automatically from pcaps. For Zeek logs, pass it with `--local-ip <address>` (repeatable). Importing without `--baseline` adds the capture to the *live* corpus instead, e.g. to seed a new site with its own past traffic.
+
+### Run it
+
+```bash
+cd wearecharliekirk-main
+sudo .venv/bin/python run.py --live        # Windows (Administrator): python run.py --live
+```
+You should see `[>] Tier 2 Inspector-Sentry watching real traffic on 'eth0'`. Open **http://localhost:8000/sentinel/**: the badge reads **REAL TRAFFIC · eth0**, each tile is one of your devices (`you-…` is this machine; hover for its IP), and flagged devices raise a banner with the categories they reached that hour.
+
+```bash
+curl http://localhost:8000/api/inspector/state            # devices, verdicts, corpus sizes, model
+curl -X POST http://localhost:8000/api/inspector/retrain  # re-commission now instead of waiting 24 h
+```
+Set `NETSENTINEL_INSPECTOR=0` to keep Tier 2 off during live capture.
+
+### Honest limits
+
+- **Granularity is one device-hour.** The current hour is re-scored every 30 s, but the Inspector judges the shape of a device's hour, not single packets. Tier 1's detectors stay the per-flow layer.
+- **A new network starts from someone else's normal.** Until the first retrain on your own complete day, your devices are judged against the baseline network, so expect extra flags on day one. The threshold is re-calibrated at every retrain.
+- **Device = IP address.** A device whose address changes (DHCP) starts over as a new device.
+- **Flag exclusion only protects flagged hours.** A slow drift that never crosses the threshold can still be learned as normal. That's the usual limit of self-training anomaly detectors.
+- **Only tested on synthetic data so far:** this path was tested on a synthetic 20-day Zeek fixture, real pcaps and live traffic in a test container, not yet on the team's own 20-day capture.
 
 ---
 
@@ -510,6 +566,8 @@ python make_charts.py results.json
 | `GET` | `/api/capture/interfaces` | Interfaces available for live capture + the default |
 | `POST` | `/api/capture/start?interface=eth0` | Start live packet capture (omit `interface` for the default-route interface) |
 | `POST` | `/api/capture/stop` | Stop live capture |
+| `GET` | `/api/inspector/state` | *(extended)* Inspector–Sentry on real traffic: devices, hourly verdicts, corpora, model |
+| `POST` | `/api/inspector/retrain` | *(extended)* Re-commission now on baseline + live corpus |
 | `POST` | `/api/reset` | Reset stats and alerts |
 | `WS` | `/ws` | Real-time alert + stats WebSocket |
 | `GET` | `/docs` | Interactive Swagger API documentation |
