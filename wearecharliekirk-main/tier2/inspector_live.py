@@ -193,8 +193,19 @@ def load_bundle(state_dir, shipped_dir=SHIPPED_MODELS):
     head = T.Head(ck["head_din"], 0); head.load_state_dict(ck["head"])
     for m in (insp, sen, head):
         m.eval()
+    # Models trained outside train_bundle (e.g. from pcap_to_tensor.py's npz)
+    # carry different metadata; fill what the service reads so a shipped model
+    # can never stop it from starting.
+    meta = dict(ck.get("meta") or {})
+    meta.setdefault("trained_at", 0.0)
+    meta.setdefault("baseline_host_days", int(meta.get("host_days", 0) or 0))
+    meta.setdefault("live_host_days", 0)
+    meta.setdefault("params", {"inspector": sum(x.numel() for x in insp.parameters()),
+                               "sentry": sum(x.numel() for x in sen.parameters())})
+    meta.setdefault("trained_on", meta.get("source", ""))
+    meta["source"] = os.path.relpath(p, HERE)
     return {"inspector": insp, "sentry": sen, "head": head, "mu": ck["mu"], "sd": ck["sd"],
-            "thr": float(ck["thr"]), "meta": dict(ck["meta"], source=os.path.relpath(p, HERE))}
+            "thr": float(ck["thr"]), "meta": meta}
 
 
 def score_hour(bundle, hosts, rows, w_now, budget_k):
@@ -446,9 +457,10 @@ class Service:
                   f"{s['days_spanned']} days ({s['first_day']} .. {s['last_day']})"})
         if self.bundle is not None:
             m = self.bundle["meta"]
-            emit({"type": "log", "text": "Loaded Inspector trained %s on %d baseline + %d live device-days"
-                  % (time.strftime("%Y-%m-%d %H:%M", time.localtime(m["trained_at"])),
-                     m["baseline_host_days"], m["live_host_days"])})
+            emit({"type": "log", "text": "Loaded Inspector %s (trained %s on %d baseline + %d live device-days%s)"
+                  % (m["source"], time.strftime("%Y-%m-%d %H:%M", time.localtime(m["trained_at"])),
+                     m["baseline_host_days"], m["live_host_days"],
+                     f"; {m['trained_on']}" if m.get("trained_on") else "")})
             emit({"type": "stage", "stage": "watching", "text": "Watching real traffic"})
         else:
             self._train("first commissioning")
