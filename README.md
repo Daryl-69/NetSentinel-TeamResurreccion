@@ -236,7 +236,7 @@ When live capture runs (`wearecharliekirk-main`, `run.py --live`) and PyTorch is
 4. **Keeps your traffic:** each finished hour (after a 7-minute grace for late connections) is added to your local database, `tier2/state/live_corpus.sqlite`.
 5. **Trains itself on the combination:** after **48 device-hours** it **fine-tunes the team's model** on the team's baseline corpus + your database. It starts from the team's weights, so what the team's capture taught it is kept. After that it retrains every 24 h (baseline + your last 60 days) and hot-swaps the models. **Hours the Inspector flagged are kept out of training**, so an intrusion in progress isn't learned as normal. Fine-tuning from the team's model caught **94 %** of planted attack chains, against **79 %** for training from scratch on the same data.
 
-### One-time: import the 20-day capture as the baseline
+### Import the team's capture as the baseline (repeat whenever you capture more)
 
 From `wearecharliekirk-main` with its `.venv` active. `--tz` is the UTC offset **where the capture was recorded**, so hour-of-day means local working hours:
 
@@ -255,7 +255,7 @@ cd tier2 && .venv\Scripts\python.exe eval_real_baseline.py   # optional: held-ou
 The corpus holds only hourly per-device statistics: no payloads, no domain names, no packet timestamps. Device addresses are replaced with `dev-01`, `dev-02`, … So it's small enough to **commit, and every install then starts from your baseline**:
 ```bash
 git add wearecharliekirk-main/tier2/data/
-git commit -m "Add 20-day baseline corpus and trained Inspector"
+git commit -m "Update baseline corpus and trained Inspector"
 ```
 A fresh install loads the shipped model (`tier2/data/models/inspector_baseline.pt`) until it has retrained on its own traffic. `train` fine-tunes the current model by default; add `--from-scratch` for new weights.
 
